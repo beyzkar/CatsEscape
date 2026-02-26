@@ -24,6 +24,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
     private Rigidbody2D rb;
     private MonoBehaviour movementScript;
+    private UnityEngine.Video.VideoPlayer bgVideo;
 
     void Awake()
     {
@@ -33,16 +34,19 @@ public class PlayerObstacleRules : MonoBehaviour
         audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false;
+
+        bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
     }
 
     void Update()
     {
         if (dead) return;
 
-        if (stuck && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+        if (stuck && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow)))
         {
             stuck = false;
             GameSpeed.Multiplier = 1f;
+            if (bgVideo != null) bgVideo.Play();
         }
     }
 
@@ -92,22 +96,20 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
-        // YANDAN temas: reduce life and STUCK
+        // YANDAN temas: STUCK and STOP
         if (hitSide && !stuck)
         {
-            sideHits++;
-
-            if (sideHits < maxSideHits)
-            {
-                stuck = true;
-                GameSpeed.Multiplier = 0f;
-                // Note: The obstacle is NOT destroyed, player must jump over it.
-            }
-            else
-            {
-                Die();
-            }
+            stuck = true;
+            GameSpeed.Multiplier = 0f;
+            if (bgVideo != null) bgVideo.Pause();
+            // Note: The obstacle is NOT destroyed, player must jump over it.
         }
+    }
+
+    private void OnCollisionStay2D(Collision2D col)
+    {
+        if (dead) return;
+        if (col.collider.CompareTag("Bodyguard")) Die();
     }
 
     private void Die()
@@ -115,7 +117,8 @@ public class PlayerObstacleRules : MonoBehaviour
         dead = true;
         stuck = false;
 
-        GameSpeed.Multiplier = 1f;
+        GameSpeed.Multiplier = 0f;
+        if (bgVideo != null) bgVideo.Pause();
 
         if (movementScript != null)
             movementScript.enabled = false;
@@ -140,5 +143,11 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             Die();
         }
+    }
+
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        if (dead) return;
+        if (other.CompareTag("Bodyguard")) Die();
     }
 }

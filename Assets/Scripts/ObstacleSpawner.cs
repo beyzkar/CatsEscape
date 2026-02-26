@@ -32,6 +32,11 @@ public class ObstacleSpawner : MonoBehaviour
     {
         while (true)
         {
+            if (GameSpeed.Multiplier <= 0)
+            {
+                yield return null;
+                continue;
+            }
             yield return new WaitForSeconds(Random.Range(minDelay, maxDelay));
 
             // Decide which one to spawn (picking only one per interval)
