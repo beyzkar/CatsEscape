@@ -26,6 +26,11 @@ public class PlayerMovement : MonoBehaviour
     private int jumpsLeft;
     private bool isGrounded;
     
+    [Header("Intro Walk")]
+    public float introSpeed = 3f;
+    public float stopX = -4f; // Example middle position
+    private bool introFinished = false;
+
     public AudioClip jumpSfx;
     private AudioSource audioSrc;
 
@@ -36,15 +41,28 @@ public class PlayerMovement : MonoBehaviour
         audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false;
+
+        // Force orientation: Face Right (if cat walks Left) or Face Left (if cat walks Right)
+        // Adjust this if your cat is backwards
+        transform.localRotation = Quaternion.Euler(0, 0, 0); 
     }
 
     void Start()
     {
         jumpsLeft = maxJumps;
+        
+        // Ensure starting position is off-screen if needed
+        // transform.position = new Vector3(-12f, transform.position.y, 0f);
     }
 
     void Update()
     {
+        if (!introFinished)
+        {
+            DoIntroWalk();
+            return;
+        }
+
         // yere değiyor mu kontrol
         bool groundedNow = Physics2D.OverlapCircle(
             groundCheck.position,
@@ -66,6 +84,19 @@ public class PlayerMovement : MonoBehaviour
             Input.GetMouseButtonDown(0))
         {
             TryJump();
+        }
+    }
+
+    void DoIntroWalk()
+    {
+        // Move cat towards the stopping point
+        float step = introSpeed * Time.deltaTime;
+        transform.position = Vector3.MoveTowards(transform.position, new Vector3(stopX, transform.position.y, 0), step);
+
+        // Check if reached
+        if (Mathf.Abs(transform.position.x - stopX) < 0.01f)
+        {
+            introFinished = true;
         }
     }
 

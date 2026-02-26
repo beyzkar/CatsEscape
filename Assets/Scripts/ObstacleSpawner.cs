@@ -3,16 +3,25 @@ using UnityEngine;
 
 public class ObstacleSpawner : MonoBehaviour
 {
-    [Header("Prefab")]
-    public GameObject obstaclePrefab;
+    [Header("Prefabs")]
+    public GameObject obstaclePrefab;   // ObstacleBag
+    public GameObject bodyguardPrefab;  // BodyGuard
 
-    [Header("Spawn X/Y")]
-    public float spawnX = 12f;
-    public float spawnY = -2.3f; 
+    [Header("Spawn Bag (Obstacle) X/Y")]
+    public float bagSpawnX = 12f;
+    public float bagSpawnY = -2.3f;
+
+    [Header("Spawn Bodyguard X/Y")]
+    public float bodyguardSpawnX = 12f;
+    public float bodyguardSpawnY = -2.0f;
 
     [Header("Random Time")]
     public float minDelay = 1.2f;
     public float maxDelay = 2.6f;
+
+    [Header("Chances")]
+    [Range(0f, 1f)]
+    public float bodyguardChance = 0.3f;
 
     void Start()
     {
@@ -23,11 +32,19 @@ public class ObstacleSpawner : MonoBehaviour
     {
         while (true)
         {
-            float wait = Random.Range(minDelay, maxDelay);
-            yield return new WaitForSeconds(wait);
+            yield return new WaitForSeconds(Random.Range(minDelay, maxDelay));
 
-            Vector3 pos = new Vector3(spawnX, spawnY, 0f);
-            Instantiate(obstaclePrefab, pos, Quaternion.identity);
+            // Decide which one to spawn (picking only one per interval)
+            bool spawnBodyguard = Random.value < bodyguardChance;
+
+            if (spawnBodyguard && bodyguardPrefab != null)
+            {
+                Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
+            }
+            else if (!spawnBodyguard && obstaclePrefab != null)
+            {
+                Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
+            }
         }
     }
 }

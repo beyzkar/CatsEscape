@@ -9,7 +9,8 @@ public class GroundScroll : MonoBehaviour
     void Update()
     {
         speed = Mathf.Min(maxSpeed, speed + speedIncreasePerSecond * Time.deltaTime);
-        //Mathf.Min: hız max hızı geçmesin diye engel koyar
+        //Mathf.Min: hız max hızı geçmesin diye engel koyar,
+        
         transform.position += Vector3.left * speed * Time.deltaTime;
         //Vector3.left: sola doğru hareket ettirir.
     }

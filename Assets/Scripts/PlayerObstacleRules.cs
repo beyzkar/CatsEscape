@@ -49,6 +49,15 @@ public class PlayerObstacleRules : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D col)
     {
         if (dead) return;
+
+        // Bodyguard: Instant failure from any direction
+        if (col.collider.CompareTag("Bodyguard"))
+        {
+            Die();
+            return;
+        }
+
+        // Obstacle (Bag) logic
         if (!col.collider.CompareTag("Obstacle")) return;
 
         bool hitTop = false;
@@ -83,7 +92,7 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
-        // YANDAN temas
+        // YANDAN temas: reduce life and STUCK
         if (hitSide && !stuck)
         {
             sideHits++;
@@ -92,6 +101,7 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 stuck = true;
                 GameSpeed.Multiplier = 0f;
+                // Note: The obstacle is NOT destroyed, player must jump over it.
             }
             else
             {
@@ -119,5 +129,16 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (GameOverManager.Instance != null)
             GameOverManager.Instance.ShowGameOver();
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (dead) return;
+
+        // Ensure Bodyguard causes immediate death even if it's a trigger
+        if (other.CompareTag("Bodyguard"))
+        {
+            Die();
+        }
     }
 }

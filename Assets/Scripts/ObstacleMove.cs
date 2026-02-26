@@ -7,8 +7,9 @@ public class ObstacleMove : MonoBehaviour
 
     void Update()
     {
-        transform.Translate(Vector2.left * speed * GameSpeed.Multiplier * Time.deltaTime);
-        
+        // SADECE X ekseninde hareket
+        transform.position += Vector3.left * speed * GameSpeed.Multiplier * Time.deltaTime;
+
         if (transform.position.x < destroyX)
             Destroy(gameObject);
     }
