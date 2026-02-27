@@ -12,6 +12,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
     [Header("SFX")]
     public AudioClip crushSfx;
+    public AudioClip deathSfx;
     private AudioSource audioSrc;
 
     [Header("Death kick")]
@@ -119,6 +120,16 @@ public class PlayerObstacleRules : MonoBehaviour
 
         GameSpeed.Multiplier = 0f;
         if (bgVideo != null) bgVideo.Pause();
+
+        // Stop background music and play game over sound
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.StopBackgroundMusic();
+            AudioManager.Instance.PlayGameOverSound();
+        }
+
+        if (deathSfx != null && audioSrc != null)
+            audioSrc.PlayOneShot(deathSfx);
 
         if (movementScript != null)
             movementScript.enabled = false;
