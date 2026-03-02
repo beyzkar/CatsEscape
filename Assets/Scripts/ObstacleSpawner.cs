@@ -6,6 +6,7 @@ public class ObstacleSpawner : MonoBehaviour
     [Header("Prefabs")]
     public GameObject obstaclePrefab;   // ObstacleBag
     public GameObject bodyguardPrefab;  // BodyGuard
+    public GameObject pondPrefab;       // ObstaclePond
 
     [Header("Spawn Bag (Obstacle) X/Y")]
     public float bagSpawnX = 12f;
@@ -15,6 +16,10 @@ public class ObstacleSpawner : MonoBehaviour
     public float bodyguardSpawnX = 12f;
     public float bodyguardSpawnY = -2.0f;
 
+    [Header("Spawn Pond X/Y")]
+    public float pondSpawnX = 12f;
+    public float pondSpawnY = -2.5f;
+
     [Header("Random Time")]
     public float minDelay = 1.2f;
     public float maxDelay = 2.6f;
@@ -22,6 +27,8 @@ public class ObstacleSpawner : MonoBehaviour
     [Header("Chances")]
     [Range(0f, 1f)]
     public float bodyguardChance = 0.3f;
+    [Range(0f, 1f)]
+    public float pondChance = 0.4f;
 
     void Start()
     {
@@ -39,16 +46,30 @@ public class ObstacleSpawner : MonoBehaviour
             }
             yield return new WaitForSeconds(Random.Range(minDelay, maxDelay));
 
-            // Decide which one to spawn (picking only one per interval)
-            bool spawnBodyguard = Random.value < bodyguardChance;
+            // Decide which one to spawn based on chances
+            float rnd = Random.value;
 
-            if (spawnBodyguard && bodyguardPrefab != null)
+            if (rnd < bodyguardChance)
             {
-                Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
+                if (bodyguardPrefab != null)
+                    Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
+                else
+                    Debug.LogWarning("ObstacleSpawner: Bodyguard chosen but prefab is NULL!");
             }
-            else if (!spawnBodyguard && obstaclePrefab != null)
+            else if (rnd < (bodyguardChance + pondChance))
+            {
+                if (pondPrefab != null)
+                    Instantiate(pondPrefab, new Vector3(pondSpawnX, pondSpawnY, 0f), Quaternion.identity);
+                else
+                    Debug.LogWarning("ObstacleSpawner: Pond chosen but prefab is NULL!");
+            }
+            else if (obstaclePrefab != null)
             {
                 Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
+            }
+            else
+            {
+                Debug.LogWarning("ObstacleSpawner: Default Bag chosen but prefab is NULL!");
             }
         }
     }

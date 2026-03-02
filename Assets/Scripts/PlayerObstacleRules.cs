@@ -55,8 +55,8 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        // Bodyguard: Instant failure from any direction
-        if (col.collider.CompareTag("Bodyguard"))
+        // Bodyguard or Pond: Instant failure from any direction
+        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Pond"))
         {
             Die();
             return;
@@ -110,7 +110,7 @@ public class PlayerObstacleRules : MonoBehaviour
     private void OnCollisionStay2D(Collision2D col)
     {
         if (dead) return;
-        if (col.collider.CompareTag("Bodyguard")) Die();
+        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Pond")) Die();
     }
 
     private void Die()
@@ -149,8 +149,8 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        // Ensure Bodyguard causes immediate death even if it's a trigger
-        if (other.CompareTag("Bodyguard"))
+        // Ensure Bodyguard or Pond causes immediate death even if it's a trigger
+        if (other.CompareTag("Bodyguard") || other.CompareTag("Pond"))
         {
             Die();
         }
@@ -159,6 +159,6 @@ public class PlayerObstacleRules : MonoBehaviour
     private void OnTriggerStay2D(Collider2D other)
     {
         if (dead) return;
-        if (other.CompareTag("Bodyguard")) Die();
+        if (other.CompareTag("Bodyguard") || other.CompareTag("Pond")) Die();
     }
 }
