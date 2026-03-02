@@ -31,4 +31,14 @@ public class GameOverManager : MonoBehaviour
         // Reload the current scene
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
+
+    public void LoadMainMenu()
+    {
+        // Reset time and speed scales before returning to menu
+        Time.timeScale = 1f;
+        GameSpeed.Multiplier = 1f;
+        
+        // Load the Main Menu scene
+        SceneManager.LoadScene("MainMenu");
+    }
 }
