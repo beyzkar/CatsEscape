@@ -100,7 +100,12 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    void TryJump()
+    public void ResetJumps()
+    {
+        jumpsLeft = maxJumps;
+    }
+
+    public void TryJump()
     {
         if (jumpsLeft <= 0) return;  
 

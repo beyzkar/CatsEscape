@@ -8,6 +8,7 @@ public class ObstacleSpawner : MonoBehaviour
     public GameObject bodyguardPrefab;  // BodyGuard
     public GameObject barbedWirePrefab; // BarbedWire
     public GameObject wallPrefab;       // Wall
+    public GameObject catFoodPrefab;    // CatFood
 
     [Header("Spawn Bag (Obstacle) X/Y")]
     public float bagSpawnX = 12f;
@@ -23,9 +24,13 @@ public class ObstacleSpawner : MonoBehaviour
 
     [Header("Spawn Wall X/Y/Scale")]
     public float wallSpawnX = 12f;
-    public float wallSpawnY = -3.0f; // Adjust this in Inspector to touch ground
+    public float wallSpawnY = -3.0f; 
     public float wallScaleY1 = 1.5f;
     public float wallScaleY2 = 2.5f;
+
+    [Header("Spawn CatFood X/Y")]
+    public float catFoodSpawnX = 12f;
+    public float catFoodSpawnY = -1.5f; // Spawn a bit higher so the cat can jump to it
 
     [Header("Random Time")]
     public float minDelay = 1.2f;
@@ -38,6 +43,8 @@ public class ObstacleSpawner : MonoBehaviour
     public float barbedWireChance = 0.2f;
     [Range(0f, 1f)]
     public float wallChance = 0.2f;
+    [Range(0f, 1f)]
+    public float catFoodChance = 0.15f;
 
     void Start()
     {
@@ -62,15 +69,11 @@ public class ObstacleSpawner : MonoBehaviour
             {
                 if (bodyguardPrefab != null)
                     Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
-                else
-                    Debug.LogWarning("ObstacleSpawner: Bodyguard chosen but prefab is NULL!");
             }
             else if (rnd < (bodyguardChance + barbedWireChance))
             {
                 if (barbedWirePrefab != null)
                     Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
-                else
-                    Debug.LogWarning("ObstacleSpawner: BarbedWire chosen but prefab is NULL!");
             }
             else if (rnd < (bodyguardChance + barbedWireChance + wallChance))
             {
@@ -80,16 +83,17 @@ public class ObstacleSpawner : MonoBehaviour
                     GameObject wall = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
                     wall.transform.localScale = new Vector3(wall.transform.localScale.x, randomScaleY, wall.transform.localScale.z);
                 }
-                else
-                    Debug.LogWarning("ObstacleSpawner: Wall chosen but prefab is NULL!");
+            }
+            else if (rnd < (bodyguardChance + barbedWireChance + wallChance + catFoodChance))
+            {
+                if (catFoodPrefab != null)
+                {
+                    Instantiate(catFoodPrefab, new Vector3(catFoodSpawnX, catFoodSpawnY, 0f), Quaternion.identity);
+                }
             }
             else if (obstaclePrefab != null)
             {
                 Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
-            }
-            else
-            {
-                Debug.LogWarning("ObstacleSpawner: Default Bag chosen but prefab is NULL!");
             }
         }
     }

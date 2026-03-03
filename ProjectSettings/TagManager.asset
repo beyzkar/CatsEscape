@@ -8,6 +8,7 @@ TagManager:
   - Bodyguard
   - BarbedWire
   - Wall
+  - CatFood
   layers:
   - Default
   - TransparentFX
