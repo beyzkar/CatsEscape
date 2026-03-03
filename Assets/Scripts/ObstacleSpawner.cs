@@ -6,7 +6,8 @@ public class ObstacleSpawner : MonoBehaviour
     [Header("Prefabs")]
     public GameObject obstaclePrefab;   // ObstacleBag
     public GameObject bodyguardPrefab;  // BodyGuard
-    public GameObject pondPrefab;       // ObstaclePond
+    public GameObject barbedWirePrefab; // BarbedWire
+    public GameObject wallPrefab;       // Wall
 
     [Header("Spawn Bag (Obstacle) X/Y")]
     public float bagSpawnX = 12f;
@@ -16,9 +17,15 @@ public class ObstacleSpawner : MonoBehaviour
     public float bodyguardSpawnX = 12f;
     public float bodyguardSpawnY = -2.0f;
 
-    [Header("Spawn Pond X/Y")]
-    public float pondSpawnX = 12f;
-    public float pondSpawnY = -2.5f;
+    [Header("Spawn BarbedWire X/Y")]
+    public float barbedWireSpawnX = 12f;
+    public float barbedWireSpawnY = -3.66f;
+
+    [Header("Spawn Wall X/Y/Scale")]
+    public float wallSpawnX = 12f;
+    public float wallSpawnY = -3.0f; // Adjust this in Inspector to touch ground
+    public float wallScaleY1 = 1.5f;
+    public float wallScaleY2 = 2.5f;
 
     [Header("Random Time")]
     public float minDelay = 1.2f;
@@ -28,7 +35,9 @@ public class ObstacleSpawner : MonoBehaviour
     [Range(0f, 1f)]
     public float bodyguardChance = 0.3f;
     [Range(0f, 1f)]
-    public float pondChance = 0.4f;
+    public float barbedWireChance = 0.2f;
+    [Range(0f, 1f)]
+    public float wallChance = 0.2f;
 
     void Start()
     {
@@ -56,12 +65,23 @@ public class ObstacleSpawner : MonoBehaviour
                 else
                     Debug.LogWarning("ObstacleSpawner: Bodyguard chosen but prefab is NULL!");
             }
-            else if (rnd < (bodyguardChance + pondChance))
+            else if (rnd < (bodyguardChance + barbedWireChance))
             {
-                if (pondPrefab != null)
-                    Instantiate(pondPrefab, new Vector3(pondSpawnX, pondSpawnY, 0f), Quaternion.identity);
+                if (barbedWirePrefab != null)
+                    Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
                 else
-                    Debug.LogWarning("ObstacleSpawner: Pond chosen but prefab is NULL!");
+                    Debug.LogWarning("ObstacleSpawner: BarbedWire chosen but prefab is NULL!");
+            }
+            else if (rnd < (bodyguardChance + barbedWireChance + wallChance))
+            {
+                if (wallPrefab != null)
+                {
+                    float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
+                    GameObject wall = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
+                    wall.transform.localScale = new Vector3(wall.transform.localScale.x, randomScaleY, wall.transform.localScale.z);
+                }
+                else
+                    Debug.LogWarning("ObstacleSpawner: Wall chosen but prefab is NULL!");
             }
             else if (obstaclePrefab != null)
             {

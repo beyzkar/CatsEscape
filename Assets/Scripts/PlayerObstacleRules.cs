@@ -6,13 +6,15 @@ public class PlayerObstacleRules : MonoBehaviour
     public float topNormalThreshold = 0.4f;
     public float sideNormalThreshold = 0.6f;
 
-    [Header("Lives (side hits)")]
-    public int maxSideHits = 3;
-    public int sideHits = 0;
+    [Header("Hearts (Wall hits)")]
+    public GameObject[] heartUI;
+    private int currentHearts = 3;
+    private GameObject lastHitWall;
 
     [Header("SFX")]
     public AudioClip crushSfx;
     public AudioClip deathSfx;
+    public AudioClip hitWallAudio;
     private AudioSource audioSrc;
 
     [Header("Death kick")]
@@ -37,6 +39,11 @@ public class PlayerObstacleRules : MonoBehaviour
         audioSrc.playOnAwake = false;
 
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
+
+        if (heartUI != null && heartUI.Length > 0)
+        {
+            currentHearts = heartUI.Length;
+        }
     }
 
     void Update()
@@ -46,6 +53,7 @@ public class PlayerObstacleRules : MonoBehaviour
         if (stuck && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow)))
         {
             stuck = false;
+            lastHitWall = null; // Clear wall tracking on jump
             GameSpeed.Multiplier = 1f;
             if (bgVideo != null) bgVideo.Play();
         }
@@ -55,15 +63,18 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        // Bodyguard or Pond: Instant failure from any direction
-        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Pond"))
+        // Bodyguard or BarbedWire: Instant failure from any direction
+        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("BarbedWire"))
         {
+            // If we already hit this as a Wall in the same frame, don't die instantly
+            if (col.gameObject == lastHitWall) return;
+
             Die();
             return;
         }
 
-        // Obstacle (Bag) logic
-        if (!col.collider.CompareTag("Obstacle")) return;
+        // Obstacle (Bag) or Wall logic
+        if (!col.collider.CompareTag("Obstacle") && !col.collider.CompareTag("Wall")) return;
 
         bool hitTop = false;
         bool hitSide = false;
@@ -87,30 +98,83 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
-        // ÜSTTEN temas: ses + kutuyu yok et
+        // ÜSTTEN temas: ses + kutuyu yok et (Sadece Bag/Obstacle için)
         if (hitTop)
         {
-            if (crushSfx != null && audioSrc != null)
-                audioSrc.PlayOneShot(crushSfx);
+            if (col.collider.CompareTag("Obstacle"))
+            {
+                if (crushSfx != null && audioSrc != null)
+                    audioSrc.PlayOneShot(crushSfx);
 
-            Destroy(col.gameObject);
+                Destroy(col.gameObject);
+            }
             return;
         }
 
-        // YANDAN temas: STUCK and STOP
-        if (hitSide && !stuck)
+        // YANDAN veya ALT'TAN temas: STUCK and STOP (Wall or Obstacle)
+        if (!hitTop && !stuck)
         {
-            stuck = true;
-            GameSpeed.Multiplier = 0f;
-            if (bgVideo != null) bgVideo.Pause();
-            // Note: The obstacle is NOT destroyed, player must jump over it.
+            if (col.collider.CompareTag("Wall"))
+            {
+                // Only count hit if it's a new wall
+                if (col.gameObject != lastHitWall)
+                {
+                    lastHitWall = col.gameObject;
+                    LoseHeart();
+                }
+
+                if (!dead) // Still alive?
+                {
+                    stuck = true;
+                    GameSpeed.Multiplier = 0f;
+                    if (bgVideo != null) bgVideo.Pause();
+                }
+            }
+            else if (col.collider.CompareTag("Obstacle"))
+            {
+                stuck = true;
+                GameSpeed.Multiplier = 0f;
+                if (bgVideo != null) bgVideo.Pause();
+            }
+        }
+    }
+
+    private void LoseHeart()
+    {
+        if (dead) return;
+
+        // If currentHearts is 3, first hit makes it 2 and hides heartUI[2]
+        // If currentHearts is 1, third hit makes it 0 and hides heartUI[0]
+        // If currentHearts is 0, fourth hit makes it -1 and triggers Die()
+        currentHearts--;
+        
+        Debug.Log("Heart lost! Remaining CurrentHearts value: " + currentHearts);
+
+        // Turn off hearts 3, 2, 1 (uses index from 0 to Length-1)
+        if (heartUI != null && currentHearts >= 0 && currentHearts < heartUI.Length)
+        {
+            if (heartUI[currentHearts] != null)
+                heartUI[currentHearts].SetActive(false);
+        }
+
+        // Play hit wall sound
+        if (hitWallAudio != null && audioSrc != null)
+            audioSrc.PlayOneShot(hitWallAudio);
+
+        // ONLY DIE ON THE 4TH HIT (when currentHearts becomes -1)
+        if (currentHearts < 0)
+        {
+            Die();
         }
     }
 
     private void OnCollisionStay2D(Collision2D col)
     {
         if (dead) return;
-        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Pond")) Die();
+        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("BarbedWire"))
+        {
+            if (col.gameObject != lastHitWall) Die();
+        }
     }
 
     private void Die()
@@ -149,16 +213,36 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        // Ensure Bodyguard or Pond causes immediate death even if it's a trigger
-        if (other.CompareTag("Bodyguard") || other.CompareTag("Pond"))
+        // Ensure Bodyguard or BarbedWire causes immediate death even if it's a trigger
+        if (other.CompareTag("Bodyguard") || other.CompareTag("BarbedWire"))
         {
-            Die();
+            if (other.gameObject != lastHitWall) Die();
+        }
+
+        // Wall trigger (if collider is trigger)
+        if (other.CompareTag("Wall") && !stuck)
+        {
+            if (other.gameObject != lastHitWall)
+            {
+                lastHitWall = other.gameObject;
+                LoseHeart();
+            }
+
+            if (!dead)
+            {
+                stuck = true;
+                GameSpeed.Multiplier = 0f;
+                if (bgVideo != null) bgVideo.Pause();
+            }
         }
     }
 
     private void OnTriggerStay2D(Collider2D other)
     {
         if (dead) return;
-        if (other.CompareTag("Bodyguard") || other.CompareTag("Pond")) Die();
+        if (other.CompareTag("Bodyguard") || other.CompareTag("BarbedWire"))
+        {
+            if (other.gameObject != lastHitWall) Die();
+        }
     }
 }

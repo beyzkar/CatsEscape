@@ -6,7 +6,8 @@ TagManager:
   tags:
   - Obstacle
   - Bodyguard
-  - Pond
+  - BarbedWire
+  - Wall
   layers:
   - Default
   - TransparentFX
