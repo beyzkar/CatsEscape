@@ -31,6 +31,12 @@ public class ObstacleMove : MonoBehaviour
                 {
                     ScoreManager.Instance.RegisterCleanJump();
                 }
+
+                // Report to LevelManager for progression
+                if (LevelManager.Instance != null)
+                {
+                    LevelManager.Instance.ObstaclePassed();
+                }
             }
         }
 

@@ -64,36 +64,75 @@ public class ObstacleSpawner : MonoBehaviour
             }
             yield return new WaitForSeconds(Random.Range(minDelay, maxDelay));
 
-            // Decide which one to spawn based on chances
-            float rnd = Random.Range(0f, bagChance + bodyguardChance + barbedWireChance + wallChance + catFoodChance);
+            int currentLevel = 1;
+            if (LevelManager.Instance != null) currentLevel = LevelManager.Instance.currentLevel;
 
-            if (rnd < bagChance)
+            // Decide which one to spawn based on chances AND level constraints
+            float totalChance = bagChance;
+            if (currentLevel >= 2) totalChance += bodyguardChance;
+            if (currentLevel >= 3) totalChance += wallChance;
+            if (currentLevel >= 4) totalChance += barbedWireChance;
+            
+            // CatFood always spawns across all levels
+            totalChance += catFoodChance;
+
+            float rnd = Random.Range(0f, totalChance);
+            float currentLimit = bagChance;
+
+            if (rnd < currentLimit)
             {
                 if (obstaclePrefab != null)
                     Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
             }
-            else if (rnd < (bagChance + bodyguardChance))
+            else
             {
-                if (bodyguardPrefab != null)
-                    Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
-            }
-            else if (rnd < (bagChance + bodyguardChance + barbedWireChance))
-            {
-                if (barbedWirePrefab != null)
-                    Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
-            }
-            else if (rnd < (bagChance + bodyguardChance + barbedWireChance + wallChance))
-            {
-                if (wallPrefab != null)
+                bool spawned = false;
+
+                // Level 2+: Bodyguard
+                if (currentLevel >= 2)
                 {
-                    float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
-                    GameObject wall = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
-                    wall.transform.localScale = new Vector3(wall.transform.localScale.x, randomScaleY, wall.transform.localScale.z);
+                    currentLimit += bodyguardChance;
+                    if (rnd < currentLimit && !spawned)
+                    {
+                        if (bodyguardPrefab != null)
+                            Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
+                        spawned = true;
+                    }
                 }
-            }
-            else if (catFoodPrefab != null)
-            {
-                Instantiate(catFoodPrefab, new Vector3(catFoodSpawnX, catFoodSpawnY, 0f), Quaternion.identity);
+
+                // Level 3+: Wall
+                if (currentLevel >= 3 && !spawned)
+                {
+                    currentLimit += wallChance;
+                    if (rnd < currentLimit)
+                    {
+                        if (wallPrefab != null)
+                        {
+                            float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
+                            GameObject wall = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
+                            wall.transform.localScale = new Vector3(wall.transform.localScale.x, randomScaleY, wall.transform.localScale.z);
+                        }
+                        spawned = true;
+                    }
+                }
+
+                // Level 4+: Barbed Wire
+                if (currentLevel >= 4 && !spawned)
+                {
+                    currentLimit += barbedWireChance;
+                    if (rnd < currentLimit)
+                    {
+                        if (barbedWirePrefab != null)
+                            Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
+                        spawned = true;
+                    }
+                }
+
+                // Cat Food (Last chance if not spawned yet)
+                if (!spawned && catFoodPrefab != null)
+                {
+                    Instantiate(catFoodPrefab, new Vector3(catFoodSpawnX, catFoodSpawnY, 0f), Quaternion.identity);
+                }
             }
         }
     }
