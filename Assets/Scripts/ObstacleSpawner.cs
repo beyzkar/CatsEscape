@@ -38,6 +38,8 @@ public class ObstacleSpawner : MonoBehaviour
 
     [Header("Chances")]
     [Range(0f, 1f)]
+    public float bagChance = 0.2f;
+    [Range(0f, 1f)]
     public float bodyguardChance = 0.3f;
     [Range(0f, 1f)]
     public float barbedWireChance = 0.2f;
@@ -63,19 +65,24 @@ public class ObstacleSpawner : MonoBehaviour
             yield return new WaitForSeconds(Random.Range(minDelay, maxDelay));
 
             // Decide which one to spawn based on chances
-            float rnd = Random.value;
+            float rnd = Random.Range(0f, bagChance + bodyguardChance + barbedWireChance + wallChance + catFoodChance);
 
-            if (rnd < bodyguardChance)
+            if (rnd < bagChance)
+            {
+                if (obstaclePrefab != null)
+                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
+            }
+            else if (rnd < (bagChance + bodyguardChance))
             {
                 if (bodyguardPrefab != null)
                     Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
             }
-            else if (rnd < (bodyguardChance + barbedWireChance))
+            else if (rnd < (bagChance + bodyguardChance + barbedWireChance))
             {
                 if (barbedWirePrefab != null)
                     Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
             }
-            else if (rnd < (bodyguardChance + barbedWireChance + wallChance))
+            else if (rnd < (bagChance + bodyguardChance + barbedWireChance + wallChance))
             {
                 if (wallPrefab != null)
                 {
@@ -84,16 +91,9 @@ public class ObstacleSpawner : MonoBehaviour
                     wall.transform.localScale = new Vector3(wall.transform.localScale.x, randomScaleY, wall.transform.localScale.z);
                 }
             }
-            else if (rnd < (bodyguardChance + barbedWireChance + wallChance + catFoodChance))
+            else if (catFoodPrefab != null)
             {
-                if (catFoodPrefab != null)
-                {
-                    Instantiate(catFoodPrefab, new Vector3(catFoodSpawnX, catFoodSpawnY, 0f), Quaternion.identity);
-                }
-            }
-            else if (obstaclePrefab != null)
-            {
-                Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
+                Instantiate(catFoodPrefab, new Vector3(catFoodSpawnX, catFoodSpawnY, 0f), Quaternion.identity);
             }
         }
     }

@@ -19,6 +19,7 @@ public class PlayerObstacleRules : MonoBehaviour
     public AudioClip deathSfx;
     public AudioClip hitWallAudio;
     public AudioClip catVoiceAudio;
+    public AudioClip heartFillSfx;
     private AudioSource audioSrc;
 
     [Header("Death kick")]
@@ -127,6 +128,13 @@ public class PlayerObstacleRules : MonoBehaviour
                 lastHitWall = col.gameObject;
                 LoseHeart();
                 
+                // Reset clean jumps combo on hit
+                if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
+
+                // Disable reward for the obstacle we hit
+                ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
+                if (moveScript != null) moveScript.canRewardCleanJump = false;
+
                 if (!dead)
                 {
                     stuck = true;
@@ -154,7 +162,6 @@ public class PlayerObstacleRules : MonoBehaviour
         if (!col.collider.CompareTag("Obstacle") && !col.collider.CompareTag("Wall")) return;
 
         bool hitTop = false;
-        bool hitSide = false;
 
         // Check all contact points for better reliability
         for (int i = 0; i < col.contactCount; i++)
@@ -167,21 +174,18 @@ public class PlayerObstacleRules : MonoBehaviour
                 hitTop = true;
                 break;
             }
-            
-            // Player hits side -> normal points horizontal
-            if (Mathf.Abs(n.x) > sideNormalThreshold)
-            {
-                hitSide = true;
-            }
         }
 
-        // ÜSTTEN temas: ses + kutuyu yok et (Sadece Bag/Obstacle için)
+        // ÜSTTEN temas: ses + kutuyu yok et (Sadece Bag/Obstacle için) + 20 XP
         if (hitTop)
         {
             if (col.collider.CompareTag("Obstacle"))
             {
                 if (crushSfx != null && audioSrc != null)
                     audioSrc.PlayOneShot(crushSfx);
+
+                // Add 20 XP for crushing obstacle bag
+                if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
 
                 Destroy(col.gameObject);
             }
@@ -193,6 +197,13 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             // Ignore if we are in jump grace and hitting the SAME object
             if (jumpGraceTimer > 0 && col.gameObject == lastHitWall) return;
+
+            // Reset clean jumps combo on hit/stuck
+            if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
+
+            // Disable reward for the obstacle we hit
+            ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
+            if (moveScript != null) moveScript.canRewardCleanJump = false;
 
             // Wall and Obstacle (Bag) now ONLY stop the player without losing hearts
             if (col.collider.CompareTag("Wall") || col.collider.CompareTag("Obstacle"))
@@ -282,6 +293,13 @@ public class PlayerObstacleRules : MonoBehaviour
             
             Debug.Log("Healed! Current Hearts: " + currentHearts);
         }
+
+        // Play heart fill sound
+        if (heartFillSfx != null && audioSrc != null)
+            audioSrc.PlayOneShot(heartFillSfx);
+
+        // Add 50 XP for collecting Cat Food
+        if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(50);
     }
 
     private void OnCollisionStay2D(Collision2D col)
@@ -337,6 +355,13 @@ public class PlayerObstacleRules : MonoBehaviour
                 lastHitWall = other.gameObject;
                 LoseHeart();
                 
+                // Reset combo on trigger hit
+                if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
+
+                // Disable reward for this obstacle
+                ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
+                if (moveScript != null) moveScript.canRewardCleanJump = false;
+
                 if (!dead)
                 {
                     stuck = true;
@@ -368,6 +393,13 @@ public class PlayerObstacleRules : MonoBehaviour
             // Wall only stops now
             stuck = true;
             GameSpeed.Multiplier = 0f;
+
+            // Reset combo on trigger hit
+            if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
+
+            // Disable reward for this obstacle
+            ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
+            if (moveScript != null) moveScript.canRewardCleanJump = false;
 
             // Play hit wall sound
             if (hitWallAudio != null && audioSrc != null)
