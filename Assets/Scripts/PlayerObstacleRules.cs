@@ -14,13 +14,7 @@ public class PlayerObstacleRules : MonoBehaviour
     private bool hasTakenDamage = false;
     private GameObject lastHitWall;
 
-    [Header("SFX")]
-    public AudioClip crushSfx;
-    public AudioClip deathSfx;
-    public AudioClip hitWallAudio;
-    public AudioClip catVoiceAudio;
-    public AudioClip heartFillSfx;
-    private AudioSource audioSrc;
+    // local AudioClips have been removed for global control in AudioManager
 
     [Header("Death kick")]
     public float deathKickX = -8f;
@@ -32,6 +26,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
     private Rigidbody2D rb;
     private PlayerMovement movementScript;
+    private Animator animator;
     private UnityEngine.Video.VideoPlayer bgVideo;
 
     private float jumpGraceTimer = 0f;
@@ -45,10 +40,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         movementScript = GetComponent<PlayerMovement>();
-
-        audioSrc = GetComponent<AudioSource>();
-        if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
-        audioSrc.playOnAwake = false;
+        animator = GetComponentInChildren<Animator>();
 
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
 
@@ -88,6 +80,7 @@ public class PlayerObstacleRules : MonoBehaviour
         if (stuck && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow)))
         {
             stuck = false;
+            if (animator != null) animator.speed = 1f; // Resumes animation
             // DO NOT set lastHitWall = null here; keeping it prevents re-damage from the same object
             GameSpeed.Multiplier = 1f;
             jumpGraceTimer = JUMP_GRACE_TIME;
@@ -138,6 +131,7 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (!dead)
                 {
                     stuck = true;
+                    if (animator != null) animator.speed = 0f; // Pauses animation
                     GameSpeed.Multiplier = 0f;
 
                     // Grant a jump to ensure player can escape
@@ -181,8 +175,8 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             if (col.collider.CompareTag("Obstacle"))
             {
-                if (crushSfx != null && audioSrc != null)
-                    audioSrc.PlayOneShot(crushSfx);
+                if (AudioManager.Instance != null)
+                    AudioManager.Instance.PlayCrush();
 
                 // Add 20 XP for crushing obstacle bag
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
@@ -209,11 +203,12 @@ public class PlayerObstacleRules : MonoBehaviour
             if (col.collider.CompareTag("Wall") || col.collider.CompareTag("Obstacle"))
             {
                 stuck = true;
+                if (animator != null) animator.speed = 0f; // Pauses animation
                 GameSpeed.Multiplier = 0f;
 
                 // Play hit wall sound
-                if (hitWallAudio != null && audioSrc != null)
-                    audioSrc.PlayOneShot(hitWallAudio);
+                if (AudioManager.Instance != null)
+                    AudioManager.Instance.PlayHitWall();
 
                 // Grant a jump
                 if (movementScript != null) movementScript.ResetJumps();
@@ -253,8 +248,8 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         // Play Cat Voice sound
-        if (catVoiceAudio != null && audioSrc != null)
-            audioSrc.PlayOneShot(catVoiceAudio);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayHeartLost();
 
         // ONLY DIE ON THE 4TH HIT (when currentHearts becomes -1)
         if (currentHearts < 0)
@@ -295,8 +290,8 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         // Play heart fill sound
-        if (heartFillSfx != null && audioSrc != null)
-            audioSrc.PlayOneShot(heartFillSfx);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayHeartFill();
 
         // Add 50 XP for collecting Cat Food
         if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(50);
@@ -323,8 +318,8 @@ public class PlayerObstacleRules : MonoBehaviour
             AudioManager.Instance.PlayGameOverSound();
         }
 
-        if (deathSfx != null && audioSrc != null)
-            audioSrc.PlayOneShot(deathSfx);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayGameOverSFX();
 
         if (movementScript != null)
             movementScript.enabled = false;
@@ -365,6 +360,7 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (!dead)
                 {
                     stuck = true;
+                    if (animator != null) animator.speed = 0f; // Pauses animation
                     GameSpeed.Multiplier = 0f;
 
                     // Grant a jump
@@ -392,6 +388,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
             // Wall only stops now
             stuck = true;
+            if (animator != null) animator.speed = 0f; // Pauses animation
             GameSpeed.Multiplier = 0f;
 
             // Reset combo on trigger hit
@@ -402,8 +399,8 @@ public class PlayerObstacleRules : MonoBehaviour
             if (moveScript != null) moveScript.canRewardCleanJump = false;
 
             // Play hit wall sound
-            if (hitWallAudio != null && audioSrc != null)
-                audioSrc.PlayOneShot(hitWallAudio);
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayHitWall();
 
             // Grant a jump
             if (movementScript != null) movementScript.ResetJumps();

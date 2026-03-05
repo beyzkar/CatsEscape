@@ -31,16 +31,9 @@ public class PlayerMovement : MonoBehaviour
     public float stopX = -4f; // Example middle position
     private bool introFinished = false;
 
-    public AudioClip jumpSfx;
-    private AudioSource audioSrc;
-
-
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        audioSrc = GetComponent<AudioSource>();
-        if (audioSrc == null) audioSrc = gameObject.AddComponent<AudioSource>();
-        audioSrc.playOnAwake = false;
 
         // Force orientation: Face Right (if cat walks Left) or Face Left (if cat walks Right)
         // Adjust this if your cat is backwards
@@ -112,8 +105,8 @@ public class PlayerMovement : MonoBehaviour
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
         rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
 
-        if (jumpSfx != null && audioSrc != null)
-            audioSrc.PlayOneShot(jumpSfx);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayJump();
 
         jumpsLeft--;
         //Debug.Log("After jump | jumpsLeft=" + jumpsLeft); jumpın çalıp çalışmadığını kontrol eder.
