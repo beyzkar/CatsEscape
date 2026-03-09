@@ -81,7 +81,6 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             stuck = false;
             if (animator != null) animator.speed = 1f; // Resumes animation
-            // DO NOT set lastHitWall = null here; keeping it prevents re-damage from the same object
             GameSpeed.Multiplier = 1f;
             jumpGraceTimer = JUMP_GRACE_TIME;
 
@@ -99,7 +98,7 @@ public class PlayerObstacleRules : MonoBehaviour
                 movementScript.TryJump();
             }
 
-            // Nudge back slightly to prevent overlapping the wall collider
+            // Small nudge to ensure we aren't perfectly flush with the wall
             transform.position += Vector3.left * 0.2f;
 
             if (bgVideo != null) bgVideo.Play();
@@ -110,12 +109,24 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        // Bodyguard or BarbedWire: Heart removal + Stop (used to be instant death)
+        // Ignore if we are in jump grace and hitting the SAME object
+        if (jumpGraceTimer > 0 && col.gameObject == lastHitWall)
+        {
+            // For Wall: Ignore for 0.25s to clear overlap safely. 
+            // For others: Ignore for the full 0.5s.
+            if (col.gameObject.CompareTag("Wall"))
+            {
+                if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        // Bodyguard or BarbedWire: Heart removal + Stop
         if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("BarbedWire"))
         {
-            // Ignore if we are in jump grace and hitting the SAME object
-            if (jumpGraceTimer > 0 && col.gameObject == lastHitWall) return;
-
             if (col.gameObject != lastHitWall && !stuck)
             {
                 lastHitWall = col.gameObject;
@@ -190,7 +201,15 @@ public class PlayerObstacleRules : MonoBehaviour
         if (!hitTop && !stuck)
         {
             // Ignore if we are in jump grace and hitting the SAME object
-            if (jumpGraceTimer > 0 && col.gameObject == lastHitWall) return;
+            if (jumpGraceTimer > 0 && col.gameObject == lastHitWall)
+            {
+                // For Wall: Ignore for 0.25s to clear overlap safely. 
+                if (col.gameObject.CompareTag("Wall"))
+                {
+                    if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
+                }
+                else return;
+            }
 
             // Reset clean jumps combo on hit/stuck
             if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
@@ -202,6 +221,7 @@ public class PlayerObstacleRules : MonoBehaviour
             // Wall and Obstacle (Bag) now ONLY stop the player without losing hearts
             if (col.collider.CompareTag("Wall") || col.collider.CompareTag("Obstacle"))
             {
+                lastHitWall = col.gameObject;
                 stuck = true;
                 if (animator != null) animator.speed = 0f; // Pauses animation
                 GameSpeed.Multiplier = 0f;
@@ -220,7 +240,8 @@ public class PlayerObstacleRules : MonoBehaviour
                     rb.bodyType = RigidbodyType2D.Kinematic;
                 }
 
-                transform.position += Vector3.left * 0.3f;
+                float nudgeAmount = col.collider.CompareTag("Wall") ? 3.5f : 0.3f;
+                transform.position += Vector3.left * nudgeAmount;
 
                 if (bgVideo != null) bgVideo.Pause();
             }
@@ -342,7 +363,7 @@ public class PlayerObstacleRules : MonoBehaviour
         // Ensure Bodyguard or BarbedWire causes heart loss and stop
         if (other.CompareTag("Bodyguard") || other.CompareTag("BarbedWire"))
         {
-            // Ignore if in jump grace and same object
+            // Ignore last hit during grace
             if (jumpGraceTimer > 0 && other.gameObject == lastHitWall) return;
 
             if (other.gameObject != lastHitWall && !stuck)
@@ -384,8 +405,13 @@ public class PlayerObstacleRules : MonoBehaviour
         if (other.CompareTag("Wall") && !stuck)
         {
             // Ignore if in jump grace and same object
-            if (jumpGraceTimer > 0 && other.gameObject == lastHitWall) return;
+            if (jumpGraceTimer > 0 && other.gameObject == lastHitWall)
+            {
+                // For Wall: Ignore for 0.25s
+                if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
+            }
 
+            lastHitWall = other.gameObject;
             // Wall only stops now
             stuck = true;
             if (animator != null) animator.speed = 0f; // Pauses animation
@@ -412,7 +438,8 @@ public class PlayerObstacleRules : MonoBehaviour
                 rb.bodyType = RigidbodyType2D.Kinematic;
             }
 
-            transform.position += Vector3.left * 0.3f;
+            float nudgeAmount = other.CompareTag("Wall") ? 3.5f : 0.3f;
+            transform.position += Vector3.left * nudgeAmount;
 
             if (bgVideo != null) bgVideo.Pause();
         }
