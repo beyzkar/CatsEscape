@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerObstacleRules : MonoBehaviour
 {
@@ -14,8 +15,6 @@ public class PlayerObstacleRules : MonoBehaviour
     private bool hasTakenDamage = false;
     private GameObject lastHitWall;
 
-    // local AudioClips have been removed for global control in AudioManager
-
     [Header("Death kick")]
     public float deathKickX = -8f;
     public float deathKickY = 6f;
@@ -28,6 +27,13 @@ public class PlayerObstacleRules : MonoBehaviour
     private PlayerMovement movementScript;
     private Animator animator;
     private UnityEngine.Video.VideoPlayer bgVideo;
+    private Renderer[] allRenderers;
+
+    [Header("Power-up Settings")]
+    public Material playerGlowMaterial;
+    private Material[] originalMaterials;
+    private bool isInvincible = false;
+    private Coroutine powerUpCoroutine;
 
     private float jumpGraceTimer = 0f;
     private const float JUMP_GRACE_TIME = 0.5f; 
@@ -36,23 +42,22 @@ public class PlayerObstacleRules : MonoBehaviour
     [Header("Return Speed")]
     public float returnSpeed = 2f;
 
+    [Header("Hit Recovery")]
+    public float hitRecoveryDuration = 0.8f;
+    private float hitRecoveryTimer = 0f;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         movementScript = GetComponent<PlayerMovement>();
-        animator = GetComponentInChildren<Animator>();
-
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
-
         startX = transform.position.x;
 
         if (heartUI != null && heartUI.Length > 0)
         {
-            // Start with initial amount (e.g., 3)
             currentHearts = initialHearts;
             maxHearts = initialHearts;
 
-            // Hide all hearts initially beyond the starting ones
             for (int i = 0; i < heartUI.Length; i++)
             {
                 if (heartUI[i] != null)
@@ -70,6 +75,9 @@ public class PlayerObstacleRules : MonoBehaviour
         if (jumpGraceTimer > 0)
             jumpGraceTimer -= Time.deltaTime;
 
+        if (hitRecoveryTimer > 0)
+            hitRecoveryTimer -= Time.deltaTime;
+
         // RETURN TO HOME POSITION
         if (!stuck && !dead && transform.position.x < startX)
         {
@@ -80,26 +88,21 @@ public class PlayerObstacleRules : MonoBehaviour
         if (stuck && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow)))
         {
             stuck = false;
-            if (animator != null) animator.speed = 1f; // Resumes animation
+            if (animator != null) animator.speed = 1f;
             GameSpeed.Multiplier = 1f;
             jumpGraceTimer = JUMP_GRACE_TIME;
 
-            // Unlock physics immediately
             if (rb != null)
             {
                 rb.bodyType = RigidbodyType2D.Dynamic;
                 rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             }
 
-            // Explicitly trigger the jump to guarantee escape
             if (movementScript != null)
             {
                 movementScript.ResetJumps();
                 movementScript.TryJump();
             }
-
-            // Small nudge to ensure we aren't perfectly flush with the wall
-            transform.position += Vector3.left * 0.2f;
 
             if (bgVideo != null) bgVideo.Play();
         }
@@ -109,53 +112,47 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        // Ignore if we are in jump grace and hitting the SAME object
-        if (jumpGraceTimer > 0 && col.gameObject == lastHitWall)
-        {
-            // For Wall: Ignore for 0.25s to clear overlap safely. 
-            // For others: Ignore for the full 0.5s.
-            if (col.gameObject.CompareTag("Wall"))
-            {
-                if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
-            }
-            else
-            {
-                return;
-            }
-        }
+        bool isBodyguard = col.collider.CompareTag("Bodyguard") || col.transform.root.CompareTag("Bodyguard");
+        bool isBarbedWire = col.collider.CompareTag("BarbedWire") || col.transform.root.CompareTag("BarbedWire");
 
-        // Bodyguard or BarbedWire: Heart removal + Stop
-        if (col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("BarbedWire"))
+        if (isBodyguard || isBarbedWire)
         {
+            if (isInvincible) return;
+
             if (col.gameObject != lastHitWall && !stuck)
             {
                 lastHitWall = col.gameObject;
                 LoseHeart();
                 
-                // Reset clean jumps combo on hit
                 if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-                // Disable reward for the obstacle we hit
+                // Removed flashing effect for Bodyguard per user request
+                // Recovery flashing is now only for BarbedWire or generic recovery if added elsewhere
+                if (isBarbedWire)
+                {
+                    hitRecoveryTimer = hitRecoveryDuration;
+                    StartCoroutine(FlashRecoveryEffect());
+                }
+
                 ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
                 if (moveScript != null) moveScript.canRewardCleanJump = false;
 
                 if (!dead)
                 {
                     stuck = true;
-                    if (animator != null) animator.speed = 0f; // Pauses animation
+                    if (animator != null) animator.speed = 0f;
                     GameSpeed.Multiplier = 0f;
 
-                    // Grant a jump to ensure player can escape
                     if (movementScript != null) movementScript.ResetJumps();
 
-                    // LOCK POSITION (Kinematic) + small immediate nudge to stay on surface
                     if (rb != null)
                     {
                         rb.linearVelocity = Vector2.zero;
                         rb.bodyType = RigidbodyType2D.Kinematic;
                     }
 
-                    transform.position += Vector3.left * 0.3f;
+                    // Separation nudge: Increased to 0.7f to ensure boundary is respected and no overlap occurs
+                    transform.position += Vector3.left * 0.7f;
 
                     if (bgVideo != null) bgVideo.Pause();
                 }
@@ -163,17 +160,12 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
-        // Obstacle (Bag) or Wall logic
         if (!col.collider.CompareTag("Obstacle") && !col.collider.CompareTag("Wall")) return;
 
         bool hitTop = false;
-
-        // Check all contact points for better reliability
         for (int i = 0; i < col.contactCount; i++)
         {
             Vector2 n = col.GetContact(i).normal;
-
-            // Player lands on top -> normal points up
             if (n.y > topNormalThreshold)
             {
                 hitTop = true;
@@ -181,29 +173,21 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
-        // ÜSTTEN temas: ses + kutuyu yok et (Sadece Bag/Obstacle için) + 20 XP
         if (hitTop)
         {
             if (col.collider.CompareTag("Obstacle"))
             {
-                if (AudioManager.Instance != null)
-                    AudioManager.Instance.PlayCrush();
-
-                // Add 20 XP for crushing obstacle bag
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
-
                 Destroy(col.gameObject);
             }
             return;
         }
 
-        // YANDAN veya ALT'TAN temas: STUCK and STOP (Wall or Obstacle)
         if (!hitTop && !stuck)
         {
-            // Ignore if we are in jump grace and hitting the SAME object
             if (jumpGraceTimer > 0 && col.gameObject == lastHitWall)
             {
-                // For Wall: Ignore for 0.25s to clear overlap safely. 
                 if (col.gameObject.CompareTag("Wall"))
                 {
                     if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
@@ -211,36 +195,28 @@ public class PlayerObstacleRules : MonoBehaviour
                 else return;
             }
 
-            // Reset clean jumps combo on hit/stuck
             if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-            // Disable reward for the obstacle we hit
             ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
             if (moveScript != null) moveScript.canRewardCleanJump = false;
 
-            // Wall and Obstacle (Bag) now ONLY stop the player without losing hearts
             if (col.collider.CompareTag("Wall") || col.collider.CompareTag("Obstacle"))
             {
                 lastHitWall = col.gameObject;
                 stuck = true;
-                if (animator != null) animator.speed = 0f; // Pauses animation
+                if (animator != null) animator.speed = 0f;
                 GameSpeed.Multiplier = 0f;
 
-                // Play hit wall sound
-                if (AudioManager.Instance != null)
-                    AudioManager.Instance.PlayHitWall();
-
-                // Grant a jump
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
                 if (movementScript != null) movementScript.ResetJumps();
 
-                // LOCK POSITION (Kinematic)
                 if (rb != null)
                 {
                     rb.linearVelocity = Vector2.zero;
                     rb.bodyType = RigidbodyType2D.Kinematic;
                 }
 
-                float nudgeAmount = col.collider.CompareTag("Wall") ? 3.5f : 0.3f;
+                float nudgeAmount = col.collider.CompareTag("Wall") ? 3.5f : 0.7f;
                 transform.position += Vector3.left * nudgeAmount;
 
                 if (bgVideo != null) bgVideo.Pause();
@@ -251,210 +227,217 @@ public class PlayerObstacleRules : MonoBehaviour
     private void LoseHeart()
     {
         if (dead) return;
-
-        hasTakenDamage = true; // Mark as damaged for CatFood logic
-
-        // If currentHearts is 3, first hit makes it 2 and hides heartUI[2]
-        // If currentHearts is 1, third hit makes it 0 and hides heartUI[0]
-        // If currentHearts is 0, fourth hit makes it -1 and triggers Die()
+        hasTakenDamage = true;
         currentHearts--;
         
-        Debug.Log("Heart lost! Remaining CurrentHearts value: " + currentHearts);
-
-        // Turn off hearts (uses index from 0 to Length-1)
         if (heartUI != null && currentHearts >= 0 && currentHearts < heartUI.Length)
         {
             if (heartUI[currentHearts] != null)
                 heartUI[currentHearts].SetActive(false);
         }
 
-        // Play Cat Voice sound
-        if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayHeartLost();
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayHeartLost();
 
-        // ONLY DIE ON THE 4TH HIT (when currentHearts becomes -1)
-        if (currentHearts < 0)
-        {
-            Die();
-        }
+        if (currentHearts < 0) Die();
     }
 
-    public void CollectCatFood()
+    private const int MAX_ALLOWED_HEARTS = 5;
+
+    public void CollectFish()
     {
         if (dead) return;
+        if (powerUpCoroutine != null) StopCoroutine(powerUpCoroutine);
+        powerUpCoroutine = StartCoroutine(PowerUpSequence());
 
-        // 1. If never taken damage and max hearts < 9, increase capacity
-        if (!hasTakenDamage && maxHearts < 9 && heartUI != null && maxHearts < heartUI.Length)
+        if (!hasTakenDamage && maxHearts < MAX_ALLOWED_HEARTS && heartUI != null && maxHearts < heartUI.Length)
         {
             maxHearts++;
             currentHearts = maxHearts;
-            
-            // Show the new heart in UI
-            if (heartUI[currentHearts - 1] != null)
-                heartUI[currentHearts - 1].SetActive(true);
-            
-            Debug.Log("Max Hearts increased to: " + maxHearts);
+            if (heartUI[currentHearts - 1] != null) heartUI[currentHearts - 1].SetActive(true);
         }
-        // 2. If damaged, heal one heart (up to current maxHearts)
         else if (currentHearts < maxHearts)
         {
             currentHearts++;
-            
-            // Show the restored heart in UI
             if (heartUI != null && currentHearts > 0 && currentHearts <= heartUI.Length)
             {
-                if (heartUI[currentHearts - 1] != null)
-                    heartUI[currentHearts - 1].SetActive(true);
+                if (heartUI[currentHearts - 1] != null) heartUI[currentHearts - 1].SetActive(true);
             }
-            
-            Debug.Log("Healed! Current Hearts: " + currentHearts);
         }
 
-        // Play heart fill sound
-        if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayHeartFill();
-
-        // Add 50 XP for collecting Cat Food
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayHeartFill();
         if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(50);
     }
 
-    private void OnCollisionStay2D(Collision2D col)
+    private IEnumerator PowerUpSequence()
     {
-        if (dead) return;
-        // No longer instant death
+        isInvincible = true;
+        GameSpeed.Multiplier = 1.5f;
+        allRenderers = GetComponentsInChildren<Renderer>();
+        if (allRenderers != null && allRenderers.Length > 0 && playerGlowMaterial != null)
+        {
+            originalMaterials = new Material[allRenderers.Length];
+            for (int i = 0; i < allRenderers.Length; i++)
+            {
+                originalMaterials[i] = allRenderers[i].sharedMaterial;
+                allRenderers[i].sortingOrder = 100;
+                Material glowInstance = new Material(playerGlowMaterial);
+                if (originalMaterials[i].HasProperty("_MainTex")) glowInstance.mainTexture = originalMaterials[i].mainTexture;
+                allRenderers[i].material = glowInstance;
+            }
+        }
+
+        yield return new WaitForSeconds(7f);
+
+        isInvincible = false;
+        GameSpeed.Multiplier = 1f;
+        if (allRenderers != null && originalMaterials != null)
+        {
+            for (int i = 0; i < allRenderers.Length; i++)
+            {
+                if (allRenderers[i] != null && i < originalMaterials.Length)
+                {
+                    allRenderers[i].material = originalMaterials[i];
+                    allRenderers[i].sortingOrder = 0;
+                }
+            }
+        }
+        powerUpCoroutine = null;
     }
 
     private void Die()
     {
         dead = true;
         stuck = false;
-
         GameSpeed.Multiplier = 0f;
         if (bgVideo != null) bgVideo.Pause();
-
-        // Stop background music and play game over sound
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.StopBackgroundMusic();
             AudioManager.Instance.PlayGameOverSound();
-        }
-
-        if (AudioManager.Instance != null)
             AudioManager.Instance.PlayGameOverSFX();
-
-        if (movementScript != null)
-            movementScript.enabled = false;
-
+        }
+        if (movementScript != null) movementScript.enabled = false;
         if (rb != null)
         {
             rb.linearVelocity = Vector2.zero;
             rb.gravityScale = deathGravity;
             rb.AddForce(new Vector2(deathKickX, deathKickY), ForceMode2D.Impulse);
         }
-
-        if (GameOverManager.Instance != null)
-            GameOverManager.Instance.ShowGameOver();
+        if (GameOverManager.Instance != null) GameOverManager.Instance.ShowGameOver();
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (dead) return;
 
-        // Ensure Bodyguard or BarbedWire causes heart loss and stop
-        if (other.CompareTag("Bodyguard") || other.CompareTag("BarbedWire"))
+        bool isBodyguard = other.CompareTag("Bodyguard") || other.transform.root.CompareTag("Bodyguard");
+        bool isBarbedWire = other.CompareTag("BarbedWire") || other.transform.root.CompareTag("BarbedWire");
+
+        if (isBodyguard || isBarbedWire)
         {
-            // Ignore last hit during grace
-            if (jumpGraceTimer > 0 && other.gameObject == lastHitWall) return;
+            if (isInvincible) return;
 
             if (other.gameObject != lastHitWall && !stuck)
             {
                 lastHitWall = other.gameObject;
                 LoseHeart();
                 
-                // Reset combo on trigger hit
                 if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-                // Disable reward for this obstacle
+                // Removed flashing effect for Bodyguard per user request
+                if (isBarbedWire)
+                {
+                    hitRecoveryTimer = hitRecoveryDuration;
+                    StartCoroutine(FlashRecoveryEffect());
+                }
+
                 ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
                 if (moveScript != null) moveScript.canRewardCleanJump = false;
 
                 if (!dead)
                 {
                     stuck = true;
-                    if (animator != null) animator.speed = 0f; // Pauses animation
+                    if (animator != null) animator.speed = 0f;
                     GameSpeed.Multiplier = 0f;
 
-                    // Grant a jump
                     if (movementScript != null) movementScript.ResetJumps();
 
-                    // LOCK POSITION (Kinematic)
                     if (rb != null)
                     {
                         rb.linearVelocity = Vector2.zero;
                         rb.bodyType = RigidbodyType2D.Kinematic;
                     }
 
-                    transform.position += Vector3.left * 0.3f;
+                    // Separation nudge: Increased to 0.7f
+                    transform.position += Vector3.left * 0.7f;
 
                     if (bgVideo != null) bgVideo.Pause();
                 }
             }
         }
 
-        // Wall trigger (if collider is trigger)
         if (other.CompareTag("Wall") && !stuck)
         {
-            // Ignore if in jump grace and same object
+            if (isInvincible) return;
+
             if (jumpGraceTimer > 0 && other.gameObject == lastHitWall)
             {
-                // For Wall: Ignore for 0.25s
                 if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
             }
 
             lastHitWall = other.gameObject;
-            // Wall only stops now
             stuck = true;
-            if (animator != null) animator.speed = 0f; // Pauses animation
+            if (animator != null) animator.speed = 0f;
             GameSpeed.Multiplier = 0f;
 
-            // Reset combo on trigger hit
             if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-            // Disable reward for this obstacle
             ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
             if (moveScript != null) moveScript.canRewardCleanJump = false;
 
-            // Play hit wall sound
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayHitWall();
-
-            // Grant a jump
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
             if (movementScript != null) movementScript.ResetJumps();
 
-            // LOCK POSITION (Kinematic)
             if (rb != null)
             {
                 rb.linearVelocity = Vector2.zero;
                 rb.bodyType = RigidbodyType2D.Kinematic;
             }
 
-            float nudgeAmount = other.CompareTag("Wall") ? 3.5f : 0.3f;
+            float nudgeAmount = other.CompareTag("Wall") ? 3.5f : 0.7f;
             transform.position += Vector3.left * nudgeAmount;
 
             if (bgVideo != null) bgVideo.Pause();
         }
 
-        // CatFood detection
-        if (other.CompareTag("CatFood"))
+        if (other.CompareTag("Fish"))
         {
-            CollectCatFood();
-            Destroy(other.gameObject); // Remove the food sprite
+            CollectFish();
+            Destroy(other.gameObject);
         }
     }
 
     private void OnTriggerStay2D(Collider2D other)
     {
         if (dead) return;
-        // No longer instant death
+    }
+
+    private IEnumerator FlashRecoveryEffect()
+    {
+        float elapsed = 0f;
+        allRenderers = GetComponentsInChildren<Renderer>();
+        while (elapsed < hitRecoveryDuration)
+        {
+            if (allRenderers != null)
+            {
+                foreach (var r in allRenderers) if (r != null) r.enabled = !r.enabled;
+            }
+            yield return new WaitForSeconds(0.08f);
+            elapsed += 0.08f;
+        }
+        if (allRenderers != null)
+        {
+            foreach (var r in allRenderers) if (r != null) r.enabled = true;
+        }
     }
 }

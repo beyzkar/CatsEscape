@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 3489678866327151701}
   - component: {fileID: 2097068435673634884}
   - component: {fileID: 924785815995663724}
+  - component: {fileID: 8364941395427165961}
   m_Layer: 0
   m_Name: ObstacleBag
   m_TagString: Obstacle
@@ -32,7 +33,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -3.3, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.14, y: 0.14, z: 0.14}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -86,12 +87,12 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 50
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 5988663278455033155, guid: 512e8ddd7015148d09d9ecebadd8fd13, type: 3}
+  m_Sprite: {fileID: -7587613512364005081, guid: ee952e8dbb3864902afa47e43e0854fb, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 21.59, y: 15.685621}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -110,6 +111,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleMove
   speed: 6
   destroyX: -15
+  canRewardCleanJump: 1
 --- !u!50 &-7416929410573394273
 Rigidbody2D:
   serializedVersion: 5
@@ -171,17 +173,17 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.00000023841858, y: -0.082139015}
+  m_Offset: {x: 0.19211578, y: -0.8862548}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 2.45, y: 1.8351119}
-    newSize: {x: 1, y: 1}
+    oldSize: {x: 21.59, y: 15.685621}
+    newSize: {x: 21.59, y: 15.685621}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 2.0557327, y: 1.210855}
+  m_Size: {x: 20.570393, y: 14.214753}
   m_EdgeRadius: 0
 --- !u!114 &2097068435673634884
 MonoBehaviour:
@@ -208,3 +210,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleBreak
   topNormalThreshold: 0.2
+--- !u!114 &8364941395427165961
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6769421730509668011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6ecda4d1d1d24c2e8aea5b863f307f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObstacleThemeSetter
+  assetType: 0

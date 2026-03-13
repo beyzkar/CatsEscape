@@ -25,6 +25,7 @@ public class PlayerMovement : MonoBehaviour
      */
     private int jumpsLeft;
     private bool isGrounded;
+    public bool IsGrounded => isGrounded; // Diğer scriptlerin (LevelManager) kedinin yere basıp basmadığını görmesi için
     
     [Header("Intro Walk")]
     public float introSpeed = 3f;
@@ -54,7 +55,7 @@ public class PlayerMovement : MonoBehaviour
         {
             DoIntroWalk();
             return;
-        }
+        } 
 
         // yere değiyor mu kontrol
         bool groundedNow = Physics2D.OverlapCircle(

@@ -6,16 +6,17 @@ Shader "Custom/SpriteOutlineGlow"
         _Color ("Tint", Color) = (1,1,1,1)
         
         [Header(Glow Settings)]
-        [HDR] _GlowColor ("Glow Color", Color) = (1,1,0,1)
-        _GlowAmount ("Inner Glow Intensity", Range(0, 10)) = 1
-        _SoftGlowSpread ("Soft Glow Spread", Range(0, 10)) = 2
-        _SoftGlowIntensity ("Soft Glow Intensity", Range(0, 5)) = 0.5
+        [HDR] _GlowColor ("Glow Color", Color) = (0, 0.5, 1, 1)
+        _SoftGlowSpread ("Halo Spread", Range(0, 100)) = 10
+        _SoftGlowIntensity ("Halo Intensity", Range(0, 50)) = 5
         
         [Header(Outline Settings)]
-        _OutlineColor ("Outline Color", Color) = (1,1,1,1)
-        _OutlineWidth ("Outline Width", Range(0, 5)) = 1
+        _OutlineColor ("Outline Color", Color) = (0, 0.8, 1, 1)
+        _OutlineWidth ("Outline Width", Range(0, 30)) = 5
         
+        [MaterialToggle] _AuraMode ("Aura Mode (Transparent Center)", Float) = 0
         [MaterialToggle] PixelSnap ("Pixel snap", Float) = 0
+        [HideInInspector] _GlowAmount ("Inner Glow", Float) = 0
         [HideInInspector] _RendererColor ("RendererColor", Color) = (1,1,1,1)
         [HideInInspector] _Flip ("Flip", Vector) = (1,1,1,1)
     }
@@ -71,6 +72,7 @@ Shader "Custom/SpriteOutlineGlow"
             float _SoftGlowIntensity;
             fixed4 _OutlineColor;
             float _OutlineWidth;
+            float _AuraMode;
 
             v2f vert(appdata_t IN)
             {
@@ -87,57 +89,68 @@ Shader "Custom/SpriteOutlineGlow"
                 return OUT;
             }
 
+            // High-quality Octagon sampling helper
+            float SampleAlpha(float2 uv, float spread)
+            {
+                float2 s = _MainTex_TexelSize.xy * spread;
+                float a = 0;
+                a += tex2D(_MainTex, uv + float2(s.x, 0)).a;
+                a += tex2D(_MainTex, uv + float2(-s.x, 0)).a;
+                a += tex2D(_MainTex, uv + float2(0, s.y)).a;
+                a += tex2D(_MainTex, uv + float2(0, -s.y)).a;
+                float2 ds = s * 0.707;
+                a += tex2D(_MainTex, uv + ds).a;
+                a += tex2D(_MainTex, uv - ds).a;
+                a += tex2D(_MainTex, uv + float2(ds.x, -ds.y)).a;
+                a += tex2D(_MainTex, uv + float2(-ds.x, ds.y)).a;
+                return a * 0.125;
+            }
+
             fixed4 frag(v2f IN) : SV_Target
             {
                 fixed4 c = tex2D(_MainTex, IN.texcoord) * IN.color;
-                float2 texelSize = _MainTex_TexelSize.xy;
                 
-                // --- Soft Glow Spread (Halo) ---
-                float softGlow = 0;
-                if (_SoftGlowIntensity > 0)
-                {
-                    // Sample alpha in a cross pattern further out
-                    float2 spread = texelSize * _SoftGlowSpread;
-                    softGlow += tex2D(_MainTex, IN.texcoord + float2(spread.x, spread.y)).a;
-                    softGlow += tex2D(_MainTex, IN.texcoord + float2(-spread.x, -spread.y)).a;
-                    softGlow += tex2D(_MainTex, IN.texcoord + float2(spread.x, -spread.y)).a;
-                    softGlow += tex2D(_MainTex, IN.texcoord + float2(-spread.x, spread.y)).a;
-                    softGlow *= 0.25;
+                // 1. Original Alpha
+                float aSprite = c.a;
+
+                // 2. Outline Alpha
+                float aOutline = (_OutlineWidth > 0) ? saturate(SampleAlpha(IN.texcoord, _OutlineWidth) * 10.0) : aSprite;
+
+                // 3. Halo Alpha
+                float totalSpread = _OutlineWidth + _SoftGlowSpread;
+                float aHaloRaw = SampleAlpha(IN.texcoord, totalSpread);
+                float aHalo = saturate(aHaloRaw * _SoftGlowIntensity);
+
+                // --- COMPOSITING ---
+                fixed4 glowColor = fixed4(0,0,0,0);
+
+                // Build the Glow/Outline layer
+                if (aHalo > 0.001) {
+                    glowColor.rgb = _GlowColor.rgb * aHalo;
+                    glowColor.a = aHalo;
                 }
 
-                // --- Outline Logic ---
-                if (_OutlineWidth > 0 && c.a < 0.9)
-                {
-                    float2 outlineSize = texelSize * _OutlineWidth;
-                    float alphaSum = 0;
-                    alphaSum += tex2D(_MainTex, IN.texcoord + float2(outlineSize.x, 0)).a;
-                    alphaSum += tex2D(_MainTex, IN.texcoord + float2(-outlineSize.x, 0)).a;
-                    alphaSum += tex2D(_MainTex, IN.texcoord + float2(0, outlineSize.y)).a;
-                    alphaSum += tex2D(_MainTex, IN.texcoord + float2(0, -outlineSize.y)).a;
-                    
-                    if (alphaSum > 0 && c.a < 0.1)
-                    {
-                        fixed4 o = _OutlineColor;
-                        o.rgb *= o.a;
-                        // Add some of the glow color to the outline too
-                        o.rgb += _GlowColor.rgb * _GlowAmount * 0.5;
-                        return o;
-                    }
+                if (aOutline > 0.001) {
+                    float outlineMask = saturate(aOutline - aSprite);
+                    glowColor.rgb = lerp(glowColor.rgb, _OutlineColor.rgb, outlineMask);
+                    glowColor.a = max(glowColor.a, aOutline);
                 }
 
-                // --- Final Color Assembly ---
-                fixed4 finalColor = c;
-                
-                // Add emissive inner glow
-                finalColor.rgb += (c.rgb * _GlowColor.rgb * _GlowAmount);
-                
-                // Add procedural soft outer halo
-                if (c.a < 0.5)
+                fixed4 finalColor = glowColor;
+
+                // Conditional Masking based on Aura Mode
+                if (_AuraMode > 0.5)
                 {
-                    finalColor.rgb += (_GlowColor.rgb * softGlow * _SoftGlowIntensity);
-                    finalColor.a = max(finalColor.a, softGlow * _SoftGlowIntensity);
+                    // Aura Mode: Middle is transparent (for dedicated aura objects)
+                    finalColor.a *= (1.0 - aSprite);
                 }
-                
+                else
+                {
+                    // Normal Mode: Show Character + Glow (for the cat itself)
+                    finalColor.rgb = lerp(finalColor.rgb, c.rgb, aSprite);
+                    finalColor.a = max(finalColor.a, aSprite);
+                }
+
                 finalColor.rgb *= finalColor.a;
                 return finalColor;
             }
