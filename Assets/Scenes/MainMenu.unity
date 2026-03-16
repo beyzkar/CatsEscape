@@ -207,10 +207,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 50000000}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a72f811563304419b5681a452ab81f0, type: 3}
+  m_Script: {fileID: 11500000, guid: c3d189c8befe8499ea7740c6b3613d93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterSelectionUI
   mainMenuManager: {fileID: 1866936181}
+  ladyMitoButton: {fileID: 0}
+  sirNoriButton: {fileID: 0}
 --- !u!1 &50000010
 GameObject:
   m_ObjectHideFlags: 0
@@ -271,7 +273,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 6700916742771646357, guid: 5843d7854c4d74a108bc00d64f66054d, type: 3}
+  m_Sprite: {fileID: 6700916742771646357, guid: 0e4f248b9d6ab4935a57fbdd3eff4aec, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -405,7 +407,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 6700916742771646357, guid: 5843d7854c4d74a108bc00d64f66054d, type: 3}
+  m_Sprite: {fileID: 6700916742771646357, guid: 0e4f248b9d6ab4935a57fbdd3eff4aec, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -558,20 +560,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &228222909
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 906770508}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8db2cd284ef644349480e52eb9c72dc9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  videoPlayer: {fileID: 906770509}
-  backgroundImage: {fileID: 1021073814}
 --- !u!1 &250000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -619,26 +607,26 @@ MonoBehaviour:
   backgroundSource: {fileID: 0}
   sfxSource: {fileID: 0}
   backgroundMusic: {fileID: 8300000, guid: 98fe1f915ce544f54a69dae1c86c2c6b, type: 3}
-  backgroundMusicVolume: 0
+  backgroundMusicVolume: 0.4
   gameOverClip: {fileID: 8300000, guid: d179a49c48d164ea088b1786770e7f98, type: 3}
-  gameOverVolume: 0
-  levelWinClip: {fileID: 0}
+  gameOverVolume: 1
+  levelWinClip: {fileID: 8300000, guid: 6e9bcb8cb674b485ca9524d63504edb3, type: 3}
   levelWinVolume: 1
-  finalWinClip: {fileID: 0}
+  finalWinClip: {fileID: 8300000, guid: e546bb67411994b7a9547bc0440f00d1, type: 3}
   finalWinVolume: 1
-  jumpSfx: {fileID: 0}
+  jumpSfx: {fileID: 8300000, guid: cd1917c8e04994c709a83c1b72f2c17f, type: 3}
   jumpVolume: 1
-  crushSfx: {fileID: 0}
+  crushSfx: {fileID: 8300000, guid: aa49e2f9aed774a3f99931b731f03ac3, type: 3}
   crushVolume: 1
-  gameOverSfx: {fileID: 0}
+  gameOverSfx: {fileID: 8300000, guid: d179a49c48d164ea088b1786770e7f98, type: 3}
   gameOverSfxVolume: 1
-  hitWallAudio: {fileID: 0}
+  hitWallAudio: {fileID: 8300000, guid: 8945cffd43e834b2d8807ea882aac4ad, type: 3}
   hitWallVolume: 1
-  heartLostSfx: {fileID: 0}
+  heartLostSfx: {fileID: 8300000, guid: 286d53a94afe447d79ff0720dea2a616, type: 3}
   heartLostVolume: 1
-  heartFillSfx: {fileID: 0}
+  heartFillSfx: {fileID: 8300000, guid: f04e036c732ee45fabf6d7523f4e3077, type: 3}
   heartFillVolume: 1
-  extraXPSfx: {fileID: 0}
+  extraXPSfx: {fileID: 8300000, guid: c70586eeaa299480d8d8beeb96b37901, type: 3}
   extraXPVolume: 1
   backgroundGlobalVolume: 0.5
   sfxGlobalVolume: 0.5
@@ -962,8 +950,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: LADY MITO
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
-  m_sharedMaterial: {fileID: -6544901983756021181, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1fd5220161d404963b745774beb2e728, type: 2}
+  m_sharedMaterial: {fileID: 8651596757643109152, guid: 1fd5220161d404963b745774beb2e728, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1100,8 +1088,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: CAT'S  ESCAPE
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
-  m_sharedMaterial: {fileID: -6544901983756021181, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1fd5220161d404963b745774beb2e728, type: 2}
+  m_sharedMaterial: {fileID: 8651596757643109152, guid: 1fd5220161d404963b745774beb2e728, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1260,8 +1248,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: PLAY
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
-  m_sharedMaterial: {fileID: -6544901983756021181, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1fd5220161d404963b745774beb2e728, type: 2}
+  m_sharedMaterial: {fileID: 8651596757643109152, guid: 1fd5220161d404963b745774beb2e728, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1370,7 +1358,6 @@ GameObject:
   m_Component:
   - component: {fileID: 906770510}
   - component: {fileID: 906770509}
-  - component: {fileID: 228222909}
   m_Layer: 0
   m_Name: BackgroundVideo
   m_TagString: Untagged
@@ -1386,7 +1373,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 906770508}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: 957d7ca73c6904185a71bc3b088c26bc, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 5963419fd6caf40a298f1db04f28d1ea, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 1661041396}
@@ -1486,7 +1473,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 165584978342098290, guid: 238cf74e5f64947039286051ec7b7fe5, type: 3}
+  m_Sprite: {fileID: 165584978342098290, guid: d0ee2d0b7c4414135904c3490cffc84d, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1521,7 +1508,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1021073815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1638,8 +1625,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: SIR NORI
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
-  m_sharedMaterial: {fileID: -6544901983756021181, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1fd5220161d404963b745774beb2e728, type: 2}
+  m_sharedMaterial: {fileID: 8651596757643109152, guid: 1fd5220161d404963b745774beb2e728, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1773,7 +1760,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 319058752718750782, guid: a28fd0ba185c1405fbfa04330fdfe357, type: 3}
+  m_Sprite: {fileID: 319058752718750782, guid: da19bd1faee9247428f2d39f55911d08, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1877,7 +1864,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1661041394}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1892,7 +1879,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1661041394}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: 957d7ca73c6904185a71bc3b088c26bc, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 5963419fd6caf40a298f1db04f28d1ea, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 1661041396}
@@ -1979,8 +1966,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: CHOOSE YOUR HERO
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
-  m_sharedMaterial: {fileID: -6544901983756021181, guid: bfa15d8f20aa64028b898416a2fa4ab4, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1fd5220161d404963b745774beb2e728, type: 2}
+  m_sharedMaterial: {fileID: 8651596757643109152, guid: 1fd5220161d404963b745774beb2e728, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

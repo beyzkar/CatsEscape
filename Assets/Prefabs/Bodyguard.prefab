@@ -43,6 +43,7 @@ GameObject:
   - component: {fileID: 4154504971365232045}
   - component: {fileID: 3908875123259669663}
   - component: {fileID: -1015769895270835303}
+  - component: {fileID: 579286645063664978}
   m_Layer: 0
   m_Name: Bodyguard
   m_TagString: Bodyguard
@@ -155,6 +156,28 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
+--- !u!95 &579286645063664978
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6673541505603066278}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: c2b15d26b0ff64c6dbf1bb1257c675a5, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1001 &458942274299482264
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -258,7 +281,7 @@ PrefabInstance:
     - target: {fileID: 9015651193053095870, guid: 1c8950e890f8de640b645d9ccc90ffa4, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: 2ab6733b489eb454ea5bb90ce4ff0ccb, type: 2}
+      objectReference: {fileID: 9100000, guid: c2b15d26b0ff64c6dbf1bb1257c675a5, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

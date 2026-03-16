@@ -50,6 +50,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         movementScript = GetComponent<PlayerMovement>();
+        animator = GetComponentInChildren<Animator>();
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
         startX = transform.position.x;
 
