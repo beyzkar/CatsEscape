@@ -2778,7 +2778,8 @@ MonoBehaviour:
   bodyguardPrefab: {fileID: 6673541505603066278, guid: 14087af99914e42ecb026da9e0bddb5d, type: 3}
   barbedWirePrefab: {fileID: 1862761434422741247, guid: 7de9f5ad0d8ef4581b5eab3d372d1b99, type: 3}
   wallPrefab: {fileID: 2867133255236968643, guid: 06f8c559101514afe94f6b01fa2e90ba, type: 3}
-  fishPrefab: {fileID: 5544632389803324300, guid: 73f293f60fe3d4cefbeeafa5220a4598, type: 3}
+  longWallPrefab: {fileID: 1558480094471278770, guid: 600b15f83aeb94607bbc3ee090b1c2f1, type: 3}
+  fishPrefab: {fileID: 4646909014813445964, guid: cfcb2a87471cb40739c838beaad794c9, type: 3}
   bagSpawnX: 12
   bagSpawnY: -3.3
   bodyguardSpawnX: 12
@@ -2787,6 +2788,8 @@ MonoBehaviour:
   barbedWireSpawnY: -3.9
   wallSpawnX: 12
   wallSpawnY: -3.9
+  longWallSpawnX: 12
+  longWallSpawnY: -2
   wallScaleY1: 1.5
   wallScaleY2: 2.5
   fishSpawnX: 12
@@ -2803,7 +2806,8 @@ MonoBehaviour:
     bagChance: 0.3
     bodyguardChance: 0.4
     wallChance: 0.5
-    fishChance: 0.1
+    longWallChance: 0.575
+    fishChance: 0.582
   level4:
     bagChance: 0.25
     bodyguardChance: 0.25

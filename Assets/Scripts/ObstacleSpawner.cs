@@ -8,6 +8,7 @@ public class ObstacleSpawner : MonoBehaviour
     public GameObject bodyguardPrefab;  // BodyGuard
     public GameObject barbedWirePrefab; // BarbedWire
     public GameObject wallPrefab;       // Wall
+    public GameObject longWallPrefab;   // LongWall
     public GameObject fishPrefab;       // Fish
 
     [Header("Spawn Positions")]
@@ -19,6 +20,8 @@ public class ObstacleSpawner : MonoBehaviour
     public float barbedWireSpawnY = -3.66f;
     public float wallSpawnX = 12f;
     public float wallSpawnY = -2.0f; 
+    public float longWallSpawnX = 12f;
+    public float longWallSpawnY = -2.0f;
     public float wallScaleY1 = 1.5f;
     public float wallScaleY2 = 2.5f;
     public float fishSpawnX = 12f;
@@ -42,7 +45,8 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level3Settings {
         [Range(0f, 1f)] public float bagChance = 0.3f;
         [Range(0f, 1f)] public float bodyguardChance = 0.3f;
-        [Range(0f, 1f)] public float wallChance = 0.3f;
+        [Range(0f, 1f)] public float wallChance = 0.2f;
+        [Range(0f, 1f)] public float longWallChance = 0.1f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
     }
     [System.Serializable]
@@ -79,7 +83,7 @@ public class ObstacleSpawner : MonoBehaviour
             int currentLevel = 1;
             if (LevelManager.Instance != null) currentLevel = LevelManager.Instance.currentLevel;
 
-            float bag = 0, bodyguard = 0, wall = 0, barbed = 0, fish = 0;
+            float bag = 0, bodyguard = 0, wall = 0, longWall = 0, barbed = 0, fish = 0;
 
             switch (currentLevel)
             {
@@ -96,6 +100,7 @@ public class ObstacleSpawner : MonoBehaviour
                     bag = level3.bagChance;
                     bodyguard = level3.bodyguardChance;
                     wall = level3.wallChance;
+                    longWall = level3.longWallChance;
                     fish = level3.fishChance;
                     break;
                 case 4:
@@ -108,7 +113,7 @@ public class ObstacleSpawner : MonoBehaviour
                     break;
             }
 
-            float totalChance = bag + bodyguard + wall + barbed + fish;
+            float totalChance = bag + bodyguard + wall + longWall + barbed + fish;
             float rnd = Random.Range(0f, totalChance);
             float currentLimit = 0f;
 
@@ -139,6 +144,21 @@ public class ObstacleSpawner : MonoBehaviour
                     float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
                     GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
                     w.transform.localScale = new Vector3(w.transform.localScale.x, randomScaleY, w.transform.localScale.z);
+                }
+                continue;
+            }
+
+            // Check LongWall
+            currentLimit += longWall;
+            if (rnd < currentLimit)
+            {
+                if (longWallPrefab != null)
+                {
+                    Instantiate(longWallPrefab, new Vector3(longWallSpawnX, longWallSpawnY, 0f), Quaternion.identity);
+                }
+                else
+                {
+                    Debug.LogWarning("LongWall chosen but longWallPrefab is NULL! Please assign it in the Inspector.");
                 }
                 continue;
             }

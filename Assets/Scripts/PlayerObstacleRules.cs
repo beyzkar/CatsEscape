@@ -287,7 +287,7 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(7f);
+        yield return new WaitForSeconds(10f);
 
         isInvincible = false;
         GameSpeed.Multiplier = 1f;
@@ -405,7 +405,11 @@ public class PlayerObstacleRules : MonoBehaviour
                 rb.bodyType = RigidbodyType2D.Kinematic;
             }
 
-            float nudgeAmount = other.CompareTag("Wall") ? 3.5f : 0.7f;
+            float nudgeAmount = 0.7f;
+            if (other.CompareTag("Wall"))
+            {
+                nudgeAmount = (other.gameObject.name.Contains("LongWall")) ? 4.5f : 3.5f;
+            }
             transform.position += Vector3.left * nudgeAmount;
 
             if (bgVideo != null) bgVideo.Pause();
