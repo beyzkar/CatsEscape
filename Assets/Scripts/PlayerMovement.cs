@@ -30,8 +30,8 @@ public class PlayerMovement : MonoBehaviour
     
     [Header("Movement Settings")]
     public float moveRightSpeed = 5f;
-    public float moveLeftSpeed = 7f; // Hızlı kaçış manevrası için
-    public float minX = -8.5f;
+    public float moveLeftSpeed = 5f; 
+    public float minX = -6f;
     public float maxX = 2f;
     [Header("Return Speed")]
     public float returnSpeed = 2f;
@@ -86,6 +86,13 @@ public class PlayerMovement : MonoBehaviour
         if (rules != null && rules.IsDead) 
         {
             targetVelocityX = 0f;
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+                // Restored to Dynamic to prevent dragging by moving obstacles
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            }
             return;
         }
 
@@ -127,16 +134,11 @@ public class PlayerMovement : MonoBehaviour
             horizontalInput = 1f;
         }
 
-        // --- CAMERA SHIFT LOGIC ---
-        if (mainCam != null)
-        {
-            // If moving left, shift camera target left
-            targetCameraShift = (horizontalInput < 0) ? -maxCameraShift : 0f;
-            currentCameraShift = Mathf.Lerp(currentCameraShift, targetCameraShift, Time.deltaTime * cameraShiftSpeed);
-            mainCam.transform.position = new Vector3(initialCamPos.x + currentCameraShift, initialCamPos.y, initialCamPos.z);
-        }
+        // --- POSITION CLAMPING (Hard Boundary) ---
+        float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
+        transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
 
-        // --- FLIP LOGIC ---
+        // --- CAMERA SHIFT LOGIC ---
         if (horizontalInput > 0) FaceDirection(true);
         else if (horizontalInput < 0) FaceDirection(false);
 
@@ -155,6 +157,12 @@ public class PlayerMovement : MonoBehaviour
 
         // Apply horizontal velocity while preserving vertical velocity from gravity/jumps
         float finalVelocityX = targetVelocityX;
+
+        // If stuck, don't allow horizontal movement unless specifically escaping (handled by unstick logic)
+        if (rules != null && rules.IsStuck)
+        {
+            finalVelocityX = 0f;
+        }
 
         // RETURN TO HOME logic (if not dead/stuck and not pressing Left)
         if (introFinished && (rules == null || (!rules.IsDead && !rules.IsStuck)))

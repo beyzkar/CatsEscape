@@ -48,6 +48,8 @@ public class PlayerObstacleRules : MonoBehaviour
     [Header("Hit Recovery")]
     public float hitRecoveryDuration = 0.8f;
     private float hitRecoveryTimer = 0f;
+    private float damageCooldown = 0f;
+    private const float DAMAGE_COOLDOWN_TIME = 0.5f;
 
     void Awake()
     {
@@ -89,28 +91,73 @@ public class PlayerObstacleRules : MonoBehaviour
         if (hitRecoveryTimer > 0)
             hitRecoveryTimer -= Time.deltaTime;
 
+        if (damageCooldown > 0)
+            damageCooldown -= Time.deltaTime;
 
-        if (stuck && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKey(KeyCode.LeftArrow)))
+
+        if (stuck)
         {
-            stuck = false;
-            if (animator != null) animator.speed = 1f;
-            GameSpeed.Multiplier = 1f;
-            jumpGraceTimer = JUMP_GRACE_TIME;
+            bool jumpInput = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow);
+            bool moveInput = Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow);
 
-            if (rb != null)
+            if (jumpInput || moveInput)
             {
-                rb.bodyType = RigidbodyType2D.Dynamic;
-                rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-            }
+                stuck = false;
+                if (animator != null) animator.speed = 1f;
+                GameSpeed.Multiplier = 1f;
+                jumpGraceTimer = JUMP_GRACE_TIME;
 
-            if (movementScript != null)
-            {
-                movementScript.ResetJumps();
-                movementScript.TryJump();
-            }
+                if (rb != null)
+                {
+                    rb.bodyType = RigidbodyType2D.Dynamic;
+                    // Restore rotation freeze but allow position movement
+                    rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+                }
 
-            if (bgVideo != null) bgVideo.Play();
+                if (movementScript != null)
+                {
+                    movementScript.ResetJumps();
+                    // Only jump if the input was a jump key
+                    if (jumpInput) movementScript.TryJump();
+                }
+
+                if (bgVideo != null) bgVideo.Play();
+            }
         }
+
+        // --- BOUNDARY FREEZE CHECK ---
+        if (!dead && !stuck && movementScript != null)
+        {
+            // If we are at the left boundary and trying to move left
+            if (transform.position.x <= movementScript.minX + 0.05f && Input.GetKey(KeyCode.LeftArrow))
+            {
+                EnterStuckState(null); // No specific obstacle
+            }
+        }
+    }
+
+    private void EnterStuckState(GameObject hitSource)
+    {
+        if (dead) return;
+        
+        stuck = true;
+        if (hitSource != null) lastHitWall = hitSource;
+
+        if (animator != null) animator.speed = 0f;
+        GameSpeed.Multiplier = 0f;
+
+        if (movementScript != null) movementScript.ResetJumps();
+
+        if (rb != null)
+        {
+            // Only stop horizontal progress
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            // Removed FreezeAll to allow smooth falling
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        }
+
+        if (bgVideo != null) bgVideo.Pause();
     }
 
     private void OnCollisionEnter2D(Collision2D col)
@@ -124,15 +171,14 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             if (isInvincible) return;
 
-            if (col.gameObject != lastHitWall && !stuck)
+            if (col.gameObject != lastHitWall && damageCooldown <= 0)
             {
                 lastHitWall = col.gameObject;
                 LoseHeart();
+                damageCooldown = DAMAGE_COOLDOWN_TIME;
                 
                 if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-                // Removed flashing effect for Bodyguard per user request
-                // Recovery flashing is now only for BarbedWire or generic recovery if added elsewhere
                 if (isBarbedWire)
                 {
                     hitRecoveryTimer = hitRecoveryDuration;
@@ -142,21 +188,11 @@ public class PlayerObstacleRules : MonoBehaviour
                 ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
                 if (moveScript != null) moveScript.canRewardCleanJump = false;
 
-                if (!dead)
+                // Only freeze the world if it's a side hit
+                Vector2 normal = col.GetContact(0).normal;
+                if (Mathf.Abs(normal.x) > 0.4f)
                 {
-                    stuck = true;
-                    if (animator != null) animator.speed = 0f;
-                    GameSpeed.Multiplier = 0f;
-
-                    if (movementScript != null) movementScript.ResetJumps();
-
-                    if (rb != null)
-                    {
-                        rb.linearVelocity = Vector2.zero;
-                        rb.bodyType = RigidbodyType2D.Kinematic;
-                    }
-
-                    if (bgVideo != null) bgVideo.Pause();
+                    EnterStuckState(col.gameObject);
                 }
             }
             return;
@@ -182,10 +218,7 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
-                
-                // Increment level progress when crushing obstacles
                 if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
-                
                 Destroy(col.gameObject);
             }
             return;
@@ -209,20 +242,8 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (isWall || col.collider.CompareTag("Obstacle"))
             {
-                lastHitWall = col.gameObject;
-                stuck = true;
-                if (animator != null) animator.speed = 0f;
-                GameSpeed.Multiplier = 0f;
-
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-                if (movementScript != null) movementScript.ResetJumps();
-
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector2.zero;
-                }
-
-                if (bgVideo != null) bgVideo.Pause();
+                EnterStuckState(col.gameObject);
             }
         }
     }
@@ -250,7 +271,6 @@ public class PlayerObstacleRules : MonoBehaviour
         if (powerUpCoroutine != null) StopCoroutine(powerUpCoroutine);
         powerUpCoroutine = StartCoroutine(PowerUpSequence());
 
-        // Expansion logic: If at max capacity but capacity is less than 5, increase capacity
         if (currentHearts >= maxHearts && maxHearts < MAX_ALLOWED_HEARTS)
         {
             maxHearts++;
@@ -258,11 +278,9 @@ public class PlayerObstacleRules : MonoBehaviour
         }
         else if (currentHearts < maxHearts)
         {
-            // Simple heal logic: If taken damage, just heal
             currentHearts++;
         }
 
-        // Update UI
         if (heartUI != null)
         {
             for (int i = 0; i < heartUI.Length; i++)
@@ -307,7 +325,7 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (allRenderers[i] != null && i < originalMaterials.Length)
                 {
                     allRenderers[i].material = originalMaterials[i];
-                    allRenderers[i].sortingOrder = 0;
+                    allRenderers[i].sortingOrder = 50; // Restore to our fixed high sorting order
                 }
             }
         }
@@ -347,14 +365,14 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             if (isInvincible) return;
 
-            if (other.gameObject != lastHitWall && !stuck)
+            if (other.gameObject != lastHitWall && damageCooldown <= 0)
             {
                 lastHitWall = other.gameObject;
                 LoseHeart();
+                damageCooldown = DAMAGE_COOLDOWN_TIME;
                 
                 if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-                // Removed flashing effect for Bodyguard per user request
                 if (isBarbedWire)
                 {
                     hitRecoveryTimer = hitRecoveryDuration;
@@ -364,25 +382,13 @@ public class PlayerObstacleRules : MonoBehaviour
                 ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
                 if (moveScript != null) moveScript.canRewardCleanJump = false;
 
-                if (!dead)
+                // Only freeze if we are not significantly above the obstacle
+                if (transform.position.y < other.bounds.center.y + 0.5f)
                 {
-                    stuck = true;
-                    if (animator != null) animator.speed = 0f;
-                    GameSpeed.Multiplier = 0f;
-
-                    if (movementScript != null) movementScript.ResetJumps();
-
-                    if (rb != null)
-                    {
-                        rb.linearVelocity = Vector2.zero;
-                        rb.bodyType = RigidbodyType2D.Kinematic;
-                    }
-
-                    if (bgVideo != null) bgVideo.Pause();
+                    EnterStuckState(other.gameObject);
                 }
             }
         }
-
         bool isWall = other.CompareTag("Wall") || other.CompareTag("LongWall");
         if (isWall && !stuck)
         {
@@ -393,25 +399,20 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
             }
 
-            lastHitWall = other.gameObject;
-            stuck = true;
-            if (animator != null) animator.speed = 0f;
-            GameSpeed.Multiplier = 0f;
-
-            if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
-
-            ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
-            if (moveScript != null) moveScript.canRewardCleanJump = false;
-
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-            if (movementScript != null) movementScript.ResetJumps();
-
-            if (rb != null)
+            // Damage on any hit
+            if (damageCooldown <= 0)
             {
-                rb.linearVelocity = Vector2.zero;
+                LoseHeart();
+                damageCooldown = DAMAGE_COOLDOWN_TIME;
             }
 
-            if (bgVideo != null) bgVideo.Pause();
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+
+            // Only freeze if we are not significantly above the obstacle
+            if (transform.position.y < other.bounds.center.y + 0.5f)
+            {
+                EnterStuckState(other.gameObject);
+            }
         }
 
         if (other.CompareTag("Fish"))
@@ -425,17 +426,10 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
         
-        // Re-check wall collision during stay if we missed the enter event while moving left
-        if (other.CompareTag("Wall") || other.CompareTag("LongWall"))
+        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bodyguard");
+        if (isBlockingObstacle && (other.gameObject != lastHitWall || !stuck))
         {
-            if (other.gameObject != lastHitWall)
-            {
-                lastHitWall = other.gameObject;
-                stuck = true;
-                if (animator != null) animator.speed = 0f;
-                GameSpeed.Multiplier = 0f;
-                if (bgVideo != null) bgVideo.Pause();
-            }
+            EnterStuckState(other.gameObject);
         }
     }
 
@@ -443,15 +437,10 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
 
-        if (col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall"))
+        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Bodyguard");
+        if (isBlockingObstacle)
         {
-            // If we are touching a wall but not 'stuck', force stuck state
-            // This prevents sliding through walls when moving left
-            lastHitWall = col.gameObject;
-            stuck = true;
-            if (animator != null) animator.speed = 0f;
-            GameSpeed.Multiplier = 0f;
-            if (bgVideo != null) bgVideo.Pause();
+            EnterStuckState(col.gameObject);
         }
     }
 
