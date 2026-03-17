@@ -28,8 +28,7 @@ public class ObstacleThemeSetter : MonoBehaviour
             if (theme.obstacleSprite != null)
                 sr.sprite = theme.obstacleSprite;
             
-            // Wall uses dynamic scale from ObstacleSpawner often, 
-            // but for generic obstacles we apply the theme scale.
+            // Apply scale from theme (User manages this in Unity Inspector)
             transform.localScale = theme.obstacleScale;
         }
         else if (gameObject.CompareTag("Wall") || assetType == AssetType.Wall)

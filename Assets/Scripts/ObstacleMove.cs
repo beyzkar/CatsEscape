@@ -8,17 +8,23 @@ public class ObstacleMove : MonoBehaviour
 
     private bool passedPlayer = false;
     private Transform player;
+    private PlayerMovement playerMove;
 
     void Start()
     {
         GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p != null) player = p.transform;
+        if (p != null)
+        {
+            player = p.transform;
+            playerMove = p.GetComponent<PlayerMovement>();
+        }
     }
 
     void Update()
     {
         // SADECE X ekseninde hareket
-        transform.position += Vector3.left * speed * GameSpeed.Multiplier * Time.deltaTime;
+        int dir = (playerMove != null) ? playerMove.WorldDirection : 1;
+        transform.position += Vector3.left * speed * GameSpeed.Multiplier * dir * Time.deltaTime;
 
         // Check if passed player's X position for "clean jump" reward
         if (!passedPlayer && player != null && transform.position.x < player.position.x)

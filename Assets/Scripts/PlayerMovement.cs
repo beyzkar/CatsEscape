@@ -26,15 +26,39 @@ public class PlayerMovement : MonoBehaviour
     private int jumpsLeft;
     private bool isGrounded;
     public bool IsGrounded => isGrounded; // Diğer scriptlerin (LevelManager) kedinin yere basıp basmadığını görmesi için
+    public int WorldDirection { get; private set; } = 1;
     
+    [Header("Movement Settings")]
+    public float moveRightSpeed = 5f;
+    public float moveLeftSpeed = 7f; // Hızlı kaçış manevrası için
+    public float minX = -8.5f;
+    public float maxX = 2f;
+    [Header("Return Speed")]
+    public float returnSpeed = 2f;
+
+    private PlayerObstacleRules rules;
+
     [Header("Intro Walk")]
     public float introSpeed = 3f;
-    public float stopX = -4f; // Example middle position
+    public float stopX = -4f;
     private bool introFinished = false;
+
+    [Header("Camera Control")]
+    public float maxCameraShift = 2f;
+    public float cameraShiftSpeed = 5f;
+    private Camera mainCam;
+    private float targetCameraShift = 0f;
+    private float currentCameraShift = 0f;
+    private Vector3 initialCamPos;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        
+        rules = GetComponent<PlayerObstacleRules>();
+        mainCam = Camera.main;
+        if (mainCam != null) initialCamPos = mainCam.transform.position;
 
         // Force orientation: Face Right (if cat walks Left) or Face Left (if cat walks Right)
         // Adjust this if your cat is backwards
@@ -49,6 +73,8 @@ public class PlayerMovement : MonoBehaviour
         // transform.position = new Vector3(-12f, transform.position.y, 0f);
     }
 
+    private float targetVelocityX = 0f;
+
     void Update()
     {
         if (!introFinished)
@@ -56,6 +82,12 @@ public class PlayerMovement : MonoBehaviour
             DoIntroWalk();
             return;
         } 
+
+        if (rules != null && rules.IsDead) 
+        {
+            targetVelocityX = 0f;
+            return;
+        }
 
         // yere değiyor mu kontrol
         bool groundedNow = Physics2D.OverlapCircle(
@@ -72,6 +104,42 @@ public class PlayerMovement : MonoBehaviour
 
         isGrounded = groundedNow;
 
+        // --- HORIZONTAL MOVEMENT INPUT ---
+        float horizontalInput = 0f;
+        targetVelocityX = 0f;
+
+        // Move Left (Always available if not dead)
+        if (Input.GetKey(KeyCode.LeftArrow))
+        {
+            targetVelocityX = -moveLeftSpeed;
+            horizontalInput = -1f;
+            WorldDirection = -1;
+        }
+        else
+        {
+            WorldDirection = 1;
+        }
+
+        // Move Right (Movement is allowed, but World remains stopped by GameSpeed.Multiplier)
+        if (Input.GetKey(KeyCode.RightArrow))
+        {
+            targetVelocityX = moveRightSpeed;
+            horizontalInput = 1f;
+        }
+
+        // --- CAMERA SHIFT LOGIC ---
+        if (mainCam != null)
+        {
+            // If moving left, shift camera target left
+            targetCameraShift = (horizontalInput < 0) ? -maxCameraShift : 0f;
+            currentCameraShift = Mathf.Lerp(currentCameraShift, targetCameraShift, Time.deltaTime * cameraShiftSpeed);
+            mainCam.transform.position = new Vector3(initialCamPos.x + currentCameraShift, initialCamPos.y, initialCamPos.z);
+        }
+
+        // --- FLIP LOGIC ---
+        if (horizontalInput > 0) FaceDirection(true);
+        else if (horizontalInput < 0) FaceDirection(false);
+
         // zıplama tuşları
         if (Input.GetKeyDown(KeyCode.Space) ||
             Input.GetKeyDown(KeyCode.UpArrow) ||
@@ -79,6 +147,42 @@ public class PlayerMovement : MonoBehaviour
         {
             TryJump();
         }
+    }
+
+    void FixedUpdate()
+    {
+        if (!introFinished || (rules != null && rules.IsDead)) return;
+
+        // Apply horizontal velocity while preserving vertical velocity from gravity/jumps
+        float finalVelocityX = targetVelocityX;
+
+        // RETURN TO HOME logic (if not dead/stuck and not pressing Left)
+        if (introFinished && (rules == null || (!rules.IsDead && !rules.IsStuck)))
+        {
+            // If we are to the left of our home (stopX) and not actively moving further left
+            if (transform.position.x < stopX && targetVelocityX >= 0)
+            {
+                // Add return speed to the right
+                finalVelocityX += returnSpeed;
+            }
+        }
+
+        rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
+
+        // Clamping position is better done by forcing velocity to 0 at boundaries
+        // but for now, we'll let Physics handle colliders. 
+        // If we really need a hard clamp, we should check if we're past maxX/minX and set velocity to 0.
+        if (transform.position.x > maxX && rb.linearVelocity.x > 0)
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+        if (transform.position.x < minX && rb.linearVelocity.x < 0)
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+    }
+
+    void FaceDirection(bool faceRight)
+    {
+        // 0 degrees for right, 180 degrees for left
+        float yRotation = faceRight ? 0f : 180f;
+        transform.localRotation = Quaternion.Euler(0, yRotation, 0);
     }
 
     void DoIntroWalk()

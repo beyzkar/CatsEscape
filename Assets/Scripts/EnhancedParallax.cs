@@ -50,9 +50,12 @@ public class EnhancedParallax : MonoBehaviour
         InitializeLayers();
     }
 
+    private PlayerMovement player;
+
     void Start()
     {
         InitializeLayers();
+        player = FindFirstObjectByType<PlayerMovement>();
     }
 
     [ContextMenu("Initialize Layers")]
@@ -78,7 +81,8 @@ public class EnhancedParallax : MonoBehaviour
     {
         if (GameSpeed.Multiplier <= 0) return;
 
-        float movement = baseSpeed * GameSpeed.Multiplier * Time.deltaTime;
+        int dir = (player != null) ? player.WorldDirection : 1;
+        float movement = baseSpeed * GameSpeed.Multiplier * dir * Time.deltaTime;
 
         for (int i = 0; i < layers.Length; i++)
         {
@@ -95,9 +99,14 @@ public class EnhancedParallax : MonoBehaviour
             Vector3 pos = layers[i].layerParent.localPosition;
             pos.x -= movement * layers[i].speed;
 
-            if (pos.x <= -layers[i].width)
+            // Loop logic needs to handle both directions
+            if (dir > 0)
             {
-                pos.x += layers[i].width;
+                if (pos.x <= -layers[i].width) pos.x += layers[i].width;
+            }
+            else
+            {
+                if (pos.x >= 0) pos.x -= layers[i].width;
             }
 
             layers[i].layerParent.localPosition = pos;

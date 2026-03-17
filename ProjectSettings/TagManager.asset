@@ -10,6 +10,7 @@ TagManager:
   - Wall
   - CatFood
   - Fish
+  - LongWall
   layers:
   - Default
   - TransparentFX

@@ -10,11 +10,11 @@ GameObject:
   m_Component:
   - component: {fileID: 5348105315111347498}
   - component: {fileID: 5408815001121508997}
-  - component: {fileID: 600000001} # ObstacleMove
-  - component: {fileID: 600000002} # BoxCollider2D
+  - component: {fileID: 600000001}
+  - component: {fileID: 600000002}
   m_Layer: 0
   m_Name: LongWall
-  m_TagString: Wall
+  m_TagString: LongWall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
