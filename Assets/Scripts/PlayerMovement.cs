@@ -32,7 +32,7 @@ public class PlayerMovement : MonoBehaviour
     public float moveRightSpeed = 5f;
     public float moveLeftSpeed = 5f; 
     public float minX = -6f;
-    public float maxX = 2f;
+    public float maxX = 5f;
     [Header("Return Speed")]
     public float returnSpeed = 2f;
 
@@ -43,13 +43,6 @@ public class PlayerMovement : MonoBehaviour
     public float stopX = -4f;
     private bool introFinished = false;
 
-    [Header("Camera Control")]
-    public float maxCameraShift = 2f;
-    public float cameraShiftSpeed = 5f;
-    private Camera mainCam;
-    private float targetCameraShift = 0f;
-    private float currentCameraShift = 0f;
-    private Vector3 initialCamPos;
 
     void Awake()
     {
@@ -57,8 +50,6 @@ public class PlayerMovement : MonoBehaviour
         if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         
         rules = GetComponent<PlayerObstacleRules>();
-        mainCam = Camera.main;
-        if (mainCam != null) initialCamPos = mainCam.transform.position;
 
         // Force orientation: Face Right (if cat walks Left) or Face Left (if cat walks Right)
         // Adjust this if your cat is backwards
@@ -197,7 +188,7 @@ public class PlayerMovement : MonoBehaviour
     {
         // Move cat towards the stopping point
         float step = introSpeed * Time.deltaTime;
-        transform.position = Vector3.MoveTowards(transform.position, new Vector3(stopX, transform.position.y, 0), step);
+        transform.position = Vector3.MoveTowards(transform.position, new Vector3(stopX, transform.position.y, transform.position.z), step);
 
         // Check if reached
         if (Mathf.Abs(transform.position.x - stopX) < 0.01f)

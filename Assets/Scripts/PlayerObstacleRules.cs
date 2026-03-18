@@ -33,13 +33,14 @@ public class PlayerObstacleRules : MonoBehaviour
     private Renderer[] allRenderers;
 
     [Header("Power-up Settings")]
-    public Material playerGlowMaterial;
-    private Material[] originalMaterials;
     private bool isInvincible = false;
     private Coroutine powerUpCoroutine;
 
     private float jumpGraceTimer = 0f;
     private const float JUMP_GRACE_TIME = 0.5f; 
+    
+    [Header("Effects")]
+    public ParticleSystem sparkleEffect;
 
     private float startX;
     [Header("Return Speed")]
@@ -54,17 +55,22 @@ public class PlayerObstacleRules : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Start()
+    {
         movementScript = GetComponent<PlayerMovement>();
         animator = GetComponentInChildren<Animator>();
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
         startX = transform.position.x;
+        
+        // Nudge Z closer to camera to stay in front of 2D sprites (at Z=0)
+        transform.position = new Vector3(transform.position.x, transform.position.y, -5f);
+        
+        UpdateSortingOrder(100);
+        if (sparkleEffect != null) sparkleEffect.gameObject.SetActive(false);
 
-        // Set constant high sorting order to stay in front of obstacles
-        allRenderers = GetComponentsInChildren<Renderer>();
-        if (allRenderers != null)
-        {
-            foreach (var r in allRenderers) if (r != null) r.sortingOrder = 50;
-        }
+        // Initialize hearts
 
         if (heartUI != null && heartUI.Length > 0)
         {
@@ -141,7 +147,15 @@ public class PlayerObstacleRules : MonoBehaviour
         if (dead) return;
         
         stuck = true;
-        if (hitSource != null) lastHitWall = hitSource;
+        if (hitSource != null) 
+        {
+            lastHitWall = hitSource;
+            
+            // Nudge player slightly away from the obstacle to prevent clipping
+            // Assuming obstacles come from the right (positive X relative to player)
+            float nudgeX = -0.3f; 
+            transform.position = new Vector3(transform.position.x + nudgeX, transform.position.y, transform.position.z);
+        }
 
         if (animator != null) animator.speed = 0f;
         GameSpeed.Multiplier = 0f;
@@ -153,7 +167,6 @@ public class PlayerObstacleRules : MonoBehaviour
             // Only stop horizontal progress
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
             rb.bodyType = RigidbodyType2D.Dynamic;
-            // Removed FreezeAll to allow smooth falling
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         }
 
@@ -164,14 +177,16 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        bool isBodyguard = col.collider.CompareTag("Bodyguard") || col.transform.root.CompareTag("Bodyguard");
+        bool isBodyguard = IsBodyguard(col.gameObject);
         bool isBarbedWire = col.collider.CompareTag("BarbedWire") || col.transform.root.CompareTag("BarbedWire");
 
         if (isBodyguard || isBarbedWire)
         {
             if (isInvincible) return;
 
-            if (col.gameObject != lastHitWall && damageCooldown <= 0)
+            // Removed `col.gameObject != lastHitWall` to ensure damage triggers even if lastHitWall wasn't cleared.
+            // damageCooldown already prevents multiple hearts lost in a single collision frame.
+            if (damageCooldown <= 0)
             {
                 lastHitWall = col.gameObject;
                 LoseHeart();
@@ -182,7 +197,6 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (isBarbedWire)
                 {
                     hitRecoveryTimer = hitRecoveryDuration;
-                    StartCoroutine(FlashRecoveryEffect());
                 }
 
                 ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
@@ -214,12 +228,16 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (hitTop)
         {
-            if (col.collider.CompareTag("Obstacle"))
+            if (col.collider.CompareTag("Obstacle") || col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall"))
             {
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
-                if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
+                if (col.collider.CompareTag("Obstacle")) 
+                {
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
+                    if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
+                    Destroy(col.gameObject);
+                }
+                
                 if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
-                Destroy(col.gameObject);
             }
             return;
         }
@@ -261,6 +279,8 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlayHeartLost();
 
+        StartCoroutine(FlashRecoveryEffect());
+
         if (currentHearts < 0) Die();
     }
 
@@ -268,7 +288,10 @@ public class PlayerObstacleRules : MonoBehaviour
     public void CollectFish()
     {
         if (dead) return;
-        if (powerUpCoroutine != null) StopCoroutine(powerUpCoroutine);
+        if (powerUpCoroutine != null) 
+        {
+            StopCoroutine(powerUpCoroutine);
+        }
         powerUpCoroutine = StartCoroutine(PowerUpSequence());
 
         if (currentHearts >= maxHearts && maxHearts < MAX_ALLOWED_HEARTS)
@@ -300,34 +323,27 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         isInvincible = true;
         GameSpeed.Multiplier = 1.5f;
-        allRenderers = GetComponentsInChildren<Renderer>();
-        if (allRenderers != null && allRenderers.Length > 0 && playerGlowMaterial != null)
+        UpdateSortingOrder(100);
+        
+        if (sparkleEffect != null) 
         {
-            originalMaterials = new Material[allRenderers.Length];
-            for (int i = 0; i < allRenderers.Length; i++)
-            {
-                originalMaterials[i] = allRenderers[i].sharedMaterial;
-                allRenderers[i].sortingOrder = 100;
-                Material glowInstance = new Material(playerGlowMaterial);
-                if (originalMaterials[i].HasProperty("_MainTex")) glowInstance.mainTexture = originalMaterials[i].mainTexture;
-                allRenderers[i].material = glowInstance;
-            }
+            sparkleEffect.gameObject.SetActive(true);
+            sparkleEffect.Play();
         }
-
+        
         yield return new WaitForSeconds(10f);
+
+        if (sparkleEffect != null) 
+        {
+            sparkleEffect.Stop();
+            sparkleEffect.gameObject.SetActive(false);
+        }
 
         isInvincible = false;
         GameSpeed.Multiplier = 1f;
-        if (allRenderers != null && originalMaterials != null)
+        if (allRenderers != null)
         {
-            for (int i = 0; i < allRenderers.Length; i++)
-            {
-                if (allRenderers[i] != null && i < originalMaterials.Length)
-                {
-                    allRenderers[i].material = originalMaterials[i];
-                    allRenderers[i].sortingOrder = 50; // Restore to our fixed high sorting order
-                }
-            }
+            UpdateSortingOrder(100);
         }
         powerUpCoroutine = null;
     }
@@ -358,14 +374,14 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        bool isBodyguard = other.CompareTag("Bodyguard") || other.transform.root.CompareTag("Bodyguard");
+        bool isBodyguard = IsBodyguard(other.gameObject);
         bool isBarbedWire = other.CompareTag("BarbedWire") || other.transform.root.CompareTag("BarbedWire");
 
         if (isBodyguard || isBarbedWire)
         {
             if (isInvincible) return;
 
-            if (other.gameObject != lastHitWall && damageCooldown <= 0)
+            if (damageCooldown <= 0)
             {
                 lastHitWall = other.gameObject;
                 LoseHeart();
@@ -376,7 +392,6 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (isBarbedWire)
                 {
                     hitRecoveryTimer = hitRecoveryDuration;
-                    StartCoroutine(FlashRecoveryEffect());
                 }
 
                 ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
@@ -399,14 +414,17 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
             }
 
-            // Damage on any hit
-            if (damageCooldown <= 0)
+            // Damage on any hit (except LongWall)
+            if (damageCooldown <= 0 && !other.CompareTag("LongWall"))
             {
                 LoseHeart();
                 damageCooldown = DAMAGE_COOLDOWN_TIME;
             }
 
             if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+            
+            // Pass reporting for triggers (especially LongWall)
+            if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
 
             // Only freeze if we are not significantly above the obstacle
             if (transform.position.y < other.bounds.center.y + 0.5f)
@@ -444,22 +462,65 @@ public class PlayerObstacleRules : MonoBehaviour
         }
     }
 
+    public void UpdateSortingOrder(int order)
+    {
+        allRenderers = GetComponentsInChildren<Renderer>(true);
+        if (allRenderers != null)
+        {
+            foreach (var r in allRenderers) 
+            {
+                if (r != null) 
+                {
+                    // Don't override the sparkle effect's custom sorting
+                    if (sparkleEffect != null && r == sparkleEffect.GetComponent<Renderer>()) continue;
+                    
+                    r.sortingLayerName = "Default";
+                    r.sortingOrder = order;
+                }
+            }
+        }
+    }
+
+    private bool IsBodyguard(GameObject obj)
+    {
+        if (obj == null) return false;
+        if (obj.CompareTag("Bodyguard")) return true;
+        if (obj.transform.root != null && obj.transform.root.CompareTag("Bodyguard")) return true;
+        return false;
+    }
+
     private IEnumerator FlashRecoveryEffect()
     {
         float elapsed = 0f;
-        allRenderers = GetComponentsInChildren<Renderer>();
+        // Only get renderers that are CURRENTLY enabled to avoid white square glitches
+        var targetRenderers = new System.Collections.Generic.List<Renderer>();
+        Renderer[] all = GetComponentsInChildren<Renderer>(true);
+        if (all != null)
+        {
+            foreach (var r in all)
+            {
+                // Only blink things that are part of the cat but NOT hidden helper objects
+                // and were enabled when the hit happened.
+                if (r != null && r.enabled && !r.gameObject.name.Contains("Square") && !r.gameObject.name.Contains("Indicator"))
+                {
+                    targetRenderers.Add(r);
+                }
+            }
+        }
+
         while (elapsed < hitRecoveryDuration)
         {
-            if (allRenderers != null)
+            foreach (var r in targetRenderers) 
             {
-                foreach (var r in allRenderers) if (r != null) r.enabled = !r.enabled;
+                if (r != null) r.enabled = !r.enabled;
             }
             yield return new WaitForSeconds(0.08f);
             elapsed += 0.08f;
         }
-        if (allRenderers != null)
+
+        foreach (var r in targetRenderers) 
         {
-            foreach (var r in allRenderers) if (r != null) r.enabled = true;
+            if (r != null) r.enabled = true;
         }
     }
 }

@@ -46,7 +46,7 @@ public class ObstacleMove : MonoBehaviour
             }
         }
 
-        if (transform.position.x < destroyX)
+        if (transform.position.x < destroyX && GameSpeed.Multiplier > 0)
             Destroy(gameObject);
     }
 }
