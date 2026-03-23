@@ -19,6 +19,12 @@ public class GameOverManager : MonoBehaviour
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
         
+        // Leaderboard check
+        if (LeaderboardManager.Instance != null && ScoreManager.Instance != null)
+        {
+            LeaderboardManager.Instance.CheckForHighScore(ScoreManager.Instance.GetTotalXP());
+        }
+
         Time.timeScale = 0f;
     }
 

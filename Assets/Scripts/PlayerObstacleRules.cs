@@ -139,7 +139,7 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 EnterStuckState(null); // No specific obstacle
             }
-        }
+        } 
     }
 
     private void EnterStuckState(GameObject hitSource)

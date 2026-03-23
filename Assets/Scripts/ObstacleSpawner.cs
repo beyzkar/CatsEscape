@@ -33,39 +33,28 @@ public class ObstacleSpawner : MonoBehaviour
     [System.Serializable]
     public class Level1Settings {
         [Range(0f, 1f)] public float bagChance = 0.8f;
-        public float bagY = -2.3f;
         [Range(0f, 1f)] public float fishChance = 0.2f;
     }
     [System.Serializable]
     public class Level2Settings {
         [Range(0f, 1f)] public float bagChance = 0.4f;
-        public float bagY = -2.3f;
         [Range(0f, 1f)] public float bodyguardChance = 0.4f;
-        public float bodyguardY = -2.0f;
         [Range(0f, 1f)] public float fishChance = 0.2f;
     }
     [System.Serializable]
     public class Level3Settings {
         [Range(0f, 1f)] public float bagChance = 0.3f;
-        public float bagY = -2.3f;
         [Range(0f, 1f)] public float bodyguardChance = 0.3f;
-        public float bodyguardY = -2.0f;
         [Range(0f, 1f)] public float wallChance = 0.2f;
-        public float wallY = -2.0f;
         [Range(0f, 1f)] public float longWallChance = 0.1f;
-        public float longWallY = -2.0f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
     }
     [System.Serializable]
     public class Level4Settings {
         [Range(0f, 1f)] public float bagChance = 0.25f;
-        public float bagY = -2.3f;
         [Range(0f, 1f)] public float bodyguardChance = 0.25f;
-        public float bodyguardY = -2.0f;
         [Range(0f, 1f)] public float wallChance = 0.25f;
-        public float wallY = -2.0f;
         [Range(0f, 1f)] public float barbedWireChance = 0.15f;
-        public float barbedWireY = -3.66f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
     }
 
@@ -95,47 +84,31 @@ public class ObstacleSpawner : MonoBehaviour
             if (LevelManager.Instance != null) currentLevel = LevelManager.Instance.currentLevel;
 
             float bag = 0, bodyguard = 0, wall = 0, longWall = 0, barbed = 0, fish = 0;
-            float currentBagY = bagSpawnY;
-            float currentBodyguardY = bodyguardSpawnY;
-            float currentWallY = wallSpawnY;
-            float currentLongWallY = longWallSpawnY;
-            float currentBarbedY = barbedWireSpawnY;
 
             switch (currentLevel)
             {
                 case 1:
                     bag = level1.bagChance;
-                    currentBagY = level1.bagY;
                     fish = level1.fishChance;
                     break;
                 case 2:
                     bag = level2.bagChance;
-                    currentBagY = level2.bagY;
                     bodyguard = level2.bodyguardChance;
-                    currentBodyguardY = level2.bodyguardY;
                     fish = level2.fishChance;
                     break;
                 case 3:
                     bag = level3.bagChance;
-                    currentBagY = level3.bagY;
                     bodyguard = level3.bodyguardChance;
-                    currentBodyguardY = level3.bodyguardY;
                     wall = level3.wallChance;
-                    currentWallY = level3.wallY;
                     longWall = level3.longWallChance;
-                    currentLongWallY = level3.longWallY;
                     fish = level3.fishChance;
                     break;
                 case 4:
                 default:
                     bag = level4.bagChance;
-                    currentBagY = level4.bagY;
                     bodyguard = level4.bodyguardChance;
-                    currentBodyguardY = level4.bodyguardY;
                     wall = level4.wallChance;
-                    currentWallY = level4.wallY;
                     barbed = level4.barbedWireChance;
-                    currentBarbedY = level4.barbedWireY;
                     fish = level4.fishChance;
                     break;
             }
@@ -149,7 +122,7 @@ public class ObstacleSpawner : MonoBehaviour
             if (rnd < currentLimit)
             {
                 if (obstaclePrefab != null)
-                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, currentBagY, 0f), Quaternion.identity);
+                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
                 continue;
             }
 
@@ -158,7 +131,7 @@ public class ObstacleSpawner : MonoBehaviour
             if (rnd < currentLimit)
             {
                 if (bodyguardPrefab != null)
-                    Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, currentBodyguardY, 0f), Quaternion.identity);
+                    Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
                 continue;
             }
 
@@ -169,7 +142,7 @@ public class ObstacleSpawner : MonoBehaviour
                 if (wallPrefab != null)
                 {
                     float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
-                    GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, currentWallY, 0f), Quaternion.identity);
+                    GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
                     w.transform.localScale = new Vector3(w.transform.localScale.x, randomScaleY, w.transform.localScale.z);
                 }
                 continue;
@@ -181,7 +154,7 @@ public class ObstacleSpawner : MonoBehaviour
             {
                 if (longWallPrefab != null)
                 {
-                    Instantiate(longWallPrefab, new Vector3(longWallSpawnX, currentLongWallY, 0f), Quaternion.identity);
+                    Instantiate(longWallPrefab, new Vector3(longWallSpawnX, longWallSpawnY, 0f), Quaternion.identity);
                 }
                 else
                 {
@@ -195,7 +168,7 @@ public class ObstacleSpawner : MonoBehaviour
             if (rnd < currentLimit)
             {
                 if (barbedWirePrefab != null)
-                    Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, currentBarbedY, 0f), Quaternion.identity);
+                    Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
                 continue;
             }
 

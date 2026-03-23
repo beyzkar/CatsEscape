@@ -125,10 +125,6 @@ public class PlayerMovement : MonoBehaviour
             horizontalInput = 1f;
         }
 
-        // --- POSITION CLAMPING (Hard Boundary) ---
-        float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
-        transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
-
         // --- CAMERA SHIFT LOGIC ---
         if (horizontalInput > 0) FaceDirection(true);
         else if (horizontalInput < 0) FaceDirection(false);

@@ -11,7 +11,7 @@ public class LevelManager : MonoBehaviour
     public int obstaclesPassed = 0;
     
     // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35)
-    private int[] levelGoals = { 0, 10, 15, 25, 35 };
+    private int[] levelGoals = { 0, 10, 15, 25, 5};
 
     [Header("UI Panels")]
     public GameObject victoryPanel;
@@ -148,8 +148,6 @@ public class LevelManager : MonoBehaviour
 
         if (victoryPanel != null)
         {
-            victoryPanel.SetActive(true);
-
             // Level bilgisini yazdır
             if (levelStatusText != null)
                 levelStatusText.text = "Level " + currentLevel + " Survived!";
@@ -162,6 +160,9 @@ public class LevelManager : MonoBehaviour
                 
                 // Play Level Win Sound
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayLevelWinSound();
+
+                // Show victory panel immediately for non-final levels
+                if (victoryPanel != null) victoryPanel.SetActive(true);
             }
             else
             {
@@ -171,6 +172,25 @@ public class LevelManager : MonoBehaviour
 
                 // Play Final Win Sound
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
+
+                // Game completely won: Sequence the panels
+                if (LeaderboardManager.Instance != null)
+                {
+                    // Set the VictoryPanel to show up AFTER the leaderboard is closed
+                    LeaderboardManager.Instance.nextPanelToOpen = victoryPanel; 
+                    
+                    // Check if player made it to top 5
+                    int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
+                    LeaderboardManager.Instance.CheckForHighScore(currentXP);
+
+                    // Important: We DON'T show the victory panel yet!
+                    // The Leaderboard will open first.
+                }
+                else
+                {
+                    // Fallback if leaderboard is missing
+                    if (victoryPanel != null) victoryPanel.SetActive(true);
+                }
             }
         }
     }
