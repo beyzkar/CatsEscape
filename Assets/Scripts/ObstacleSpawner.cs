@@ -10,6 +10,7 @@ public class ObstacleSpawner : MonoBehaviour
     public GameObject wallPrefab;       // Wall
     public GameObject longWallPrefab;   // LongWall
     public GameObject fishPrefab;       // Fish
+    public GameObject potionPrefab;     // Potion
 
     [Header("Spawn Positions")]
     public float bagSpawnX = 12f;
@@ -34,12 +35,14 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level1Settings {
         [Range(0f, 1f)] public float bagChance = 0.8f;
         [Range(0f, 1f)] public float fishChance = 0.2f;
+        [Range(0f, 1f)] public float potionChance = 0.1f;
     }
     [System.Serializable]
     public class Level2Settings {
         [Range(0f, 1f)] public float bagChance = 0.4f;
         [Range(0f, 1f)] public float bodyguardChance = 0.4f;
         [Range(0f, 1f)] public float fishChance = 0.2f;
+        [Range(0f, 1f)] public float potionChance = 0.1f;
     }
     [System.Serializable]
     public class Level3Settings {
@@ -48,6 +51,7 @@ public class ObstacleSpawner : MonoBehaviour
         [Range(0f, 1f)] public float wallChance = 0.2f;
         [Range(0f, 1f)] public float longWallChance = 0.1f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
+        [Range(0f, 1f)] public float potionChance = 0.1f;
     }
     [System.Serializable]
     public class Level4Settings {
@@ -56,6 +60,7 @@ public class ObstacleSpawner : MonoBehaviour
         [Range(0f, 1f)] public float wallChance = 0.25f;
         [Range(0f, 1f)] public float barbedWireChance = 0.15f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
+        [Range(0f, 1f)] public float potionChance = 0.1f;
     }
 
     [Header("Level Specific Settings")]
@@ -83,18 +88,20 @@ public class ObstacleSpawner : MonoBehaviour
             int currentLevel = 1;
             if (LevelManager.Instance != null) currentLevel = LevelManager.Instance.currentLevel;
 
-            float bag = 0, bodyguard = 0, wall = 0, longWall = 0, barbed = 0, fish = 0;
+            float bag = 0, bodyguard = 0, wall = 0, longWall = 0, barbed = 0, fish = 0, potion = 0;
 
             switch (currentLevel)
             {
                 case 1:
                     bag = level1.bagChance;
                     fish = level1.fishChance;
+                    potion = level1.potionChance;
                     break;
                 case 2:
                     bag = level2.bagChance;
                     bodyguard = level2.bodyguardChance;
                     fish = level2.fishChance;
+                    potion = level2.potionChance;
                     break;
                 case 3:
                     bag = level3.bagChance;
@@ -102,6 +109,7 @@ public class ObstacleSpawner : MonoBehaviour
                     wall = level3.wallChance;
                     longWall = level3.longWallChance;
                     fish = level3.fishChance;
+                    potion = level3.potionChance;
                     break;
                 case 4:
                 default:
@@ -110,10 +118,11 @@ public class ObstacleSpawner : MonoBehaviour
                     wall = level4.wallChance;
                     barbed = level4.barbedWireChance;
                     fish = level4.fishChance;
+                    potion = level4.potionChance;
                     break;
             }
 
-            float totalChance = bag + bodyguard + wall + longWall + barbed + fish;
+            float totalChance = bag + bodyguard + wall + longWall + barbed + fish + potion;
             float rnd = Random.Range(0f, totalChance);
             float currentLimit = 0f;
 
@@ -180,6 +189,18 @@ public class ObstacleSpawner : MonoBehaviour
                 {
                     float randomY = Random.Range(-2f, 1.5f);
                     Instantiate(fishPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
+                }
+                continue;
+            }
+
+            // Check Potion
+            currentLimit += potion;
+            if (rnd < currentLimit)
+            {
+                if (potionPrefab != null)
+                {
+                    float randomY = Random.Range(-2f, 1.5f);
+                    Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
                 }
                 continue;
             }

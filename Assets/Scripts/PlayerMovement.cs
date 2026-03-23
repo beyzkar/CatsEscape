@@ -3,6 +3,7 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     public float jumpForce = 12f;
+    private float currentJumpForce;
     public int maxJumps = 2; //double jump yaptığımız yer 
 
     public Transform groundCheck; //yere değip değmediğini kontrol ettiğimiz yer 
@@ -58,6 +59,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
+        currentJumpForce = jumpForce;
         jumpsLeft = maxJumps;
         
         // Ensure starting position is off-screen if needed
@@ -203,12 +205,22 @@ public class PlayerMovement : MonoBehaviour
         if (jumpsLeft <= 0) return;  
 
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
-        rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+        rb.AddForce(Vector2.up * currentJumpForce, ForceMode2D.Impulse);
 
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlayJump();
 
         jumpsLeft--;
         //Debug.Log("After jump | jumpsLeft=" + jumpsLeft); jumpın çalıp çalışmadığını kontrol eder.
+    }
+
+    public void SetJumpMultiplier(float multiplier)
+    {
+        currentJumpForce = jumpForce * multiplier;
+    }
+
+    public void ResetJumpMultiplier()
+    {
+        currentJumpForce = jumpForce;
     }
 }

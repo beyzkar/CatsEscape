@@ -34,6 +34,8 @@ public class PlayerObstacleRules : MonoBehaviour
 
     [Header("Power-up Settings")]
     private bool isInvincible = false;
+    private bool isPotionActive = false;
+    private Vector3 originalScale;
     private Coroutine powerUpCoroutine;
 
     private float jumpGraceTimer = 0f;
@@ -63,12 +65,15 @@ public class PlayerObstacleRules : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
         startX = transform.position.x;
+        originalScale = transform.localScale;
         
         // Nudge Z closer to camera to stay in front of 2D sprites (at Z=0)
         transform.position = new Vector3(transform.position.x, transform.position.y, -5f);
         
         UpdateSortingOrder(100);
         if (sparkleEffect != null) sparkleEffect.gameObject.SetActive(false);
+        
+        UpdateGameSpeed();
 
         // Initialize hearts
 
@@ -110,7 +115,7 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 stuck = false;
                 if (animator != null) animator.speed = 1f;
-                GameSpeed.Multiplier = 1f;
+                UpdateGameSpeed();
                 jumpGraceTimer = JUMP_GRACE_TIME;
 
                 if (rb != null)
@@ -188,6 +193,7 @@ public class PlayerObstacleRules : MonoBehaviour
             // damageCooldown already prevents multiple hearts lost in a single collision frame.
             if (damageCooldown <= 0)
             {
+                if (isPotionActive) ResetPotionEffect();
                 lastHitWall = col.gameObject;
                 LoseHeart();
                 damageCooldown = DAMAGE_COOLDOWN_TIME;
@@ -260,6 +266,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (isWall || col.collider.CompareTag("Obstacle"))
             {
+                if (isPotionActive) ResetPotionEffect();
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
                 EnterStuckState(col.gameObject);
             }
@@ -319,6 +326,72 @@ public class PlayerObstacleRules : MonoBehaviour
         if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(50);
     }
 
+    public void CollectPotion()
+    {
+        if (dead) return;
+        
+        isPotionActive = true;
+        transform.localScale = originalScale * 1.5f;
+        
+        if (movementScript != null)
+        {
+            movementScript.SetJumpMultiplier(1.5f);
+        }
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayPotionIncrease();
+
+        UpdateGameSpeed();
+
+        if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75);
+        // İksir ses efekti varsa buraya eklenebilir
+    }
+
+    public void ResetPotionEffect()
+    {
+        if (!isPotionActive) return;
+
+        isPotionActive = false;
+        transform.localScale = originalScale;
+
+        if (movementScript != null)
+        {
+            movementScript.ResetJumpMultiplier();
+        }
+
+        if (AudioManager.Instance != null) 
+            AudioManager.Instance.PlayPotionDecrease();
+
+        UpdateGameSpeed();
+    }
+
+    public void UpdateGameSpeed()
+    {
+        if (dead)
+        {
+            GameSpeed.Multiplier = 0f;
+            return;
+        }
+
+        float baseSpeed = 1f;
+        if (LevelManager.Instance != null)
+        {
+            baseSpeed = LevelManager.Instance.GetCurrentBaseSpeed();
+        }
+
+        float multiplier = 1f;
+        if (isInvincible)
+        {
+            multiplier = 1.5f;
+        }
+        else if (isPotionActive)
+        {
+            multiplier = 1.5f;
+        }
+
+        GameSpeed.Multiplier = baseSpeed * multiplier;
+    }
+
     private IEnumerator PowerUpSequence()
     {
         isInvincible = true;
@@ -340,7 +413,7 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         isInvincible = false;
-        GameSpeed.Multiplier = 1f;
+        UpdateGameSpeed();
         if (allRenderers != null)
         {
             UpdateSortingOrder(100);
@@ -383,6 +456,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (damageCooldown <= 0)
             {
+                if (isPotionActive) ResetPotionEffect();
                 lastHitWall = other.gameObject;
                 LoseHeart();
                 damageCooldown = DAMAGE_COOLDOWN_TIME;
@@ -436,6 +510,12 @@ public class PlayerObstacleRules : MonoBehaviour
         if (other.CompareTag("Fish"))
         {
             CollectFish();
+            Destroy(other.gameObject);
+        }
+
+        if (other.CompareTag("Potion"))
+        {
+            CollectPotion();
             Destroy(other.gameObject);
         }
     }

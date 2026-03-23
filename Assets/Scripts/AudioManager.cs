@@ -34,6 +34,10 @@ public class AudioManager : MonoBehaviour
     [Range(0f, 1f)] public float heartFillVolume = 1f;
     public AudioClip extraXPSfx;
     [Range(0f, 1f)] public float extraXPVolume = 1f;
+    public AudioClip potionIncreaseSfx;
+    [Range(0f, 1f)] public float potionIncreaseVolume = 1f;
+    public AudioClip potionDecreaseSfx;
+    [Range(0f, 1f)] public float potionDecreaseVolume = 1f;
 
     [Header("Global Settings")]
     [Range(0f, 1f)]
@@ -157,6 +161,8 @@ public class AudioManager : MonoBehaviour
     public void PlayHeartLost() { PlaySFX(heartLostSfx, heartLostVolume); }
     public void PlayHeartFill() { PlaySFX(heartFillSfx, heartFillVolume); }
     public void PlayExtraXP() { PlaySFX(extraXPSfx, extraXPVolume); }
+    public void PlayPotionIncrease() { PlaySFX(potionIncreaseSfx, potionIncreaseVolume); }
+    public void PlayPotionDecrease() { PlaySFX(potionDecreaseSfx, potionDecreaseVolume); }
 
     public void PlayGameOverSound()
     {

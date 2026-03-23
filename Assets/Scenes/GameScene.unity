@@ -1158,6 +1158,10 @@ MonoBehaviour:
   heartFillVolume: 0.5
   extraXPSfx: {fileID: 8300000, guid: c70586eeaa299480d8d8beeb96b37901, type: 3}
   extraXPVolume: 0.4
+  potionIncreaseSfx: {fileID: 8300000, guid: 5fe4f584d0b1e458f9e36e2910b74987, type: 3}
+  potionIncreaseVolume: 0.4
+  potionDecreaseSfx: {fileID: 8300000, guid: 7a43cbdd9eb124e7c8e94266a0d7116d, type: 3}
+  potionDecreaseVolume: 0.4
   backgroundGlobalVolume: 0.5
   sfxGlobalVolume: 0.5
 --- !u!1 &258602234
@@ -1991,7 +1995,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &376032485
 Transform:
   m_ObjectHideFlags: 0
@@ -3180,6 +3184,7 @@ MonoBehaviour:
   wallPrefab: {fileID: 2867133255236968643, guid: 06f8c559101514afe94f6b01fa2e90ba, type: 3}
   longWallPrefab: {fileID: 1558480094471278770, guid: 600b15f83aeb94607bbc3ee090b1c2f1, type: 3}
   fishPrefab: {fileID: 4646909014813445964, guid: cfcb2a87471cb40739c838beaad794c9, type: 3}
+  potionPrefab: {fileID: 5576752569631102745, guid: 5f33347dfbee4443f8e129f0608729ee, type: 3}
   bagSpawnX: 12
   bagSpawnY: -3.3
   bodyguardSpawnX: 12
@@ -3198,22 +3203,26 @@ MonoBehaviour:
   level1:
     bagChance: 0.8
     fishChance: 0.2
+    potionChance: 0.1
   level2:
     bagChance: 0.4
     bodyguardChance: 0.55
     fishChance: 0.2
+    potionChance: 0.1
   level3:
     bagChance: 0.3
     bodyguardChance: 0.4
     wallChance: 0.5
     longWallChance: 0.575
     fishChance: 0.582
+    potionChance: 0.1
   level4:
     bagChance: 0.25
     bodyguardChance: 0.25
     wallChance: 0.4
     barbedWireChance: 0.4
     fishChance: 0.1
+    potionChance: 0.1
 --- !u!4 &554372922
 Transform:
   m_ObjectHideFlags: 0
@@ -10816,12 +10825,12 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 258602235}
-  - {fileID: 371110518}
   - {fileID: 1499277062}
   - {fileID: 1770894205}
   - {fileID: 973442863}
   - {fileID: 974509979}
+  - {fileID: 371110518}
+  - {fileID: 258602235}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -10975,7 +10984,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &974509979
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12157,9 +12166,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1059448377}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -185}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1323024575
@@ -13175,9 +13184,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1059448377}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -25}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1468185294
@@ -14893,9 +14902,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1059448377}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -345}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1878694888
@@ -15075,9 +15084,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1059448377}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -105}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1890785510
@@ -15486,9 +15495,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1059448377}
   m_LocalEulerAnglesHint: {x: -0.008, y: -0.011, z: 0.158}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 50, y: -265}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1933799839
@@ -16035,8 +16044,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 4
+  currentLevel: 1
   obstaclesPassed: 0
+  levelSpeeds:
+  - 1
+  - 1.2
+  - 1.4
+  - 1.6
   victoryPanel: {fileID: 371110517}
   levelStatusText: {fileID: 2133008544}
   inGameLevelText: {fileID: 1770894206}
@@ -16101,7 +16115,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0

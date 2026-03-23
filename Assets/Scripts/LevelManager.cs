@@ -11,7 +11,10 @@ public class LevelManager : MonoBehaviour
     public int obstaclesPassed = 0;
     
     // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35)
-    private int[] levelGoals = { 0, 10, 15, 25, 5};
+    private int[] levelGoals = { 0, 10, 15, 25, 35};
+
+    [Header("Speed Settings")]
+    public float[] levelSpeeds = { 1.0f, 1.35f, 1.7f, 2.1f };
 
     [Header("UI Panels")]
     public GameObject victoryPanel;
@@ -46,6 +49,16 @@ public class LevelManager : MonoBehaviour
             return levelThemes[index];
         }
         return null;
+    }
+
+    public float GetCurrentBaseSpeed()
+    {
+        int index = currentLevel - 1;
+        if (levelSpeeds != null && index >= 0 && index < levelSpeeds.Length)
+        {
+            return levelSpeeds[index];
+        }
+        return 1f;
     }
 
     private bool pendingVictory = false;
@@ -94,6 +107,7 @@ public class LevelManager : MonoBehaviour
 
     private void UpdateBackgroundVisibility()
     {
+        // Search backgrounds only
         if (levelBackgrounds == null || levelBackgrounds.Length == 0) return;
 
         for (int i = 0; i < levelBackgrounds.Length; i++)
@@ -110,7 +124,7 @@ public class LevelManager : MonoBehaviour
     public void MainMenu()
     {
         Time.timeScale = 1f;
-        GameSpeed.Multiplier = 1f;
+        GameSpeed.Multiplier = 1f; // Main Menu is always 1.0f
         if (GameOverManager.Instance != null)
         {
             GameOverManager.Instance.LoadMainMenu();
@@ -208,7 +222,17 @@ public class LevelManager : MonoBehaviour
         if (finalLevelContent != null) finalLevelContent.SetActive(false);
         
         Time.timeScale = 1f;
-        GameSpeed.Multiplier = 1f;
+        
+        // Update player speed for the new level
+        if (playerMovement != null)
+        {
+            PlayerObstacleRules rules = playerMovement.GetComponent<PlayerObstacleRules>();
+            if (rules != null) rules.UpdateGameSpeed();
+        }
+        else
+        {
+            GameSpeed.Multiplier = GetCurrentBaseSpeed();
+        }
 
         // Restart BGM for the next level
         if (AudioManager.Instance != null) AudioManager.Instance.PlayBackgroundMusic();

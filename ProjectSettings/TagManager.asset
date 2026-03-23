@@ -11,6 +11,7 @@ TagManager:
   - CatFood
   - Fish
   - LongWall
+  - Potion
   layers:
   - Default
   - TransparentFX

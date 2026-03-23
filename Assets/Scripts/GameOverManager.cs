@@ -16,16 +16,27 @@ public class GameOverManager : MonoBehaviour
 
     public void ShowGameOver()
     {
-        if (gameOverPanel != null)
-            gameOverPanel.SetActive(true);
-        
-        // Leaderboard check
+        // Set time and speed to 0 immediately
+        Time.timeScale = 0f;
+        GameSpeed.Multiplier = 0f;
+
+        // Leaderboard check and panel sequencing
         if (LeaderboardManager.Instance != null && ScoreManager.Instance != null)
         {
+            // The GameOver panel should open AFTER the leaderboard is closed
+            LeaderboardManager.Instance.nextPanelToOpen = gameOverPanel;
+            
+            // This will open Save Score panel or Leaderboard panel
             LeaderboardManager.Instance.CheckForHighScore(ScoreManager.Instance.GetTotalXP());
+            
+            // Ensure GameOver panel is actually OFF for now to prevent overlapping
+            if (gameOverPanel != null) gameOverPanel.SetActive(false);
         }
-
-        Time.timeScale = 0f;
+        else
+        {
+            // Fallback: If no leaderboard system, just show GameOver panel
+            if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        }
     }
 
     public void Replay()
