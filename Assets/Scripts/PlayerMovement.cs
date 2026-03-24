@@ -43,6 +43,7 @@ public class PlayerMovement : MonoBehaviour
     public float introSpeed = 3f;
     public float stopX = -4f;
     private bool introFinished = false;
+    private bool dead = false;
 
 
     void Awake()
@@ -68,8 +69,14 @@ public class PlayerMovement : MonoBehaviour
 
     private float targetVelocityX = 0f;
 
+    public void SetDead(bool isDead)
+    {
+        dead = isDead;
+    }
+
     void Update()
     {
+        if (dead) return;
         if (!introFinished)
         {
             DoIntroWalk();

@@ -39,7 +39,14 @@ public class ObstacleThemeSetter : MonoBehaviour
             transform.localScale = theme.wallScale;
         }
 
-        // Apply Y offset from theme
-        transform.position += new Vector3(0, theme.yOffset, 0);
+        // Apply specific Y offset from theme
+        if (gameObject.CompareTag("Obstacle") || assetType == AssetType.Obstacle)
+        {
+            transform.position += new Vector3(0, theme.obstacleYOffset, 0);
+        }
+        else if (gameObject.CompareTag("Wall") || assetType == AssetType.Wall)
+        {
+            transform.position += new Vector3(0, theme.wallYOffset, 0);
+        }
     }
 }

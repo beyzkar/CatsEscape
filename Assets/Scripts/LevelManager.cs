@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Serialization;
 
 public class LevelManager : MonoBehaviour
 {
@@ -35,7 +36,10 @@ public class LevelManager : MonoBehaviour
         public Vector3 obstacleScale = Vector3.one; 
         public Sprite wallSprite;     // Wall görseli
         public Vector3 wallScale = Vector3.one;
-        public float yOffset = 0f;    // Y ekseni ince ayarı
+        
+        [FormerlySerializedAs("yOffset")]
+        public float obstacleYOffset = 0f; // ObstacleBag için Y ayarı
+        public float wallYOffset = 0f;     // Duvarlar için Y ayarı
     }
 
     [Header("Theme Assets")]
