@@ -11,11 +11,11 @@ public class LevelManager : MonoBehaviour
     public int currentLevel = 1;
     public int obstaclesPassed = 0;
     
-    // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35)
-    private int[] levelGoals = { 0, 10, 15, 25, 35};
+    // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35), Level 5 (50)
+    private int[] levelGoals = { 0, 10, 15, 25, 35, 50 };
 
     [Header("Speed Settings")]
-    public float[] levelSpeeds = { 1.0f, 1.35f, 1.7f, 2.1f };
+    public float[] levelSpeeds = { 1.0f, 1.35f, 1.7f, 2.1f, 2.5f };
 
     [Header("UI Panels")]
     public GameObject victoryPanel;
@@ -27,7 +27,7 @@ public class LevelManager : MonoBehaviour
     public Button mainMenuButton;         // MainMenuButton nesnesini buraya sürükleyin
     
     [Header("Backgrounds")]
-    public GameObject[] levelBackgrounds; // 4 tane harita objesini buraya sürükleyin
+    public GameObject[] levelBackgrounds; // 5 tane harita objesini buraya sürükleyin
 
     [System.Serializable]
     public class ThemeAssets
@@ -43,7 +43,7 @@ public class LevelManager : MonoBehaviour
     }
 
     [Header("Theme Assets")]
-    public ThemeAssets[] levelThemes; // Her level için sprite'ları buraya ekleyin (4 elemanlı)
+    public ThemeAssets[] levelThemes; // Her level için sprite'ları buraya ekleyin (5 elemanlı)
 
     public ThemeAssets GetCurrentTheme()
     {
@@ -143,7 +143,7 @@ public class LevelManager : MonoBehaviour
 
     private void CheckLevelProgress()
     {
-        if (currentLevel > 4) return;
+        if (currentLevel > 5) return;
 
         // Hedefe ulaşıldıysa ShowVictory yerine pendingVictory işaretle
         if (obstaclesPassed >= levelGoals[currentLevel])
@@ -170,9 +170,9 @@ public class LevelManager : MonoBehaviour
             if (levelStatusText != null)
                 levelStatusText.text = "Level " + currentLevel + " Survived!";
 
-            if (currentLevel < 4)
+            if (currentLevel < 5)
             {
-                // Level 1-3: Normal içerik gösterilsin
+                // Level 1-4: Normal içerik gösterilsin
                 if (normalLevelContent != null) normalLevelContent.SetActive(true);
                 if (finalLevelContent != null) finalLevelContent.SetActive(false);
                 
@@ -184,7 +184,7 @@ public class LevelManager : MonoBehaviour
             }
             else
             {
-                // Level 4: Final içeriği (You're Home) gösterilsin
+                // Level 5: Final içeriği (You're Home) gösterilsin
                 if (normalLevelContent != null) normalLevelContent.SetActive(false);
                 if (finalLevelContent != null) finalLevelContent.SetActive(true);
 
@@ -215,7 +215,7 @@ public class LevelManager : MonoBehaviour
 
     public void NextLevel()
     {
-        if (currentLevel >= 4) return;
+        if (currentLevel >= 5) return;
 
         currentLevel++;
         obstaclesPassed = 0;

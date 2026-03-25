@@ -1995,7 +1995,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &376032485
 Transform:
   m_ObjectHideFlags: 0
@@ -3359,6 +3359,10 @@ MonoBehaviour:
     wallChance: 0.4
     barbedWireChance: 0.4
     fishChance: 0.1
+    potionChance: 0.1
+  level5:
+    bagChance: 0.7
+    fishChance: 0.2
     potionChance: 0.1
 --- !u!4 &554372922
 Transform:
@@ -16465,12 +16469,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 4
+  currentLevel: 5
   obstaclesPassed: 0
   levelSpeeds:
   - 1
   - 1.2
   - 1.4
+  - 1.6
   - 1.6
   victoryPanel: {fileID: 371110517}
   levelStatusText: {fileID: 2133008544}
@@ -16484,6 +16489,7 @@ MonoBehaviour:
   - {fileID: 639124399}
   - {fileID: 525559373}
   - {fileID: 376032484}
+  - {fileID: 2025304964}
   levelThemes:
   - obstacleSprite: {fileID: -7587613512364005081, guid: cbe12a3d29ac04e3c87863a9cc9e47e8, type: 3}
     obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
@@ -16509,6 +16515,12 @@ MonoBehaviour:
     wallScale: {x: 0.2, y: 0.2, z: 0.2}
     obstacleYOffset: 0.5
     wallYOffset: -1
+  - obstacleSprite: {fileID: -7587613512364005081, guid: cbe12a3d29ac04e3c87863a9cc9e47e8, type: 3}
+    obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
+    wallSprite: {fileID: 8677674892870233858, guid: 37864d54f4aa542bba035ac16d090612, type: 3}
+    wallScale: {x: 1, y: 1, z: 1}
+    obstacleYOffset: 0
+    wallYOffset: 0
 --- !u!4 &2004907417
 Transform:
   m_ObjectHideFlags: 0
@@ -16540,7 +16552,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0

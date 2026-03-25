@@ -62,12 +62,19 @@ public class ObstacleSpawner : MonoBehaviour
         [Range(0f, 1f)] public float fishChance = 0.1f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
     }
+    [System.Serializable]
+    public class Level5Settings {
+        [Range(0f, 1f)] public float bagChance = 0.7f;
+        [Range(0f, 1f)] public float fishChance = 0.2f;
+        [Range(0f, 1f)] public float potionChance = 0.1f;
+    }
 
     [Header("Level Specific Settings")]
     public Level1Settings level1 = new Level1Settings();
     public Level2Settings level2 = new Level2Settings();
     public Level3Settings level3 = new Level3Settings();
     public Level4Settings level4 = new Level4Settings();
+    public Level5Settings level5 = new Level5Settings();
 
     void Start()
     {
@@ -112,13 +119,18 @@ public class ObstacleSpawner : MonoBehaviour
                     potion = level3.potionChance;
                     break;
                 case 4:
-                default:
                     bag = level4.bagChance;
                     bodyguard = level4.bodyguardChance;
                     wall = level4.wallChance;
                     barbed = level4.barbedWireChance;
                     fish = level4.fishChance;
                     potion = level4.potionChance;
+                    break;
+                case 5:
+                default:
+                    bag = level5.bagChance;
+                    fish = level5.fishChance;
+                    potion = level5.potionChance;
                     break;
             }
 
