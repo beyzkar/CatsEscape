@@ -8,11 +8,12 @@ CatsEscape is a dynamic 2D infinite runner developed in Unity. Take control of a
 Choose your feline hero from the main menu before starting your journey. The game supports multiple cat characters with unique visual styles.
 
 ### 🎮 Dynamic Level & Speed System
-Experience a tiered difficulty system across **4 distinct levels**, each with unique environmental themes, obstacle sets, and **progressive speed scaling**:
-- **Level 1:** Suburban start with basic hazards like Obstacle Bags.
-- **Level 2:** Increased complexity and speed (1.35x). Bodyguards introduced.
-- **Level 3:** Challenges featuring the Wall obstacle and 1.7x speed.
-- **Level 4:** The final stretch with Barbed Wire and blistering 2.1x speed. Complete the goal to reach "Home."
+Experience a tiered difficulty system across **5 distinct levels**, each with unique environmental themes, obstacle sets, and **progressive speed scaling**:
+- **Level 1 (Mountain):** Calm start with basic hazards like Obstacle Bags.
+- **Level 2 (Desert):** Increased complexity and speed (1.35x). Bodyguards introduced.
+- **Level 3 (Graveyard):** Eerie challenges featuring the Wall obstacle and 1.7x speed.
+- **Level 4 (Snow):** The final trek with Barbed Wire and blistering 2.1x speed.
+- **Level 5 (Forest):** The ultimate challenge with dynamic pits and bridge mechanics at 2.5x speed.
 
 ### 🧪 Potion Power-up
 Find the rare **Potion Bottle** to transform your cat!
@@ -21,23 +22,10 @@ Find the rare **Potion Bottle** to transform your cat!
 - **Speed Surge:** Gain a speed multiplier relative to your current level.
 - *Note: The effect is lost instantly if you collide with any obstacle.*
 
-### 🏆 Persistent Leaderboard
-Compete for the top spot! The game features a persistent "Hall of Fame":
-- **Save Score:** Enter your name after every run to see if you make the Top 5.
-- **JSON Persistence:** Scores are saved locally in a JSON format (`leaderboard.json`), ensuring your records survive across sessions.
-
-### 📈 Advanced Scoring & Combo Mechanics
-- **Distance-Based XP:** Earn experience points naturally as you travel further.
-- **Bonus XP Rewards:** 
-  - **Crush Bonus:** Land on top of obstacles to "crush" them for +20 XP.
-  - **Supply Collection:** Gather cat food for +50 XP.
-- **Clean Jump Combo:** Maintain a streak of 5 successful obstacle passes without collision to activate a score multiplier.
-
-### 💖 Health & Vitality
-- **Dynamic Hearts:** Start with 3 hearts and collect food to heal or expand your capacity up to 5 hearts.
-
-### 🎨 Immersive Visuals & Audio
-- **Enhanced Parallax:** Multi-layered backgrounds with cinematic depth.
+### 🛠️ Enhanced Background & Terrain
+- **Intelligent Parallax:** Multi-layered backgrounds with cinematic depth, featuring auto-scaling to camera height and precise layer alignment for seamless looping.
+- **Dynamic Terrain Spawner:** Level 5 introduces a modular ground system that procedurally generates pits and bridges, ensuring a unique path in every run.
+- **Theme-Aware Obstacles:** Obstacles like Bags and Walls automatically adjust their visuals, scales, and offsets to match the current level's theme.
 - **Custom Sound Effects:** Unique SFX for jumping, growth/shrink effects, and UI interactions.
 
 ---
