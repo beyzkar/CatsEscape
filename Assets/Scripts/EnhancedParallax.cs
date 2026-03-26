@@ -18,6 +18,41 @@ public class EnhancedParallax : MonoBehaviour
     {
         // Editör modunda çalışması için
         AlignAllLayers();
+        InitializeLayers();
+    }
+
+    [ContextMenu("Fit Height to Camera")]
+    public void FitHeightToCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null || !cam.orthographic || layers == null) return;
+
+        float targetHeight = cam.orthographicSize * 2f;
+
+        foreach (var layer in layers)
+        {
+            if (layer.layerParent == null || layer.layerParent.childCount == 0) continue;
+
+            for (int i = 0; i < layer.layerParent.childCount; i++)
+            {
+                Transform child = layer.layerParent.GetChild(i);
+                SpriteRenderer sr = child.GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sprite != null)
+                {
+                    float currentSpriteHeight = sr.sprite.bounds.size.y;
+                    if (currentSpriteHeight > 0)
+                    {
+                        float scale = targetHeight / currentSpriteHeight;
+                        // Uniform scale to prevent distortion
+                        child.localScale = new Vector3(scale, scale, 1f);
+                    }
+                }
+            }
+        }
+        
+        // After scaling, we must realign
+        AlignAllLayers();
+        Debug.Log("Background fitted to camera height.");
     }
 
     // Unity'de script ismine sağ tıklayıp "Align All Layers" dersen resimleri otomatik uca ekler
@@ -30,17 +65,20 @@ public class EnhancedParallax : MonoBehaviour
         {
             if (layer.layerParent == null || layer.layerParent.childCount < 2) continue;
 
-            Transform firstChild = layer.layerParent.GetChild(0);
-            Transform secondChild = layer.layerParent.GetChild(1);
-
-            SpriteRenderer sr = firstChild.GetComponent<SpriteRenderer>();
-            if (sr != null && sr.sprite != null)
+            float currentX = 0;
+            for (int i = 0; i < layer.layerParent.childCount; i++)
             {
-                float spriteWidth = sr.sprite.bounds.size.x * firstChild.localScale.x;
+                Transform child = layer.layerParent.GetChild(i);
+                SpriteRenderer sr = child.GetComponent<SpriteRenderer>();
                 
-                // Sadece X pozisyonunu değiştiriyoruz, Y ve Z (yükseklik/derinlik) korunuyor
-                firstChild.localPosition = new Vector3(0, firstChild.localPosition.y, firstChild.localPosition.z);
-                secondChild.localPosition = new Vector3(spriteWidth, secondChild.localPosition.y, secondChild.localPosition.z);
+                // Reset local position Y and Z if needed, or keep them? 
+                // Let's keep Y to allow manual offset, but align X.
+                child.localPosition = new Vector3(currentX, child.localPosition.y, child.localPosition.z);
+                
+                if (sr != null && sr.sprite != null)
+                {
+                    currentX += sr.sprite.bounds.size.x * child.localScale.x;
+                }
             }
         }
     }
@@ -94,10 +132,23 @@ public class EnhancedParallax : MonoBehaviour
                 continue;
             }
 
-            if (layers[i].width <= 0) continue;
+            if (layers[i].width <= 0) 
+            {
+                // Try to initialize on the fly if width is not set
+                Transform firstChild = layers[i].layerParent.GetChild(0);
+                SpriteRenderer sr = firstChild.GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sprite != null)
+                {
+                    layers[i].width = sr.sprite.bounds.size.x * firstChild.localScale.x;
+                }
+                
+                if (layers[i].width <= 0) continue;
+            }
+
+            if (layers[i].speed == 0) continue; 
 
             Vector3 pos = layers[i].layerParent.localPosition;
-            pos.x -= movement * layers[i].speed;
+            pos.x -= movement * Mathf.Abs(layers[i].speed);
 
             // Loop logic needs to handle both directions
             if (dir > 0)

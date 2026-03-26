@@ -11,8 +11,11 @@ public class LevelManager : MonoBehaviour
     public int currentLevel = 1;
     public int obstaclesPassed = 0;
     
+    // Seviye sürekliliği için static değişken (-1: Henüz atanmadı demek)
+    private static int savedLevel = -1;
+    
     // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35), Level 5 (50)
-    private int[] levelGoals = { 0, 10, 15, 25, 35, 50 };
+    private int[] levelGoals = { 0, 10, 15, 25, 10, 10 };
 
     [Header("Speed Settings")]
     public float[] levelSpeeds = { 1.0f, 1.35f, 1.7f, 2.1f, 2.5f };
@@ -73,6 +76,18 @@ public class LevelManager : MonoBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
+        // Seviye sürekliliğini sağla
+        if (savedLevel == -1)
+        {
+            // İlk açılışta Inspector'daki değeri baz al (Test kolaylığı için)
+            savedLevel = currentLevel;
+        }
+        else
+        {
+            // Sonraki yüklemelerde (Retry vb.) kaydedilen seviyeyi kullan
+            currentLevel = savedLevel;
+        }
+
         // PlayerMovement referansını al
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null) playerMovement = p.GetComponent<PlayerMovement>();
@@ -86,6 +101,7 @@ public class LevelManager : MonoBehaviour
     {
         if (inGameLevelText != null)
         {
+            // Sadece LEVEL X yazar (PITS sayacı kaldırıldı)
             inGameLevelText.text = "LEVEL " + currentLevel;
         }
     }
@@ -125,8 +141,14 @@ public class LevelManager : MonoBehaviour
         }
     }
 
+    public static void ResetPersistentLevel()
+    {
+        savedLevel = 1;
+    }
+
     public void MainMenu()
     {
+        ResetPersistentLevel(); // Seviyeyi sıfırla
         Time.timeScale = 1f;
         GameSpeed.Multiplier = 1f; // Main Menu is always 1.0f
         if (GameOverManager.Instance != null)
@@ -138,7 +160,25 @@ public class LevelManager : MonoBehaviour
     public void ObstaclePassed()
     {
         obstaclesPassed++;
+        
+        // Konsolda Level 5 ilerlemesini göster
+        if (currentLevel == 5)
+        {
+            Debug.Log("Level 5 - Zemin/Cukur gecildi! Sayac: " + obstaclesPassed + "/10");
+        }
+
         CheckLevelProgress();
+        UpdateInGameLevelText(); // Sayacı güncelle
+    }
+
+    public void ResetProgress()
+    {
+        if (currentLevel == 5)
+        {
+            obstaclesPassed = 0;
+            UpdateInGameLevelText();
+            Debug.Log("Level 5 - Engel vuruldu! Sayac SIFIRLANDI.");
+        }
     }
 
     private void CheckLevelProgress()
@@ -164,6 +204,9 @@ public class LevelManager : MonoBehaviour
         UnityEngine.Video.VideoPlayer bgv = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
         if (bgv != null) bgv.Pause();
 
+        // Level 5'te sayacı son kez güncelle
+        UpdateInGameLevelText();
+
         if (victoryPanel != null)
         {
             // Level bilgisini yazdır
@@ -184,40 +227,39 @@ public class LevelManager : MonoBehaviour
             }
             else
             {
-                // Level 5: Final içeriği (You're Home) gösterilsin
+                // Level 5: Önce Scoreboard sonra Leaderboard açılması isteniyor (Gemini Promptu gereği)
                 if (normalLevelContent != null) normalLevelContent.SetActive(false);
                 if (finalLevelContent != null) finalLevelContent.SetActive(true);
 
                 // Play Final Win Sound
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
 
-                // Game completely won: Sequence the panels
                 if (LeaderboardManager.Instance != null)
                 {
-                    // Set the VictoryPanel to show up AFTER the leaderboard is closed
+                    // Sıralama (Sequence): Scoreboard -> Leaderboard -> VictoryPanel
                     LeaderboardManager.Instance.nextPanelToOpen = victoryPanel; 
-                    
-                    // Check if player made it to top 5
+
                     int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
                     LeaderboardManager.Instance.CheckForHighScore(currentXP);
-
-                    // Important: We DON'T show the victory panel yet!
-                    // The Leaderboard will open first.
+                    
+                    Debug.Log("LevelManager: Level 5 bitirildi. Scoreboard açılıyor...");
                 }
                 else
                 {
-                    // Fallback if leaderboard is missing
+                    // Fallback
                     if (victoryPanel != null) victoryPanel.SetActive(true);
                 }
             }
         }
     }
 
+
     public void NextLevel()
     {
         if (currentLevel >= 5) return;
 
         currentLevel++;
+        savedLevel = currentLevel; // Kaydet
         obstaclesPassed = 0;
         
         // Panelleri kapat ve devam et

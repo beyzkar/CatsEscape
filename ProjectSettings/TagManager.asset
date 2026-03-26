@@ -12,6 +12,7 @@ TagManager:
   - Fish
   - LongWall
   - Potion
+  - Bush
   layers:
   - Default
   - TransparentFX

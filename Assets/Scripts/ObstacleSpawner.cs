@@ -3,6 +3,13 @@ using UnityEngine;
 
 public class ObstacleSpawner : MonoBehaviour
 {
+    public static ObstacleSpawner Instance { get; private set; }
+
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+    }
+
     [Header("Prefabs")]
     public GameObject obstaclePrefab;   // ObstacleBag
     public GameObject bodyguardPrefab;  // BodyGuard
@@ -67,6 +74,7 @@ public class ObstacleSpawner : MonoBehaviour
         [Range(0f, 1f)] public float bagChance = 0.7f;
         [Range(0f, 1f)] public float fishChance = 0.2f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
+        [Range(0f, 1f)] public float pitChance = 0.2f; // New: Ground pit probability
     }
 
     [Header("Level Specific Settings")]
@@ -128,10 +136,23 @@ public class ObstacleSpawner : MonoBehaviour
                     break;
                 case 5:
                 default:
-                    bag = level5.bagChance;
+                    // Strictly NO obstacles in Level 5
+                    bag = 0f;
+                    bodyguard = 0f;
+                    wall = 0f;
+                    longWall = 0f;
+                    barbed = 0f;
+                    
+                    // Allow only Fish and Potions
                     fish = level5.fishChance;
                     potion = level5.potionChance;
                     break;
+            }
+
+            // LEVEL 5 Check: Don't spawn any object if the ground below is a pit (to keep visuals clean)
+            if (currentLevel == 5 && GroundSpawner.Instance != null && GroundSpawner.Instance.IsPitAtX(bagSpawnX))
+            {
+                continue;
             }
 
             float totalChance = bag + bodyguard + wall + longWall + barbed + fish + potion;

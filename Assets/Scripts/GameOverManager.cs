@@ -51,6 +51,9 @@ public class GameOverManager : MonoBehaviour
 
     public void LoadMainMenu()
     {
+        // Seviye sürekliliğini sıfırla
+        LevelManager.ResetPersistentLevel();
+
         // Reset time and speed scales before returning to menu
         Time.timeScale = 1f;
         GameSpeed.Multiplier = 1f;

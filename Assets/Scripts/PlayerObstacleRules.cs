@@ -115,15 +115,16 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 stuck = false;
                 if (animator != null) animator.speed = 1f;
-                UpdateGameSpeed();
-                jumpGraceTimer = JUMP_GRACE_TIME;
 
                 if (rb != null)
                 {
+                    rb.simulated = true; // Restore physics simulation
                     rb.bodyType = RigidbodyType2D.Dynamic;
-                    // Restore rotation freeze but allow position movement
                     rb.constraints = RigidbodyConstraints2D.FreezeRotation;
                 }
+
+                UpdateGameSpeed();
+                jumpGraceTimer = JUMP_GRACE_TIME;
 
                 if (movementScript != null)
                 {
@@ -158,7 +159,7 @@ public class PlayerObstacleRules : MonoBehaviour
             
             // Nudge player slightly away from the obstacle to prevent clipping
             // Assuming obstacles come from the right (positive X relative to player)
-            float nudgeX = -0.3f; 
+            float nudgeX = -0.5f; 
             transform.position = new Vector3(transform.position.x + nudgeX, transform.position.y, transform.position.z);
         }
 
@@ -169,10 +170,8 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (rb != null)
         {
-            // Only stop horizontal progress
-            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-            rb.bodyType = RigidbodyType2D.Dynamic;
-            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.linearVelocity = Vector2.zero;
+            rb.simulated = false; // Truly freeze the player in place
         }
 
         if (bgVideo != null) bgVideo.Pause();
@@ -273,7 +272,7 @@ public class PlayerObstacleRules : MonoBehaviour
         }
     }
 
-    private void LoseHeart()
+    public void LoseHeart()
     {
         if (dead) return;
         currentHearts--;
@@ -286,9 +285,12 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlayHeartLost();
 
+        // Level 5 ilerlemesini sıfırla (İstek üzerine)
+        if (LevelManager.Instance != null) LevelManager.Instance.ResetProgress();
+
         StartCoroutine(FlashRecoveryEffect());
 
-        if (currentHearts < 0) Die();
+        if (currentHearts <= 0) Die();
     }
 
 
@@ -449,8 +451,9 @@ public class PlayerObstacleRules : MonoBehaviour
 
         bool isBodyguard = IsBodyguard(other.gameObject);
         bool isBarbedWire = other.CompareTag("BarbedWire") || other.transform.root.CompareTag("BarbedWire");
+        bool isBush = other.CompareTag("Bush");
 
-        if (isBodyguard || isBarbedWire)
+        if (isBodyguard || isBarbedWire || isBush)
         {
             if (isInvincible) return;
 
@@ -463,7 +466,7 @@ public class PlayerObstacleRules : MonoBehaviour
                 
                 if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-                if (isBarbedWire)
+                if (isBarbedWire || isBush)
                 {
                     hitRecoveryTimer = hitRecoveryDuration;
                 }
@@ -474,9 +477,11 @@ public class PlayerObstacleRules : MonoBehaviour
                 // Only freeze if we are not significantly above the obstacle
                 if (transform.position.y < other.bounds.center.y + 0.5f)
                 {
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
                     EnterStuckState(other.gameObject);
                 }
             }
+            return;
         }
         bool isWall = other.CompareTag("Wall") || other.CompareTag("LongWall");
         if (isWall && !stuck)
@@ -524,7 +529,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
         
-        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bodyguard");
+        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bodyguard") || other.CompareTag("Bush");
         if (isBlockingObstacle && (other.gameObject != lastHitWall || !stuck))
         {
             EnterStuckState(other.gameObject);
@@ -535,7 +540,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
 
-        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Bodyguard");
+        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Bush");
         if (isBlockingObstacle)
         {
             EnterStuckState(col.gameObject);
