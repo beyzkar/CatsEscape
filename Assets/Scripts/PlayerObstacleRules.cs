@@ -181,7 +181,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        bool isBodyguard = IsBodyguard(col.gameObject);
+        bool isBodyguard = IsBodyguard(col.gameObject) || IsEnemy(col.gameObject);
         bool isBarbedWire = col.collider.CompareTag("BarbedWire") || col.transform.root.CompareTag("BarbedWire");
 
         if (isBodyguard || isBarbedWire)
@@ -332,21 +332,33 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
         
-        isPotionActive = true;
-        transform.localScale = originalScale * 1.5f;
-        
-        if (movementScript != null)
+        // Scenario 1: First pickup (Normal -> Big)
+        if (!isPotionActive)
         {
-            movementScript.SetJumpMultiplier(1.5f);
+            isPotionActive = true;
+            transform.localScale = originalScale * 1.2f;
+            
+            if (movementScript != null)
+            {
+                movementScript.SetJumpMultiplier(1.2f);
+            }
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayPotionIncrease();
+
+            UpdateGameSpeed();
+
+            // First pickup: Add XP but skip XP sound (user request)
+            if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75, false);
         }
-
-        if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayPotionIncrease();
-
-        UpdateGameSpeed();
-
-        if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75);
-        // İksir ses efekti varsa buraya eklenebilir
+        // Scenario 2: Already growing (Big -> Big)
+        else
+        {
+            // Just add XP and play XP sound (ResetPotionEffect won't be called)
+            if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75, true);
+            
+            // Note: We don't play PotionIncrease or change scale here
+        }
     }
 
     public void ResetPotionEffect()
@@ -384,11 +396,11 @@ public class PlayerObstacleRules : MonoBehaviour
         float multiplier = 1f;
         if (isInvincible)
         {
-            multiplier = 1.5f;
+            multiplier = 1.2f;
         }
         else if (isPotionActive)
         {
-            multiplier = 1.5f;
+            multiplier = 1.2f;
         }
 
         GameSpeed.Multiplier = baseSpeed * multiplier;
@@ -397,7 +409,7 @@ public class PlayerObstacleRules : MonoBehaviour
     private IEnumerator PowerUpSequence()
     {
         isInvincible = true;
-        GameSpeed.Multiplier = 1.5f;
+        GameSpeed.Multiplier = 1.2f;
         UpdateSortingOrder(100);
         
         if (sparkleEffect != null) 
@@ -449,7 +461,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        bool isBodyguard = IsBodyguard(other.gameObject);
+        bool isBodyguard = IsBodyguard(other.gameObject) || IsEnemy(other.gameObject);
         bool isBarbedWire = other.CompareTag("BarbedWire") || other.transform.root.CompareTag("BarbedWire");
         bool isBush = other.CompareTag("Bush");
 
@@ -529,7 +541,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
         
-        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bodyguard") || other.CompareTag("Bush");
+        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bodyguard") || other.CompareTag("Enemy") || other.CompareTag("Bush");
         if (isBlockingObstacle && (other.gameObject != lastHitWall || !stuck))
         {
             EnterStuckState(other.gameObject);
@@ -540,7 +552,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
 
-        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Bush");
+        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Enemy") || col.collider.CompareTag("Bush");
         if (isBlockingObstacle)
         {
             EnterStuckState(col.gameObject);
@@ -564,6 +576,14 @@ public class PlayerObstacleRules : MonoBehaviour
                 }
             }
         }
+    }
+
+    private bool IsEnemy(GameObject obj)
+    {
+        if (obj == null) return false;
+        if (obj.CompareTag("Enemy")) return true;
+        if (obj.transform.root != null && obj.transform.root.CompareTag("Enemy")) return true;
+        return false;
     }
 
     private bool IsBodyguard(GameObject obj)

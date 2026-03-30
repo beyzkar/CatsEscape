@@ -16,6 +16,7 @@ public class ScoreManager : MonoBehaviour
     public GameObject xp5Prefab;
     public GameObject xp20Prefab;
     public GameObject xp50Prefab;
+    public GameObject xp75Prefab;
     public Transform playerTransform;
 
     [Header("Combo Settings")]
@@ -75,14 +76,14 @@ public class ScoreManager : MonoBehaviour
         totalXP = Mathf.FloorToInt(tempXP) + bonusXP;
     }
 
-    public void AddXP(int amount)
+    public void AddXP(int amount, bool playSound = true)
     {
         bonusXP += amount;
         UpdateUI();
         SpawnXPIcon(amount);
 
         // Play sound effect
-        if (AudioManager.Instance != null)
+        if (playSound && AudioManager.Instance != null)
         {
             AudioManager.Instance.PlayExtraXP();
         }
@@ -107,16 +108,18 @@ public class ScoreManager : MonoBehaviour
         if (amount == 5) prefab = xp5Prefab;
         else if (amount == 20) prefab = xp20Prefab;
         else if (amount == 50) prefab = xp50Prefab;
+        else if (amount == 75) prefab = xp75Prefab;
 
         if (prefab != null)
         {
             // Spawn slightly above the player
             Vector3 spawnPos = playerTransform.position + new Vector3(0, 1.5f, 0);
-            Instantiate(prefab, spawnPos, Quaternion.identity);
+            GameObject instantiated = Instantiate(prefab, spawnPos, Quaternion.identity);
+            Debug.Log($"[ScoreManager] Spawned XP icon: {instantiated.name} for amount: {amount}");
         }
         else
         {
-            Debug.LogWarning("ScoreManager: No prefab assigned for XP amount: " + amount);
+            Debug.LogWarning($"[ScoreManager] No prefab assigned for XP amount: {amount}. Check ScoreManager Inspector!");
         }
     }
 

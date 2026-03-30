@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 4d0e0ffc7a6c1bf44b435e0b23260f8c, type: 2}
+  m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -326,7 +326,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 30
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4775bc44947d548059450bcbdee3a545, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -987,7 +987,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 30
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4775bc44947d548059450bcbdee3a545, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1063,7 +1063,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 30
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4775bc44947d548059450bcbdee3a545, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1162,6 +1162,8 @@ MonoBehaviour:
   potionIncreaseVolume: 0.4
   potionDecreaseSfx: {fileID: 8300000, guid: 7a43cbdd9eb124e7c8e94266a0d7116d, type: 3}
   potionDecreaseVolume: 0.4
+  fallingSfx: {fileID: 8300000, guid: 85bf08952b4734c0eb1e1aaa9a30fa20, type: 3}
+  fallingVolume: 1
   backgroundGlobalVolume: 0.5
   sfxGlobalVolume: 0.5
 --- !u!1 &258602234
@@ -2248,7 +2250,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 30
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4775bc44947d548059450bcbdee3a545, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2675,6 +2677,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   jumpForce: 15
   maxJumps: 2
+  deathThresholdY: -4.2
   groundCheck: {fileID: 536664572}
   groundCheckRadius: 0.15
   groundLayer:
@@ -3531,7 +3534,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleSpawner
   obstaclePrefab: {fileID: 6769421730509668011, guid: ef8f733f3a3554b3a934de363eb23e03, type: 3}
-  bodyguardPrefab: {fileID: 6673541505603066278, guid: 14087af99914e42ecb026da9e0bddb5d, type: 3}
+  enemyPrefab: {fileID: 6792327054025522797, guid: 64db8d48fab1ceb43a8ee5d52643029a, type: 3}
   barbedWirePrefab: {fileID: 1831206720371873340, guid: fe1d36f7f4d044e6a8ccd82838251200, type: 3}
   wallPrefab: {fileID: 2867133255236968643, guid: 06f8c559101514afe94f6b01fa2e90ba, type: 3}
   longWallPrefab: {fileID: 1558480094471278770, guid: 600b15f83aeb94607bbc3ee090b1c2f1, type: 3}
@@ -3539,8 +3542,8 @@ MonoBehaviour:
   potionPrefab: {fileID: 5576752569631102745, guid: 5f33347dfbee4443f8e129f0608729ee, type: 3}
   bagSpawnX: 12
   bagSpawnY: -3.3
-  bodyguardSpawnX: 12
-  bodyguardSpawnY: -4.05
+  enemySpawnX: 12
+  enemySpawnY: -4
   barbedWireSpawnX: 12
   barbedWireSpawnY: -3
   wallSpawnX: 12
@@ -3558,19 +3561,19 @@ MonoBehaviour:
     potionChance: 0.1
   level2:
     bagChance: 0.4
-    bodyguardChance: 0.55
+    enemyChance: 0.4
     fishChance: 0.2
     potionChance: 0.1
   level3:
     bagChance: 0.3
-    bodyguardChance: 0.4
+    enemyChance: 0.3
     wallChance: 0.5
     longWallChance: 0.575
     fishChance: 0.582
     potionChance: 0.1
   level4:
     bagChance: 0.25
-    bodyguardChance: 0.25
+    enemyChance: 0.25
     wallChance: 0.4
     barbedWireChance: 0.4
     fishChance: 0.1
@@ -9105,7 +9108,7 @@ Transform:
   m_GameObject: {fileID: 611424990}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.96525, y: 1.00556, z: 0}
+  m_LocalPosition: {x: -2.96525, y: 1.00556, z: -1.89}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -12022,7 +12025,7 @@ Transform:
   m_GameObject: {fileID: 943791558}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.1, z: -2.3333335}
+  m_LocalPosition: {x: 0, y: 3.1, z: -2.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -12264,7 +12267,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 30
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 4775bc44947d548059450bcbdee3a545, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13120,7 +13123,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1064359277}
-  - component: {fileID: 1064359276}
   m_Layer: 0
   m_Name: SkyManager
   m_TagString: Untagged
@@ -13128,18 +13130,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1064359276
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1064359275}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bdfe893d5c41d470d9562e5e5b3be9eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SkyboxRotator
 --- !u!4 &1064359277
 Transform:
   m_ObjectHideFlags: 0
@@ -13601,7 +13591,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1136188183
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13628,13 +13618,13 @@ MonoBehaviour:
     speed: 0.2
     width: 19.2
   - layerParent: {fileID: 1168466348}
-    speed: 0.6
+    speed: 0.4
     width: 19.2
   - layerParent: {fileID: 262841278}
-    speed: 0.4
+    speed: 0.6
     width: 19.2
   - layerParent: {fileID: 1420786053}
-    speed: 0.4
+    speed: 0.6
     width: 19.2
   - layerParent: {fileID: 921318483}
     speed: 0.4
@@ -16830,13 +16820,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundSpawner
   groundNormalPrefab: {fileID: 4839023012948691586, guid: c7beb8ef7eae2435296db519a8634c12, type: 3}
-  normalYOffset: 0
+  normalYOffset: 1
   groundPitPrefab: {fileID: 5264130352985418374, guid: 95cc25135d96d403c8ddf0189083418d, type: 3}
   pitYOffset: 4.5
   pitVFXPrefab: {fileID: 0}
   vfxYOffset: -1
   groundWidth: 18
-  groundY: 0
+  groundY: -4.48
   initialAmount: 10
   spawnTriggerX: -140
   destroyLimitX: -145
@@ -17112,7 +17102,7 @@ Transform:
   m_GameObject: {fileID: 1825316529}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 19.2, y: 3.1, z: -2.3333335}
+  m_LocalPosition: {x: 19.2, y: 3.1, z: -2.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -18794,6 +18784,7 @@ MonoBehaviour:
   xp5Prefab: {fileID: 3447481861030823098, guid: 61aa0efb66b21405c849f58993483837, type: 3}
   xp20Prefab: {fileID: 1519414419598331556, guid: 92b7f137bcce442dfbcd6e2782576a75, type: 3}
   xp50Prefab: {fileID: 7626497854657416691, guid: 5f870f952f7044d3a82fe796c0520f73, type: 3}
+  xp75Prefab: {fileID: 2620284383117115623, guid: 6cafed8636906443f93e1dea848e7d34, type: 3}
   playerTransform: {fileID: 0}
 --- !u!4 &1992649375
 Transform:
@@ -18875,7 +18866,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 5
+  currentLevel: 1
   obstaclesPassed: 0
   levelSpeeds:
   - 1
@@ -18897,32 +18888,32 @@ MonoBehaviour:
   - {fileID: 376032484}
   - {fileID: 1136188182}
   levelThemes:
-  - obstacleSprite: {fileID: -7587613512364005081, guid: cbe12a3d29ac04e3c87863a9cc9e47e8, type: 3}
-    obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
+  - obstacleSprite: {fileID: -7247545730495976057, guid: 38b3b6cbb374f4e8daf2b35c6573680c, type: 3}
+    obstacleScale: {x: 1.3, y: 1.3, z: 1.3}
     wallSprite: {fileID: 8677674892870233858, guid: 37864d54f4aa542bba035ac16d090612, type: 3}
     wallScale: {x: 1, y: 1, z: 1}
     obstacleYOffset: 0
     wallYOffset: 0
-  - obstacleSprite: {fileID: -7810955473932656189, guid: f0c41e7be46574be1803d86b3f5b1fbd, type: 3}
-    obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
+  - obstacleSprite: {fileID: -2227859323833246891, guid: e8396a3df845a4dfc9690bfd4585cace, type: 3}
+    obstacleScale: {x: 1.3, y: 1.3, z: 1.3}
     wallSprite: {fileID: -7259721464142561641, guid: 8f657e6c331f74a139e6d908a3055d5b, type: 3}
     wallScale: {x: 1, y: 1, z: 1}
     obstacleYOffset: 0
     wallYOffset: 0
-  - obstacleSprite: {fileID: 3522804324463753534, guid: e5c49a45d8efb41fdb339925de5fad0f, type: 3}
+  - obstacleSprite: {fileID: 449758515141497644, guid: 1b50a84a86bbc47fe92c21d96e3911c3, type: 3}
     obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
     wallSprite: {fileID: 21300000, guid: 41c5a50e31df3e34c854b4116574dd0b, type: 3}
     wallScale: {x: 1.3, y: 1.3, z: 1.3}
     obstacleYOffset: 0.3
     wallYOffset: -1
-  - obstacleSprite: {fileID: -5614690096092390681, guid: 84d1ceaab7331461293e411272c905dc, type: 3}
+  - obstacleSprite: {fileID: -6289627745090679216, guid: f169dde41d89a450d94e657fde331905, type: 3}
     obstacleScale: {x: 0.3, y: 0.3, z: 0.3}
     wallSprite: {fileID: -5354789079275869415, guid: d446283dc8ed4426ba72af43e7b77d31, type: 3}
     wallScale: {x: 0.2, y: 0.2, z: 0.2}
     obstacleYOffset: 0.5
     wallYOffset: -1
   - obstacleSprite: {fileID: -7587613512364005081, guid: cbe12a3d29ac04e3c87863a9cc9e47e8, type: 3}
-    obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
+    obstacleScale: {x: 1.3, y: 1.3, z: 1.3}
     wallSprite: {fileID: 8677674892870233858, guid: 37864d54f4aa542bba035ac16d090612, type: 3}
     wallScale: {x: 1, y: 1, z: 1}
     obstacleYOffset: 0
@@ -18991,7 +18982,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0

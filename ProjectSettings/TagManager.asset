@@ -13,6 +13,7 @@ TagManager:
   - LongWall
   - Potion
   - Bush
+  - Enemy
   layers:
   - Default
   - TransparentFX

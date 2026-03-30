@@ -41,6 +41,7 @@ public class GroundSpawner : MonoBehaviour
     private List<GameObject> activeGrounds = new List<GameObject>();
     private float nextSpawnX = 0f;        // Bir sonraki parçanın ekleneceği X koordinatı
     private bool isSpawnerStarted = false;
+    private int segmentsSinceLastPit = 0; // İki köprü arasındaki mesafeyi korumak için
 
     void Start()
     {
@@ -165,10 +166,17 @@ public class GroundSpawner : MonoBehaviour
             currentPitChance = ObstacleSpawner.Instance.level5.pitChance;
         }
 
-        if (allowPit && currentLevel == 5 && Random.value < currentPitChance)
+        // Köprüler arası mesafe kontrolü: En az 2 normal parça geçmeli
+        int minDistanceBetweenPits = 2;
+        if (allowPit && currentLevel == 5 && segmentsSinceLastPit >= minDistanceBetweenPits && Random.value < currentPitChance)
         {
             prefabToSpawn = groundPitPrefab;
             currentOffset = pitYOffset;
+            segmentsSinceLastPit = 0; // Köprü oluştu, sayacı sıfırla
+        }
+        else
+        {
+            segmentsSinceLastPit++; // Normal parça oluştu, sayacı arttır
         }
 
         if (prefabToSpawn == null)

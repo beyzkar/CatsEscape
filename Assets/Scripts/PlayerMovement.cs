@@ -4,7 +4,10 @@ public class PlayerMovement : MonoBehaviour
 {
     public float jumpForce = 12f;
     private float currentJumpForce;
-    public int maxJumps = 2; //double jump yaptığımız yer 
+    public int maxJumps = 2; 
+
+    [Header("Level 5 Fall Settings")]
+    public float deathThresholdY = -4.2f; // Height at which jumping is disabled in Level 5
 
     public Transform groundCheck; //yere değip değmediğini kontrol ettiğimiz yer 
     public float groundCheckRadius = 0.15f;
@@ -143,7 +146,26 @@ public class PlayerMovement : MonoBehaviour
             Input.GetKeyDown(KeyCode.UpArrow) ||
             Input.GetMouseButtonDown(0))
         {
-            TryJump();
+            // Level 5 specific: Disable jump if too low (falling into pit)
+            bool isTooLowInLevel5 = false;
+            if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
+            {
+                if (transform.position.y < deathThresholdY)
+                {
+                    isTooLowInLevel5 = true;
+                }
+            }
+
+            if (!isTooLowInLevel5)
+            {
+                TryJump();
+            }
+            else
+            {
+                // Play falling sound when jump is denied
+                if (AudioManager.Instance != null)
+                    AudioManager.Instance.PlayFalling();
+            }
         }
     }
 

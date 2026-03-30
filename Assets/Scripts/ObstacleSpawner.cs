@@ -12,7 +12,7 @@ public class ObstacleSpawner : MonoBehaviour
 
     [Header("Prefabs")]
     public GameObject obstaclePrefab;   // ObstacleBag
-    public GameObject bodyguardPrefab;  // BodyGuard
+    public GameObject enemyPrefab;      // Was Bodyguard
     public GameObject barbedWirePrefab; // BarbedWire
     public GameObject wallPrefab;       // Wall
     public GameObject longWallPrefab;   // LongWall
@@ -22,8 +22,8 @@ public class ObstacleSpawner : MonoBehaviour
     [Header("Spawn Positions")]
     public float bagSpawnX = 12f;
     public float bagSpawnY = -2.3f;
-    public float bodyguardSpawnX = 12f;
-    public float bodyguardSpawnY = -2.0f;
+    public float enemySpawnX = 12f;
+    public float enemySpawnY = -2.0f;
     public float barbedWireSpawnX = 12f;
     public float barbedWireSpawnY = -3.66f;
     public float wallSpawnX = 12f;
@@ -47,14 +47,14 @@ public class ObstacleSpawner : MonoBehaviour
     [System.Serializable]
     public class Level2Settings {
         [Range(0f, 1f)] public float bagChance = 0.4f;
-        [Range(0f, 1f)] public float bodyguardChance = 0.4f;
+        [Range(0f, 1f)] public float enemyChance = 0.4f;
         [Range(0f, 1f)] public float fishChance = 0.2f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
     }
     [System.Serializable]
     public class Level3Settings {
         [Range(0f, 1f)] public float bagChance = 0.3f;
-        [Range(0f, 1f)] public float bodyguardChance = 0.3f;
+        [Range(0f, 1f)] public float enemyChance = 0.3f;
         [Range(0f, 1f)] public float wallChance = 0.2f;
         [Range(0f, 1f)] public float longWallChance = 0.1f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
@@ -63,7 +63,7 @@ public class ObstacleSpawner : MonoBehaviour
     [System.Serializable]
     public class Level4Settings {
         [Range(0f, 1f)] public float bagChance = 0.25f;
-        [Range(0f, 1f)] public float bodyguardChance = 0.25f;
+        [Range(0f, 1f)] public float enemyChance = 0.25f;
         [Range(0f, 1f)] public float wallChance = 0.25f;
         [Range(0f, 1f)] public float barbedWireChance = 0.15f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
@@ -103,24 +103,26 @@ public class ObstacleSpawner : MonoBehaviour
             int currentLevel = 1;
             if (LevelManager.Instance != null) currentLevel = LevelManager.Instance.currentLevel;
 
-            float bag = 0, bodyguard = 0, wall = 0, longWall = 0, barbed = 0, fish = 0, potion = 0;
+            float bag = 0, enemy = 0, wall = 0, longWall = 0, barbed = 0, fish = 0, potion = 0;
+            
+            // ... (switch remains same)
 
             switch (currentLevel)
             {
                 case 1:
                     bag = level1.bagChance;
                     fish = level1.fishChance;
-                    potion = level1.potionChance;
+                    potion = 0.25f; // Set to a higher default for visibility
                     break;
                 case 2:
                     bag = level2.bagChance;
-                    bodyguard = level2.bodyguardChance;
+                    enemy = level2.enemyChance;
                     fish = level2.fishChance;
                     potion = level2.potionChance;
                     break;
                 case 3:
                     bag = level3.bagChance;
-                    bodyguard = level3.bodyguardChance;
+                    enemy = level3.enemyChance;
                     wall = level3.wallChance;
                     longWall = level3.longWallChance;
                     fish = level3.fishChance;
@@ -128,7 +130,7 @@ public class ObstacleSpawner : MonoBehaviour
                     break;
                 case 4:
                     bag = level4.bagChance;
-                    bodyguard = level4.bodyguardChance;
+                    enemy = level4.enemyChance;
                     wall = level4.wallChance;
                     barbed = level4.barbedWireChance;
                     fish = level4.fishChance;
@@ -138,7 +140,7 @@ public class ObstacleSpawner : MonoBehaviour
                 default:
                     // Strictly NO obstacles in Level 5
                     bag = 0f;
-                    bodyguard = 0f;
+                    enemy = 0f; // Was bodyguard
                     wall = 0f;
                     longWall = 0f;
                     barbed = 0f;
@@ -152,28 +154,38 @@ public class ObstacleSpawner : MonoBehaviour
             // LEVEL 5 Check: Don't spawn any object if the ground below is a pit (to keep visuals clean)
             if (currentLevel == 5 && GroundSpawner.Instance != null && GroundSpawner.Instance.IsPitAtX(bagSpawnX))
             {
+                // Debug.Log("[ObstacleSpawner] Spawn skipped because of pit at " + bagSpawnX);
                 continue;
             }
 
-            float totalChance = bag + bodyguard + wall + longWall + barbed + fish + potion;
+            float totalChance = bag + enemy + wall + longWall + barbed + fish + potion;
+            if (totalChance <= 0) 
+            {
+                Debug.LogWarning("[ObstacleSpawner] Total chance is 0! Check Inspector settings.");
+                continue; 
+            }
+            
             float rnd = Random.Range(0f, totalChance);
             float currentLimit = 0f;
+            
+            // Debugging
+            Debug.Log($"[ObstacleSpawner] Lvl:{currentLevel} Rnd:{rnd:F2}/{totalChance:F2} PotionLimit:{(totalChance-potion):F2}");
 
             // Check Bag
             currentLimit += bag;
             if (rnd < currentLimit)
             {
                 if (obstaclePrefab != null)
-                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
+                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, obstaclePrefab.transform.position.z), obstaclePrefab.transform.rotation);
                 continue;
             }
 
-            // Check Bodyguard
-            currentLimit += bodyguard;
+            // Check Enemy (Was Bodyguard)
+            currentLimit += enemy;
             if (rnd < currentLimit)
             {
-                if (bodyguardPrefab != null)
-                    Instantiate(bodyguardPrefab, new Vector3(bodyguardSpawnX, bodyguardSpawnY, 0f), Quaternion.identity);
+                if (enemyPrefab != null)
+                    Instantiate(enemyPrefab, new Vector3(enemySpawnX, enemySpawnY, enemyPrefab.transform.position.z), enemyPrefab.transform.rotation);
                 continue;
             }
 
@@ -184,7 +196,7 @@ public class ObstacleSpawner : MonoBehaviour
                 if (wallPrefab != null)
                 {
                     float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
-                    GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
+                    GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, wallPrefab.transform.position.z), wallPrefab.transform.rotation);
                     w.transform.localScale = new Vector3(w.transform.localScale.x, randomScaleY, w.transform.localScale.z);
                 }
                 continue;
@@ -210,7 +222,7 @@ public class ObstacleSpawner : MonoBehaviour
             if (rnd < currentLimit)
             {
                 if (barbedWirePrefab != null)
-                    Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, 0f), Quaternion.identity);
+                    Instantiate(barbedWirePrefab, new Vector3(barbedWireSpawnX, barbedWireSpawnY, barbedWirePrefab.transform.position.z), barbedWirePrefab.transform.rotation);
                 continue;
             }
 
@@ -219,10 +231,7 @@ public class ObstacleSpawner : MonoBehaviour
             if (rnd < currentLimit)
             {
                 if (fishPrefab != null)
-                {
-                    float randomY = Random.Range(-2f, 1.5f);
-                    Instantiate(fishPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
-                }
+                    Instantiate(fishPrefab, new Vector3(fishSpawnX, fishPrefab.transform.position.y, fishPrefab.transform.position.z), fishPrefab.transform.rotation);
                 continue;
             }
 
@@ -233,7 +242,12 @@ public class ObstacleSpawner : MonoBehaviour
                 if (potionPrefab != null)
                 {
                     float randomY = Random.Range(-2f, 1.5f);
-                    Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
+                    GameObject p = Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
+                    Debug.Log($"[ObstacleSpawner] Potion spawned at Y: {randomY}. Name: {p.name}");
+                }
+                else
+                {
+                    Debug.LogWarning("[ObstacleSpawner] Potion chosen but potionPrefab is NULL!");
                 }
                 continue;
             }

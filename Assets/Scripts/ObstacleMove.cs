@@ -4,6 +4,7 @@ public class ObstacleMove : MonoBehaviour
 {
     public float speed = 7f;
     public float destroyX = -15f;
+    public bool moveEvenWhenMultiplierIsZero = false; // New: Enemy logic
     [HideInInspector] public bool canRewardCleanJump = true;
 
     private bool passedPlayer = false;
@@ -24,14 +25,22 @@ public class ObstacleMove : MonoBehaviour
     {
         // SADECE X ekseninde hareket
         int dir = (playerMove != null) ? playerMove.WorldDirection : 1;
-        transform.position += Vector3.left * speed * GameSpeed.Multiplier * dir * Time.deltaTime;
+        float currentMultiplier = GameSpeed.Multiplier;
+        
+        // If it's an enemy that should keep moving even when world is stopped (player stuck)
+        if (moveEvenWhenMultiplierIsZero && currentMultiplier <= 0)
+        {
+            currentMultiplier = 1.0f; // Move at normal base speed
+        }
+
+        transform.position += Vector3.left * speed * currentMultiplier * dir * Time.deltaTime;
 
         // Check if passed player's X position for "clean jump" reward
         if (!passedPlayer && player != null && transform.position.x < player.position.x)
         {
             passedPlayer = true;
             // Only reward if it's an obstacle and NOT the one we just hit
-            if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("Bodyguard") || CompareTag("BarbedWire") || CompareTag("Bush")))
+            if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("LongWall") || CompareTag("Bodyguard") || CompareTag("BarbedWire") || CompareTag("Bush")))
             {
                 if (ScoreManager.Instance != null)
                 {
@@ -48,7 +57,7 @@ public class ObstacleMove : MonoBehaviour
             }
         }
 
-        if (transform.position.x < destroyX && GameSpeed.Multiplier > 0)
+        if (transform.position.x < destroyX)
             Destroy(gameObject);
     }
 }

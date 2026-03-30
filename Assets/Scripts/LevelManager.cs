@@ -15,7 +15,7 @@ public class LevelManager : MonoBehaviour
     private static int savedLevel = -1;
     
     // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35), Level 5 (50)
-    private int[] levelGoals = { 0, 10, 15, 25, 10, 10 };
+    private int[] levelGoals = { 0, 10, 10, 10, 10, 10 };
 
     [Header("Speed Settings")]
     public float[] levelSpeeds = { 1.0f, 1.35f, 1.7f, 2.1f, 2.5f };

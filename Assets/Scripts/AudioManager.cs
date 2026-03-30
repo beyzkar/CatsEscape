@@ -38,6 +38,8 @@ public class AudioManager : MonoBehaviour
     [Range(0f, 1f)] public float potionIncreaseVolume = 1f;
     public AudioClip potionDecreaseSfx;
     [Range(0f, 1f)] public float potionDecreaseVolume = 1f;
+    public AudioClip fallingSfx;
+    [Range(0f, 1f)] public float fallingVolume = 1f;
 
     [Header("Global Settings")]
     [Range(0f, 1f)]
@@ -163,6 +165,7 @@ public class AudioManager : MonoBehaviour
     public void PlayExtraXP() { PlaySFX(extraXPSfx, extraXPVolume); }
     public void PlayPotionIncrease() { PlaySFX(potionIncreaseSfx, potionIncreaseVolume); }
     public void PlayPotionDecrease() { PlaySFX(potionDecreaseSfx, potionDecreaseVolume); }
+    public void PlayFalling() { PlaySFX(fallingSfx, fallingVolume); }
 
     public void PlayGameOverSound()
     {
