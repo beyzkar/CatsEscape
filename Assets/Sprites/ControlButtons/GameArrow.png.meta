@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: c2e219da99a6e4699b48266d2d06a4e7
+guid: d3bafac07273a4b9ab84289ce5ef73e2
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6049605792901559095
-    second: Water_0
+      213: -1835533648303372327
+    second: GameArrow_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Water_0
+      name: GameArrow_0
       rect:
         serializedVersion: 2
-        x: 17
-        y: 33
-        width: 640
-        height: 103
+        x: 557
+        y: 597
+        width: 946
+        height: 890
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 733fa0d9a6484f350800000000000000
-      internalID: 6049605792901559095
+      spriteID: 9d7c9973fdfd686e0800000000000000
+      internalID: -1835533648303372327
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Water_0: 6049605792901559095
+      GameArrow_0: -1835533648303372327
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -47,6 +47,10 @@ public class PlayerMovement : MonoBehaviour
     public float stopX = -4f;
     private bool introFinished = false;
     private bool dead = false;
+    
+    // Mobile Input Flags
+    private bool mobileLeft = false;
+    private bool mobileRight = false;
 
 
     void Awake()
@@ -92,80 +96,37 @@ public class PlayerMovement : MonoBehaviour
             if (rb != null)
             {
                 rb.linearVelocity = Vector2.zero;
-                // Restored to Dynamic to prevent dragging by moving obstacles
                 rb.bodyType = RigidbodyType2D.Dynamic;
                 rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             }
             return;
         }
 
-        // yere değiyor mu kontrol
-        bool groundedNow = Physics2D.OverlapCircle(
-            groundCheck.position,
-            groundCheckRadius,
-            groundLayer
-        );
+        // --- GROUND CHECK ---
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
 
-        // sadece yere değdiği anda zıplama hakkını resetle
-        if (groundedNow && !isGrounded)
+        if (isGrounded)
         {
             jumpsLeft = maxJumps;
         }
 
-        isGrounded = groundedNow;
+        // --- HORIZONTAL MOVEMENT (Strict Isolation) ---
+        float hInput = Input.GetAxisRaw("Horizontal"); // Support keyboard
+        if (mobileLeft) hInput = -1f;   // Support mobile
+        if (mobileRight) hInput = 1f;
 
-        // --- HORIZONTAL MOVEMENT INPUT ---
-        float horizontalInput = 0f;
-        targetVelocityX = 0f;
+        // Apply movement speed
+        targetVelocityX = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
+        
+        // Handle visual direction
+        if (hInput > 0) { WorldDirection = 1; FaceDirection(true); }
+        else if (hInput < 0) { WorldDirection = -1; FaceDirection(false); }
 
-        // Move Left (Always available if not dead)
-        if (Input.GetKey(KeyCode.LeftArrow))
+        // --- JUMP INPUT (Keyboard + Mobile Buttons) ---
+        // MouseButtonDown(0) removed to prevent conflict with UI button clicks in simulator
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
         {
-            targetVelocityX = -moveLeftSpeed;
-            horizontalInput = -1f;
-            WorldDirection = -1;
-        }
-        else
-        {
-            WorldDirection = 1;
-        }
-
-        // Move Right (Movement is allowed, but World remains stopped by GameSpeed.Multiplier)
-        if (Input.GetKey(KeyCode.RightArrow))
-        {
-            targetVelocityX = moveRightSpeed;
-            horizontalInput = 1f;
-        }
-
-        // --- CAMERA SHIFT LOGIC ---
-        if (horizontalInput > 0) FaceDirection(true);
-        else if (horizontalInput < 0) FaceDirection(false);
-
-        // zıplama tuşları
-        if (Input.GetKeyDown(KeyCode.Space) ||
-            Input.GetKeyDown(KeyCode.UpArrow) ||
-            Input.GetMouseButtonDown(0))
-        {
-            // Level 5 specific: Disable jump if too low (falling into pit)
-            bool isTooLowInLevel5 = false;
-            if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
-            {
-                if (transform.position.y < deathThresholdY)
-                {
-                    isTooLowInLevel5 = true;
-                }
-            }
-
-            if (!isTooLowInLevel5)
-            {
-                TryJump();
-            }
-            else
-            {
-                // Play falling sound when jump is denied
-                if (AudioManager.Instance != null)
-                    AudioManager.Instance.PlayFalling();
-            }
+            MobileJumpDown();
         }
     }
 
@@ -253,5 +214,38 @@ public class PlayerMovement : MonoBehaviour
     public void ResetJumpMultiplier()
     {
         currentJumpForce = jumpForce;
+    }
+
+    // --- MOBILE INPUT METHODS ---
+    public void SetMoveLeft(bool isMoving) { mobileLeft = isMoving; }
+    public void SetMoveRight(bool isMoving) { mobileRight = isMoving; }
+    
+    // Properties for external scripts (like PlayerObstacleRules) to check input state
+    public bool IsMovingLeft => Input.GetKey(KeyCode.LeftArrow) || mobileLeft;
+    public bool IsMovingRight => Input.GetKey(KeyCode.RightArrow) || mobileRight;
+    
+    public void MobileJumpDown()
+    {
+        if (dead) return;
+        
+        // Level 5 specific: Disable jump if too low (falling into pit)
+        bool isTooLowInLevel5 = false;
+        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
+        {
+            if (transform.position.y < deathThresholdY)
+            {
+                isTooLowInLevel5 = true;
+            }
+        }
+
+        if (!isTooLowInLevel5)
+        {
+            TryJump();
+        }
+        else
+        {
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayFalling();
+        }
     }
 }

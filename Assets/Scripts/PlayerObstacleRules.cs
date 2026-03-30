@@ -137,11 +137,10 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
-        // --- BOUNDARY FREEZE CHECK ---
         if (!dead && !stuck && movementScript != null)
         {
-            // If we are at the left boundary and trying to move left
-            if (transform.position.x <= movementScript.minX + 0.05f && Input.GetKey(KeyCode.LeftArrow))
+            // If we are at the left boundary and trying to move left (using new IsMovingLeft property)
+            if (transform.position.x <= movementScript.minX + 0.05f && movementScript.IsMovingLeft)
             {
                 EnterStuckState(null); // No specific obstacle
             }
@@ -263,26 +262,29 @@ public class PlayerObstacleRules : MonoBehaviour
             ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
             if (moveScript != null) moveScript.canRewardCleanJump = false;
 
+            // NEW: Cancel Potion growth effect on ANY obstacle or wall collision
+            if (isPotionActive) ResetPotionEffect();
+
             if (isWall || col.collider.CompareTag("Obstacle"))
             {
                 if (damageCooldown <= 0)
                 {
-                    // NEW: Level 3 ObstacleBag or any Wall damage protection (User request)
-                    bool isLevel3Bag = (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 3 && col.collider.CompareTag("Obstacle"));
+                    // GLOBAL: Obstacle Bags and Walls are harmless (User request)
+                    bool isObstacleBag = col.collider.CompareTag("Obstacle");
                     bool isAnyWall = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall");
                     
-                    if (isLevel3Bag || isAnyWall)
+                    if (isObstacleBag || isAnyWall)
                     {
                         StartCoroutine(FlashRecoveryEffect()); // Only blinking feedback, no damage
                         
-                        // User request: Level 3 bags should SOUND like Level 4 obstacles (PlayHeartLost)
-                        if (isLevel3Bag && AudioManager.Instance != null) 
-                            AudioManager.Instance.PlayHeartLost();
+                        // Impact sound for bags vs walls
+                        if (isObstacleBag && AudioManager.Instance != null) 
+                            AudioManager.Instance.PlayHeartLost(); // High-impact sound for bags (matches Level 4 style)
                     }
                     else
                     {
                         if (isPotionActive) ResetPotionEffect();
-                        LoseHeart(); // Full heart loss for other obstacles/levels
+                        LoseHeart(); // Full heart loss for other lethal obstacles (Bodyguards, Spikes, etc.)
                     }
                     
                     damageCooldown = DAMAGE_COOLDOWN_TIME;
@@ -529,6 +531,9 @@ public class PlayerObstacleRules : MonoBehaviour
             // Only special obstacles cost hearts; Wall and LongWall give effect/sound without damage (User request)
             if (damageCooldown <= 0)
             {
+                // NEW: Cancel Potion growth effect on ANY trigger obstacle hit
+                if (isPotionActive) ResetPotionEffect();
+
                 if (other.CompareTag("LongWall") || other.CompareTag("Wall"))
                 {
                     StartCoroutine(FlashRecoveryEffect()); // Blinking feedback (No heart loss for any Wall type)
