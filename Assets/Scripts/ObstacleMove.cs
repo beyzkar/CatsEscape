@@ -40,7 +40,7 @@ public class ObstacleMove : MonoBehaviour
         {
             passedPlayer = true;
             // Only reward if it's an obstacle and NOT the one we just hit
-            if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("LongWall") || CompareTag("Bodyguard") || CompareTag("BarbedWire") || CompareTag("Bush")))
+            if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("LongWall") || CompareTag("Bodyguard") || CompareTag("Enemy") || CompareTag("BarbedWire") || CompareTag("Bush")))
             {
                 if (ScoreManager.Instance != null)
                 {

@@ -265,8 +265,29 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (isWall || col.collider.CompareTag("Obstacle"))
             {
-                if (isPotionActive) ResetPotionEffect();
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+                if (damageCooldown <= 0)
+                {
+                    // NEW: Level 3 ObstacleBag or any Wall damage protection (User request)
+                    bool isLevel3Bag = (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 3 && col.collider.CompareTag("Obstacle"));
+                    bool isAnyWall = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall");
+                    
+                    if (isLevel3Bag || isAnyWall)
+                    {
+                        StartCoroutine(FlashRecoveryEffect()); // Only blinking feedback, no damage
+                        
+                        // User request: Level 3 bags should SOUND like Level 4 obstacles (PlayHeartLost)
+                        if (isLevel3Bag && AudioManager.Instance != null) 
+                            AudioManager.Instance.PlayHeartLost();
+                    }
+                    else
+                    {
+                        if (isPotionActive) ResetPotionEffect();
+                        LoseHeart(); // Full heart loss for other obstacles/levels
+                    }
+                    
+                    damageCooldown = DAMAGE_COOLDOWN_TIME;
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+                }
                 EnterStuckState(col.gameObject);
             }
         }
@@ -396,7 +417,7 @@ public class PlayerObstacleRules : MonoBehaviour
         float multiplier = 1f;
         if (isInvincible)
         {
-            multiplier = 1.2f;
+            multiplier = 1.4f; // Increased from 1.2f for more noticeable boost
         }
         else if (isPotionActive)
         {
@@ -409,7 +430,7 @@ public class PlayerObstacleRules : MonoBehaviour
     private IEnumerator PowerUpSequence()
     {
         isInvincible = true;
-        GameSpeed.Multiplier = 1.2f;
+        UpdateGameSpeed(); // Dynamically calculate speed based on level + boost
         UpdateSortingOrder(100);
         
         if (sparkleEffect != null) 
@@ -505,10 +526,17 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
             }
 
-            // Damage on any hit (except LongWall)
-            if (damageCooldown <= 0 && !other.CompareTag("LongWall"))
+            // Only special obstacles cost hearts; Wall and LongWall give effect/sound without damage (User request)
+            if (damageCooldown <= 0)
             {
-                LoseHeart();
+                if (other.CompareTag("LongWall") || other.CompareTag("Wall"))
+                {
+                    StartCoroutine(FlashRecoveryEffect()); // Blinking feedback (No heart loss for any Wall type)
+                }
+                else
+                {
+                    LoseHeart(); // Other hits result in heart loss
+                }
                 damageCooldown = DAMAGE_COOLDOWN_TIME;
             }
 

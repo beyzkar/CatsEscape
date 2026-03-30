@@ -188,8 +188,10 @@ public class PlayerMovement : MonoBehaviour
             // If we are to the left of our home (stopX) and not actively moving further left
             if (transform.position.x < stopX && targetVelocityX >= 0)
             {
-                // Add return speed to the right
-                finalVelocityX += returnSpeed;
+                // Smooth proportional return: faster when far, slower (easier) when close
+                float dist = stopX - transform.position.x;
+                float smoothReturn = dist * 3.0f; // Snappy return factor
+                finalVelocityX += Mathf.Min(smoothReturn, 5f); // Cap the return speed boost
             }
         }
 

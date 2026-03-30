@@ -48,6 +48,7 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level2Settings {
         [Range(0f, 1f)] public float bagChance = 0.4f;
         [Range(0f, 1f)] public float enemyChance = 0.4f;
+        public GameObject levelEnemyPrefab; // Level unique enemy
         [Range(0f, 1f)] public float fishChance = 0.2f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
     }
@@ -55,6 +56,7 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level3Settings {
         [Range(0f, 1f)] public float bagChance = 0.3f;
         [Range(0f, 1f)] public float enemyChance = 0.3f;
+        public GameObject levelEnemyPrefab; // Level unique enemy
         [Range(0f, 1f)] public float wallChance = 0.2f;
         [Range(0f, 1f)] public float longWallChance = 0.1f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
@@ -64,6 +66,7 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level4Settings {
         [Range(0f, 1f)] public float bagChance = 0.25f;
         [Range(0f, 1f)] public float enemyChance = 0.25f;
+        public GameObject levelEnemyPrefab; // Level unique enemy
         [Range(0f, 1f)] public float wallChance = 0.25f;
         [Range(0f, 1f)] public float barbedWireChance = 0.15f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
@@ -168,8 +171,6 @@ public class ObstacleSpawner : MonoBehaviour
             float rnd = Random.Range(0f, totalChance);
             float currentLimit = 0f;
             
-            // Debugging
-            Debug.Log($"[ObstacleSpawner] Lvl:{currentLevel} Rnd:{rnd:F2}/{totalChance:F2} PotionLimit:{(totalChance-potion):F2}");
 
             // Check Bag
             currentLimit += bag;
@@ -184,8 +185,14 @@ public class ObstacleSpawner : MonoBehaviour
             currentLimit += enemy;
             if (rnd < currentLimit)
             {
-                if (enemyPrefab != null)
-                    Instantiate(enemyPrefab, new Vector3(enemySpawnX, enemySpawnY, enemyPrefab.transform.position.z), enemyPrefab.transform.rotation);
+                // Determine which prefab to use (Level-specific or Default)
+                GameObject prefabToSpawn = enemyPrefab;
+                if (currentLevel == 2 && level2.levelEnemyPrefab != null) prefabToSpawn = level2.levelEnemyPrefab;
+                else if (currentLevel == 3 && level3.levelEnemyPrefab != null) prefabToSpawn = level3.levelEnemyPrefab;
+                else if (currentLevel == 4 && level4.levelEnemyPrefab != null) prefabToSpawn = level4.levelEnemyPrefab;
+
+                if (prefabToSpawn != null)
+                    Instantiate(prefabToSpawn, new Vector3(enemySpawnX, enemySpawnY, prefabToSpawn.transform.position.z), prefabToSpawn.transform.rotation);
                 continue;
             }
 
@@ -243,7 +250,6 @@ public class ObstacleSpawner : MonoBehaviour
                 {
                     float randomY = Random.Range(-2f, 1.5f);
                     GameObject p = Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
-                    Debug.Log($"[ObstacleSpawner] Potion spawned at Y: {randomY}. Name: {p.name}");
                 }
                 else
                 {
