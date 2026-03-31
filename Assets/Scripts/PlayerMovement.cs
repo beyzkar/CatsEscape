@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public static PlayerMovement Instance { get; private set; }
     public float jumpForce = 12f;
     private float currentJumpForce;
     public int maxJumps = 2; 
@@ -63,6 +64,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Awake()
     {
+        Instance = this;
         rb = GetComponent<Rigidbody2D>();
         if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         
@@ -156,19 +158,6 @@ public class PlayerMovement : MonoBehaviour
             finalVelocityX = 0f;
         }
 
-        // RETURN TO HOME logic (if not dead/stuck and not pressing Left)
-        if (introFinished && (rules == null || (!rules.IsDead && !rules.IsStuck)))
-        {
-            // If we are to the left of our home (stopX) and not actively moving further left
-            if (transform.position.x < stopX && targetVelocityX >= 0)
-            {
-                // Smooth proportional return: faster when far, slower (easier) when close
-                float dist = stopX - transform.position.x;
-                float smoothReturn = dist * 3.0f; // Snappy return factor
-                finalVelocityX += Mathf.Min(smoothReturn, 5f); // Cap the return speed boost
-            }
-        }
-
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
 
         // --- HARD POSITION CLAMP ---
@@ -178,7 +167,7 @@ public class PlayerMovement : MonoBehaviour
         {
             transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            currentHorizontalVelocity = 0; // Reset acceleration momentum too
+            // Don't reset currentHorizontalVelocity here so it can still drive world scroll
         }
     }
 
@@ -231,6 +220,9 @@ public class PlayerMovement : MonoBehaviour
     // Properties for external scripts (like PlayerObstacleRules) to check input state
     public bool IsMovingLeft => Input.GetKey(KeyCode.LeftArrow) || mobileLeft;
     public bool IsMovingRight => Input.GetKey(KeyCode.RightArrow) || mobileRight;
+    
+    // EXPOSE velocity for World Scrolling
+    public float CurrentVelocityX => currentHorizontalVelocity;
     
     public void MobileJumpDown()
     {

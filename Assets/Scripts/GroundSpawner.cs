@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 /// <summary>
 /// GroundSpawner: Modüler zemin parçalarını ve rastgele çukurları (Pit) uç uca ekleyerek sonsuz bir yol oluşturur.
-/// Level 5 için idealdir.
 /// </summary>
 public class GroundSpawner : MonoBehaviour
 {
@@ -58,9 +57,8 @@ public class GroundSpawner : MonoBehaviour
 
         if (isSpawnerStarted)
         {
-            // Oyun hızını al (ObstacleMove ile aynı mantık)
-            float speed = 7f; 
-            float moveStep = speed * GameSpeed.Multiplier * Time.deltaTime;
+            // Match world movement to player velocity
+            float moveStep = PlayerMovement.Instance.CurrentVelocityX * GameSpeed.Multiplier * Time.deltaTime;
 
             // Tüm aktif zeminleri hareket ettir
             for (int i = 0; i < activeGrounds.Count; i++)
@@ -74,16 +72,27 @@ public class GroundSpawner : MonoBehaviour
             // Bir sonraki parçanın ekleneceği konumu da aynı oranda kaydır
             nextSpawnX -= moveStep;
 
-            // En arkadaki parça belirli bir sınırı geçtiyse yenisini ekle
-            if (activeGrounds.Count > 0 && activeGrounds[0].transform.position.x < spawnTriggerX)
+            // Spawning: Handle both directions
+            // Forward (Right)
+            if (activeGrounds.Count > 0 && activeGrounds[activeGrounds.Count - 1].transform.position.x < (PlayerMovement.Instance.maxX + groundWidth))
             {
-                SpawnNextSegment(true);
+                SpawnNextSegment(true, true);
             }
 
-            // Çok geride kalanları temizle (activeGrounds[0] her zaman en soldakidir)
-            if (activeGrounds.Count > 0 && activeGrounds[0].transform.position.x < destroyLimitX)
+            // Backward (Left)
+            if (activeGrounds.Count > 0 && activeGrounds[0].transform.position.x > (PlayerMovement.Instance.minX - groundWidth))
             {
-                RemoveOldestSegment();
+                SpawnNextSegment(true, false);
+            }
+
+            // Cleanup: remove far away segments to save performance
+            if (activeGrounds.Count > 0 && activeGrounds[0].transform.position.x < (PlayerMovement.Instance.minX - groundWidth * 3))
+            {
+                RemoveOldestSegment(0); // Left side
+            }
+            if (activeGrounds.Count > 1 && activeGrounds[activeGrounds.Count - 1].transform.position.x > (PlayerMovement.Instance.maxX + groundWidth * 3))
+            {
+                RemoveOldestSegment(activeGrounds.Count - 1); // Right side
             }
         }
     }
@@ -145,8 +154,7 @@ public class GroundSpawner : MonoBehaviour
     /// <summary>
     /// Yeni bir zemin segmanı oluşturur ve listeye ekler.
     /// </summary>
-    /// <param name="allowPit">Rastgele bir çukur çıkma şansı olsun mu?</param>
-    public void SpawnNextSegment(bool allowPit)
+    public void SpawnNextSegment(bool allowPit, bool atRight = true)
     {
         GameObject prefabToSpawn = groundNormalPrefab;
 
@@ -185,33 +193,51 @@ public class GroundSpawner : MonoBehaviour
             return;
         }
 
+        // Determine spawn Position
+        float spawnX = atRight ? nextSpawnX : (activeGrounds[0].transform.position.x - groundWidth);
+
         // Objeyi oluştur ve listeye ekle
-        GameObject segment = Instantiate(prefabToSpawn, new Vector3(nextSpawnX, groundY + currentOffset, 0), Quaternion.identity);
+        GameObject segment = Instantiate(prefabToSpawn, new Vector3(spawnX, groundY + currentOffset, 0), Quaternion.identity);
         
         // Eğer bir efekt atanmışsa ve bu bir çukursa çukurun içine oluştur
         if (prefabToSpawn == groundPitPrefab && pitVFXPrefab != null)
         {
-            GameObject vfx = Instantiate(pitVFXPrefab, new Vector3(nextSpawnX, groundY + vfxYOffset, 0), Quaternion.identity);
+            GameObject vfx = Instantiate(pitVFXPrefab, new Vector3(spawnX, groundY + vfxYOffset, 0), Quaternion.identity);
             vfx.transform.SetParent(segment.transform); 
         }
 
-        // Bu objeyi GroundSpawner'ın altında tutmak hiyerarşiyi düzenli yapar
         segment.transform.SetParent(transform);
         
-        activeGrounds.Add(segment);
-
-        // Bir sonraki parçanın konumunu güncelle
-        nextSpawnX += groundWidth;
+        if (atRight)
+        {
+            activeGrounds.Add(segment);
+            nextSpawnX += groundWidth;
+        }
+        else
+        {
+            activeGrounds.Insert(0, segment);
+            // nextSpawnX stays the same as it's the rightmost point
+        }
     }
 
     /// <summary>
-    /// En arkada (solda) kalan eski zemin parçasını siler.
+    /// Fazlalık zemin parçalarını siler.
     /// </summary>
-    void RemoveOldestSegment()
+    void RemoveOldestSegment(int index)
     {
-        GameObject oldest = activeGrounds[0];
-        activeGrounds.RemoveAt(0);
-        Destroy(oldest);
+        if (index < 0 || index >= activeGrounds.Count) return;
+        
+        GameObject target = activeGrounds[index];
+        activeGrounds.RemoveAt(index);
+        
+        // If we removed the rightmost, we need to adjust nextSpawnX
+        if (index == activeGrounds.Count) // After removal, previous Count is index+1
+        {
+            nextSpawnX -= groundWidth;
+        }
+        // If we remove the leftmost, we don't need to change nextSpawnX
+        
+        Destroy(target);
     }
 
     /// <summary>

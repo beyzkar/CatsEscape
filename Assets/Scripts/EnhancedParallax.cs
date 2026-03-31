@@ -115,20 +115,14 @@ public class EnhancedParallax : MonoBehaviour
 
     void Update()
     {
-        if (GameSpeed.Multiplier <= 0) return;
+        if (PlayerMovement.Instance == null || GameSpeed.Multiplier <= 0) return;
 
-        int dir = (player != null) ? player.WorldDirection : 1;
-        float movement = baseSpeed * GameSpeed.Multiplier * dir * Time.deltaTime;
+        // Drive background movement strictly by player velocity
+        float movement = PlayerMovement.Instance.CurrentVelocityX * GameSpeed.Multiplier * Time.deltaTime;
 
         for (int i = 0; i < layers.Length; i++)
         {
-            if (layers[i].layerParent == null) 
-            {
-                // Hangi objede hata olduğunu anlamak için log ekleyelim
-                if (Time.frameCount % 300 == 0) // Çok sık doluşmasın diye
-                    Debug.LogWarning($"EnhancedParallax on {gameObject.name}: Layer {i} is missing its Layer Parent!", this);
-                continue;
-            }
+            if (layers[i].layerParent == null) continue;
 
             if (layers[i].width <= 0) 
             {
@@ -148,12 +142,12 @@ public class EnhancedParallax : MonoBehaviour
             Vector3 pos = layers[i].layerParent.localPosition;
             pos.x -= movement * Mathf.Abs(layers[i].speed);
 
-            // Loop logic needs to handle both directions
-            if (dir > 0)
+            // Loop logic: must handle both directions
+            if (movement > 0)
             {
                 if (pos.x <= -layers[i].width) pos.x += layers[i].width;
             }
-            else
+            else if (movement < 0)
             {
                 if (pos.x >= 0) pos.x -= layers[i].width;
             }

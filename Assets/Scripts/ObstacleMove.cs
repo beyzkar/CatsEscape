@@ -24,16 +24,12 @@ public class ObstacleMove : MonoBehaviour
     void Update()
     {
         // SADECE X ekseninde hareket
-        int dir = (playerMove != null) ? playerMove.WorldDirection : 1;
-        float currentMultiplier = GameSpeed.Multiplier;
+        float playerVel = (PlayerMovement.Instance != null) ? PlayerMovement.Instance.CurrentVelocityX : 0f;
+        float independentSpeed = (moveEvenWhenMultiplierIsZero || CompareTag("Enemy")) ? speed : 0f;
         
-        // If it's an enemy that should keep moving even when world is stopped (player stuck)
-        if (moveEvenWhenMultiplierIsZero && currentMultiplier <= 0)
-        {
-            currentMultiplier = 1.0f; // Move at normal base speed
-        }
-
-        transform.position += Vector3.left * speed * currentMultiplier * dir * Time.deltaTime;
+        // Final move amount = opposite of player velocity + internal independent speed
+        float totalScrollSpeed = (playerVel + independentSpeed) * GameSpeed.Multiplier;
+        transform.position += Vector3.left * totalScrollSpeed * Time.deltaTime;
 
         // Check if passed player's X position for "clean jump" reward
         if (!passedPlayer && player != null && transform.position.x < player.position.x)

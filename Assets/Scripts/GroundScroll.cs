@@ -15,10 +15,10 @@ public class GroundScroll : MonoBehaviour
 
     void Update()
     {
-        speed = Mathf.Min(maxSpeed, speed + speedIncreasePerSecond * Time.deltaTime);
-        //Mathf.Min: hız max hızı geçmesin diye engel koyar,
-        
-        transform.position += Vector3.left * speed * GameSpeed.Multiplier * Time.deltaTime;
-        //Vector3.left: sola doğru hareket ettirir.
+        if (PlayerMovement.Instance == null || GameSpeed.Multiplier <= 0) return;
+
+        // Move the ground in the opposite direction of player movement
+        float scrollAmount = PlayerMovement.Instance.CurrentVelocityX * GameSpeed.Multiplier * Time.deltaTime;
+        transform.position += Vector3.left * scrollAmount;
     }
 }
