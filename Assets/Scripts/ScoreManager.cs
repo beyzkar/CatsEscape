@@ -13,18 +13,12 @@ public class ScoreManager : MonoBehaviour
     private int bonusXP = 0;
 
     [Header("XP Prefabs")]
-    public GameObject xp5Prefab;
     public GameObject xp20Prefab;
     public GameObject xp50Prefab;
     public GameObject xp75Prefab;
     public Transform playerTransform;
 
-    [Header("Combo Settings")]
-    private int cleanJumpsCount = 0;
-    private const int COMBO_THRESHOLD = 5;
-    private const int COMBO_XP_BONUS = 5;
 
-    // local extraXPSfx removed
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -49,9 +43,9 @@ public class ScoreManager : MonoBehaviour
 
     private void CalculateXP()
     {
-        // 0-50 metre: her metre 0.2 xp (önceden 1)
-        // 50-100 metre: her metre 0.4 xp (önceden 2)
-        // 100-150 metre: her metre 0.6 xp (önceden 3)
+        // 0-50 metre: her metre 0.2 xp 
+        // 50-100 metre: her metre 0.4 xp 
+        // 100-150 metre: her metre 0.6 xp
         
         float tempXP = 0;
 
@@ -105,8 +99,7 @@ public class ScoreManager : MonoBehaviour
         }
 
         GameObject prefab = null;
-        if (amount == 5) prefab = xp5Prefab;
-        else if (amount == 20) prefab = xp20Prefab;
+        if (amount == 20) prefab = xp20Prefab;
         else if (amount == 50) prefab = xp50Prefab;
         else if (amount == 75) prefab = xp75Prefab;
 
@@ -123,22 +116,6 @@ public class ScoreManager : MonoBehaviour
         }
     }
 
-    public void RegisterCleanJump()
-    {
-        cleanJumpsCount++;
-        if (cleanJumpsCount >= COMBO_THRESHOLD)
-        {
-            AddXP(COMBO_XP_BONUS);
-            Debug.Log("Combo! +5 XP added. Total clean jumps: " + cleanJumpsCount);
-        }
-    }
-
-    public void ResetCleanJumps()
-    {
-        cleanJumpsCount = 0;
-        Debug.Log("Combo reset (hit obstacle).");
-    }
-
     private void UpdateUI()
     {
         if (scoreText != null)
@@ -152,3 +129,4 @@ public class ScoreManager : MonoBehaviour
         return totalXP;
     }
 }
+

@@ -49,7 +49,7 @@ public class AudioManager : MonoBehaviour
 
     private void Awake()
     {
-        // Singleton pattern with persistence
+        //Singleton yapısı sayesinde oyunun herhangi bir yerinde müziğin kesilmeden devam etmesini sağlıyor
         if (Instance == null)
         {
             Instance = this;
@@ -65,7 +65,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    private void InitializeSources()
+    private void InitializeSources() //akıllı ses ekleme (eğer bir ses dosyasını eklemeyi unutursam kod bunu otomatik olarak ekler)
     {
         // Check for existing sources or add new ones
         AudioSource[] sources = GetComponents<AudioSource>();

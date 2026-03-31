@@ -37,13 +37,12 @@ public class CharacterSelectionUI : MonoBehaviour
 
     public void SelectCharacter(int charIndex)
     {
-        // Seçimi PlayerPrefs'e kaydet (0: Kedi 1, 1: Kedi 2)
+        // Seçimi PlayerPrefs'e kaydet
         PlayerPrefs.SetInt("SelectedCharacter", charIndex);
         PlayerPrefs.Save();
 
         Debug.Log("Character Selected: " + charIndex);
 
-        // Oyunu başlat
         if (mainMenuManager != null)
         {
             mainMenuManager.PerformStartGame();

@@ -45,9 +45,6 @@ public class PlayerObstacleRules : MonoBehaviour
     public ParticleSystem sparkleEffect;
 
     private float startX;
-    [Header("Return Speed")]
-    public float returnSpeed = 2f;
-
     [Header("Hit Recovery")]
     public float hitRecoveryDuration = 0.8f;
     private float hitRecoveryTimer = 0f;
@@ -74,8 +71,6 @@ public class PlayerObstacleRules : MonoBehaviour
         if (sparkleEffect != null) sparkleEffect.gameObject.SetActive(false);
         
         UpdateGameSpeed();
-
-        // Initialize hearts
 
         if (heartUI != null && heartUI.Length > 0)
         {
@@ -104,7 +99,6 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (damageCooldown > 0)
             damageCooldown -= Time.deltaTime;
-
 
         if (stuck)
         {
@@ -180,10 +174,9 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        bool isBodyguard = IsBodyguard(col.gameObject) || IsEnemy(col.gameObject);
-        bool isBarbedWire = col.collider.CompareTag("BarbedWire") || col.transform.root.CompareTag("BarbedWire");
+        bool isEnemy = IsEnemy(col.gameObject);
 
-        if (isBodyguard || isBarbedWire)
+        if (isEnemy)
         {
             if (isInvincible) return;
 
@@ -191,17 +184,27 @@ public class PlayerObstacleRules : MonoBehaviour
             // damageCooldown already prevents multiple hearts lost in a single collision frame.
             if (damageCooldown <= 0)
             {
-                if (isPotionActive) ResetPotionEffect();
+                if (isPotionActive)
+                {
+                    ResetPotionEffect();
+                    damageCooldown = 0.2f; // Minimal cooldown to prevent multi-frame hits from SAME object
+                    lastHitWall = col.gameObject;
+                    
+                    // Impact sound but no heart lost
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+                    
+                    // Still freeze if it's a side hit to maintain game feel
+                    Vector2 hitNormal = col.GetContact(0).normal;
+                    if (Mathf.Abs(hitNormal.x) > 0.4f)
+                    {
+                        EnterStuckState(col.gameObject);
+                    }
+                    return;
+                }
+
                 lastHitWall = col.gameObject;
                 LoseHeart();
                 damageCooldown = DAMAGE_COOLDOWN_TIME;
-                
-                if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
-
-                if (isBarbedWire)
-                {
-                    hitRecoveryTimer = hitRecoveryDuration;
-                }
 
                 ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
                 if (moveScript != null) moveScript.canRewardCleanJump = false;
@@ -257,8 +260,6 @@ public class PlayerObstacleRules : MonoBehaviour
                 else return;
             }
 
-            if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
-
             ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
             if (moveScript != null) moveScript.canRewardCleanJump = false;
 
@@ -269,25 +270,26 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 if (damageCooldown <= 0)
                 {
-                    // GLOBAL: Obstacle Bags and Walls are harmless (User request)
+                    // Only special obstacles cost hearts; Bags and Walls are harmless (User request)
                     bool isObstacleBag = col.collider.CompareTag("Obstacle");
                     bool isAnyWall = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall");
-                    
-                    if (isObstacleBag || isAnyWall)
+
+                    if (!isObstacleBag && !isAnyWall)
                     {
-                        StartCoroutine(FlashRecoveryEffect()); // Only blinking feedback, no damage
-                        
-                        // Impact sound for bags vs walls
-                        if (isObstacleBag && AudioManager.Instance != null) 
-                            AudioManager.Instance.PlayHeartLost(); // High-impact sound for bags (matches Level 4 style)
-                    }
-                    else
-                    {
-                        if (isPotionActive) ResetPotionEffect();
-                        LoseHeart(); // Full heart loss for other lethal obstacles (Bodyguards, Spikes, etc.)
+                        if (isPotionActive)
+                        {
+                            ResetPotionEffect();
+                            damageCooldown = 0.2f;
+                            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+                            EnterStuckState(col.gameObject);
+                        }
+                        else
+                        {
+                            LoseHeart(); // Full heart loss for lethal obstacles (Enemies, Spikes, etc.)
+                            damageCooldown = DAMAGE_COOLDOWN_TIME;
+                        }
                     }
                     
-                    damageCooldown = DAMAGE_COOLDOWN_TIME;
                     if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
                 }
                 EnterStuckState(col.gameObject);
@@ -483,24 +485,37 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead) return;
 
-        bool isBodyguard = IsBodyguard(other.gameObject) || IsEnemy(other.gameObject);
-        bool isBarbedWire = other.CompareTag("BarbedWire") || other.transform.root.CompareTag("BarbedWire");
+        bool isEnemy = IsEnemy(other.gameObject);
         bool isBush = other.CompareTag("Bush");
 
-        if (isBodyguard || isBarbedWire || isBush)
+        if (isEnemy || isBush)
         {
             if (isInvincible) return;
 
             if (damageCooldown <= 0)
             {
-                if (isPotionActive) ResetPotionEffect();
+                if (isPotionActive)
+                {
+                    ResetPotionEffect();
+                    damageCooldown = 0.2f;
+                    lastHitWall = other.gameObject;
+                    
+                    if (isBush) hitRecoveryTimer = hitRecoveryDuration;
+                    
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+
+                    if (transform.position.y < other.bounds.center.y + 0.5f)
+                    {
+                        EnterStuckState(other.gameObject);
+                    }
+                    return;
+                }
+
                 lastHitWall = other.gameObject;
                 LoseHeart();
                 damageCooldown = DAMAGE_COOLDOWN_TIME;
-                
-                if (ScoreManager.Instance != null) ScoreManager.Instance.ResetCleanJumps();
 
-                if (isBarbedWire || isBush)
+                if (isBush)
                 {
                     hitRecoveryTimer = hitRecoveryDuration;
                 }
@@ -527,21 +542,10 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
             }
 
-            // NEW: Cancel Potion growth effect on ANY trigger obstacle hit (regardless of cooldown)
-            if (isPotionActive) ResetPotionEffect();
-
-            // Only special obstacles cost hearts; Wall and LongWall give effect/sound without damage (User request)
-            if (damageCooldown <= 0)
+            // Only special obstacles cost hearts; Wall and LongWall are now used for effect/sound without damage
+            if (!other.CompareTag("LongWall") && !other.CompareTag("Wall"))
             {
-                if (other.CompareTag("LongWall") || other.CompareTag("Wall"))
-                {
-                    StartCoroutine(FlashRecoveryEffect()); // Blinking feedback (No heart loss for any Wall type)
-                }
-                else
-                {
-                    LoseHeart(); // Other hits result in heart loss
-                }
-                damageCooldown = DAMAGE_COOLDOWN_TIME;
+                LoseHeart(); // Other hits result in heart loss
             }
 
             if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
@@ -573,7 +577,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
         
-        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bodyguard") || other.CompareTag("Enemy") || other.CompareTag("Bush");
+        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Enemy") || other.CompareTag("Bush");
         if (isBlockingObstacle && (other.gameObject != lastHitWall || !stuck))
         {
             EnterStuckState(other.gameObject);
@@ -584,7 +588,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (dead || stuck) return;
 
-        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Bodyguard") || col.collider.CompareTag("Enemy") || col.collider.CompareTag("Bush");
+        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Enemy") || col.collider.CompareTag("Bush");
         if (isBlockingObstacle)
         {
             EnterStuckState(col.gameObject);
@@ -618,13 +622,6 @@ public class PlayerObstacleRules : MonoBehaviour
         return false;
     }
 
-    private bool IsBodyguard(GameObject obj)
-    {
-        if (obj == null) return false;
-        if (obj.CompareTag("Bodyguard")) return true;
-        if (obj.transform.root != null && obj.transform.root.CompareTag("Bodyguard")) return true;
-        return false;
-    }
 
     private IEnumerator FlashRecoveryEffect()
     {

@@ -13,13 +13,13 @@ public class GroundPoint : MonoBehaviour
         // Debug: Çarpışma algılandı mı?
         if (collision.collider.CompareTag("Player"))
         {
-            Debug.Log("GroundPoint: Collision algılandı! Obje: " + gameObject.name + " | Level: " + (LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 0));
+            Debug.Log("GroundPoint: Collision detected! Object: " + gameObject.name + " | Level: " + (LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 0));
             
             if (!hasGivenPoint && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
             {
                 hasGivenPoint = true;
                 LevelManager.Instance.ObstaclePassed();
-                Debug.Log("GroundPoint: Level 5 Puani Verildi! Toplam: " + LevelManager.Instance.obstaclesPassed);
+                Debug.Log("GroundPoint: Level 5 Point Awarded! Total: " + LevelManager.Instance.obstaclesPassed);
             }
         }
     }
@@ -29,13 +29,13 @@ public class GroundPoint : MonoBehaviour
         // Debug: Trigger algılandı mı?
         if (collision.CompareTag("Player"))
         {
-            Debug.Log("GroundPoint: Trigger algılandı! Obje: " + gameObject.name + " | Level: " + (LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 0));
+            Debug.Log("GroundPoint: Trigger detected! Object: " + gameObject.name + " | Level: " + (LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 0));
 
             if (!hasGivenPoint && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
             {
                 hasGivenPoint = true;
                 LevelManager.Instance.ObstaclePassed();
-                Debug.Log("GroundPoint (Trigger): Level 5 Puani Verildi! Toplam: " + LevelManager.Instance.obstaclesPassed);
+                Debug.Log("GroundPoint (Trigger): Level 5 Point Awarded! Total: " + LevelManager.Instance.obstaclesPassed);
             }
         }
     }

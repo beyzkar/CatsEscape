@@ -115,7 +115,8 @@ public class PlayerMovement : MonoBehaviour
         // --- GROUND CHECK ---
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
 
-        if (isGrounded)
+        // Ensure jumps are only reset when truly grounded and not in the middle of a jump
+        if (isGrounded && rb.linearVelocity.y <= 0.1f)
         {
             jumpsLeft = maxJumps;
         }

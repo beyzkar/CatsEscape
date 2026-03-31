@@ -5,9 +5,9 @@ public class EnhancedParallax : MonoBehaviour
     [System.Serializable]
     public struct ParallaxLayer
     {
-        public Transform layerParent; // Katman objesi (Grup_L1 gibi)
-        public float speed;           // 0-1 arası hız
-        [HideInInspector] public float width; // Otomatik hesaplanacak
+        public Transform layerParent; // Katman objesi 
+        public float speed;           
+        [HideInInspector] public float width; 
     }
 
     public ParallaxLayer[] layers;
@@ -71,8 +71,6 @@ public class EnhancedParallax : MonoBehaviour
                 Transform child = layer.layerParent.GetChild(i);
                 SpriteRenderer sr = child.GetComponent<SpriteRenderer>();
                 
-                // Reset local position Y and Z if needed, or keep them? 
-                // Let's keep Y to allow manual offset, but align X.
                 child.localPosition = new Vector3(currentX, child.localPosition.y, child.localPosition.z);
                 
                 if (sr != null && sr.sprite != null)

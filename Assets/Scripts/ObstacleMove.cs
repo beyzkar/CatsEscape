@@ -40,14 +40,8 @@ public class ObstacleMove : MonoBehaviour
         {
             passedPlayer = true;
             // Only reward if it's an obstacle and NOT the one we just hit
-            if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("LongWall") || CompareTag("Bodyguard") || CompareTag("Enemy") || CompareTag("BarbedWire") || CompareTag("Bush")))
+            if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("LongWall") || CompareTag("Enemy") || CompareTag("Bush")))
             {
-                if (ScoreManager.Instance != null)
-                {
-                    // Bush için doğrudan XP verilmiyor artık (Seri/streak içinde değerlendiriliyor)
-                    ScoreManager.Instance.RegisterCleanJump();
-                }
-
                 // Report to LevelManager for progression (Only for Levels 1-4)
                 // Level 5 uses GroundPoint.cs for segment-based progression.
                 if (LevelManager.Instance != null && LevelManager.Instance.currentLevel < 5)
