@@ -2688,6 +2688,9 @@ MonoBehaviour:
   minX: -8.5
   maxX: 2
   returnSpeed: 2
+  flipSpeed: 25
+  acceleration: 20
+  deceleration: 25
   introSpeed: 3
   stopX: -4
 --- !u!114 &489111423
@@ -10593,7 +10596,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -10656,7 +10659,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 50
+  m_SortingOrder: 80
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1835533648303372327, guid: d3bafac07273a4b9ab84289ce5ef73e2, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -16286,7 +16289,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -16349,7 +16352,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 5
+  m_SortingOrder: 80
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1835533648303372327, guid: d3bafac07273a4b9ab84289ce5ef73e2, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -16370,11 +16373,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1525336991}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b16269510c024d568ea9aa5da1cc834, type: 3}
+  m_Script: {fileID: 11500000, guid: c3472c72ca78c4675b36d60a33283d99, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MobileButtonHandler
-  buttonType: 0
-  playerMovement: {fileID: 489111419}
+  m_EditorClassIdentifier: Assembly-CSharp::MobileButton
+  type: 0
+  player: {fileID: 489111419}
 --- !u!1 &1529476279
 GameObject:
   m_ObjectHideFlags: 0
@@ -16920,7 +16923,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -16983,7 +16986,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 50
+  m_SortingOrder: 80
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1835533648303372327, guid: d3bafac07273a4b9ab84289ce5ef73e2, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}

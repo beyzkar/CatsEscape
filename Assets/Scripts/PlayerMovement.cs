@@ -35,10 +35,18 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement Settings")]
     public float moveRightSpeed = 5f;
     public float moveLeftSpeed = 5f; 
-    public float minX = -6f;
+    public float minX = -5.3f; // Narrower left boundary
     public float maxX = 5f;
     [Header("Return Speed")]
     public float returnSpeed = 2f;
+
+    [Header("Transition Smoothing")]
+    public float flipSpeed = 25f; // Mario-style scale flip speed
+    public float acceleration = 20f;
+    public float deceleration = 25f;
+    private float currentHorizontalVelocity = 0f;
+    private float targetScaleX = 1f;
+    private float originalAbsScaleX;
 
     private PlayerObstacleRules rules;
 
@@ -69,6 +77,8 @@ public class PlayerMovement : MonoBehaviour
     {
         currentJumpForce = jumpForce;
         jumpsLeft = maxJumps;
+        originalAbsScaleX = Mathf.Abs(transform.localScale.x);
+        targetScaleX = originalAbsScaleX;
         
         // Ensure starting position is off-screen if needed
         // transform.position = new Vector3(-12f, transform.position.y, 0f);
@@ -110,17 +120,19 @@ public class PlayerMovement : MonoBehaviour
             jumpsLeft = maxJumps;
         }
 
-        // --- HORIZONTAL MOVEMENT (Strict Isolation) ---
+        // --- HORIZONTAL MOVEMENT (Smoothed) ---
         float hInput = Input.GetAxisRaw("Horizontal"); // Support keyboard
         if (mobileLeft) hInput = -1f;   // Support mobile
         if (mobileRight) hInput = 1f;
 
-        // Apply movement speed
-        targetVelocityX = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
+        float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
+        float accelRate = (Mathf.Abs(desiredVelocity) > 0.01f) ? acceleration : deceleration;
+        currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
+        targetVelocityX = currentHorizontalVelocity;
         
-        // Handle visual direction
-        if (hInput > 0) { WorldDirection = 1; FaceDirection(true); }
-        else if (hInput < 0) { WorldDirection = -1; FaceDirection(false); }
+        // --- NORMAL ROTATION (Instant Flip) ---
+        if (hInput > 0) { WorldDirection = 1; transform.localRotation = Quaternion.Euler(0, 0, 0); }
+        else if (hInput < 0) { WorldDirection = -1; transform.localRotation = Quaternion.Euler(0, 180f, 0); }
 
         // --- JUMP INPUT (Keyboard + Mobile Buttons) ---
         // MouseButtonDown(0) removed to prevent conflict with UI button clicks in simulator
@@ -158,20 +170,15 @@ public class PlayerMovement : MonoBehaviour
 
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
 
-        // Clamping position is better done by forcing velocity to 0 at boundaries
-        // but for now, we'll let Physics handle colliders. 
-        // If we really need a hard clamp, we should check if we're past maxX/minX and set velocity to 0.
-        if (transform.position.x > maxX && rb.linearVelocity.x > 0)
+        // --- HARD POSITION CLAMP ---
+        // Ensuring the cat NEVER goes beyond the defined X boundaries
+        float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
+        if (clampedX != transform.position.x)
+        {
+            transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-        if (transform.position.x < minX && rb.linearVelocity.x < 0)
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-    }
-
-    void FaceDirection(bool faceRight)
-    {
-        // 0 degrees for right, 180 degrees for left
-        float yRotation = faceRight ? 0f : 180f;
-        transform.localRotation = Quaternion.Euler(0, yRotation, 0);
+            currentHorizontalVelocity = 0; // Reset acceleration momentum too
+        }
     }
 
     void DoIntroWalk()

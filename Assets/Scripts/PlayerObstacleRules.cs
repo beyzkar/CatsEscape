@@ -366,9 +366,6 @@ public class PlayerObstacleRules : MonoBehaviour
                 movementScript.SetJumpMultiplier(1.2f);
             }
 
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayPotionIncrease();
-
             UpdateGameSpeed();
 
             // First pickup: Add XP but skip XP sound (user request)
@@ -377,11 +374,13 @@ public class PlayerObstacleRules : MonoBehaviour
         // Scenario 2: Already growing (Big -> Big)
         else
         {
-            // Just add XP and play XP sound (ResetPotionEffect won't be called)
+            // Just add XP and play XP sound
             if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75, true);
-            
-            // Note: We don't play PotionIncrease or change scale here
         }
+
+        // ALWAYS play Increase sound for every bottle collected
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayPotionIncrease();
     }
 
     public void ResetPotionEffect()
@@ -528,12 +527,12 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
             }
 
+            // NEW: Cancel Potion growth effect on ANY trigger obstacle hit (regardless of cooldown)
+            if (isPotionActive) ResetPotionEffect();
+
             // Only special obstacles cost hearts; Wall and LongWall give effect/sound without damage (User request)
             if (damageCooldown <= 0)
             {
-                // NEW: Cancel Potion growth effect on ANY trigger obstacle hit
-                if (isPotionActive) ResetPotionEffect();
-
                 if (other.CompareTag("LongWall") || other.CompareTag("Wall"))
                 {
                     StartCoroutine(FlashRecoveryEffect()); // Blinking feedback (No heart loss for any Wall type)

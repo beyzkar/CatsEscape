@@ -628,6 +628,12 @@ MonoBehaviour:
   heartFillVolume: 1
   extraXPSfx: {fileID: 8300000, guid: c70586eeaa299480d8d8beeb96b37901, type: 3}
   extraXPVolume: 1
+  potionIncreaseSfx: {fileID: 8300000, guid: 5fe4f584d0b1e458f9e36e2910b74987, type: 3}
+  potionIncreaseVolume: 1
+  potionDecreaseSfx: {fileID: 8300000, guid: 7a43cbdd9eb124e7c8e94266a0d7116d, type: 3}
+  potionDecreaseVolume: 1
+  fallingSfx: {fileID: 0}
+  fallingVolume: 1
   backgroundGlobalVolume: 0.5
   sfxGlobalVolume: 0.5
 --- !u!1 &371070510
