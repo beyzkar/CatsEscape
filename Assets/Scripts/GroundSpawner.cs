@@ -19,10 +19,6 @@ public class GroundSpawner : MonoBehaviour
         if (Instance == null) Instance = this;
     }
     
-    [Header("VFX Ayarları")]
-    public GameObject pitVFXPrefab;       // Çukurların içinden çıkacak efekt (Ateş vb.)
-    public float vfxYOffset = -1f;        // Efektin dikey konumu
-    
     [Header("Düzenleme Ayarları")]
     public float groundWidth = 12f;       // Her bir zemin prefabının genişliği (Unity birimi cinsinden)
     public float groundY = -2.5f;         // Zeminlerin oluşacağı dikey konum
@@ -74,7 +70,8 @@ public class GroundSpawner : MonoBehaviour
 
             // Spawning: Handle both directions
             // Forward (Right)
-            if (activeGrounds.Count > 0 && activeGrounds[activeGrounds.Count - 1].transform.position.x < (PlayerMovement.Instance.maxX + groundWidth))
+            float rightLimit = (PlayerMovement.Instance.ScreenMaxX > 0) ? PlayerMovement.Instance.ScreenMaxX : PlayerMovement.Instance.maxX;
+            if (activeGrounds.Count > 0 && activeGrounds[activeGrounds.Count - 1].transform.position.x < (rightLimit + groundWidth))
             {
                 SpawnNextSegment(true, true);
             }
@@ -199,13 +196,6 @@ public class GroundSpawner : MonoBehaviour
         // Objeyi oluştur ve listeye ekle
         GameObject segment = Instantiate(prefabToSpawn, new Vector3(spawnX, groundY + currentOffset, 0), Quaternion.identity);
         
-        // Eğer bir efekt atanmışsa ve bu bir çukursa çukurun içine oluştur
-        if (prefabToSpawn == groundPitPrefab && pitVFXPrefab != null)
-        {
-            GameObject vfx = Instantiate(pitVFXPrefab, new Vector3(spawnX, groundY + vfxYOffset, 0), Quaternion.identity);
-            vfx.transform.SetParent(segment.transform); 
-        }
-
         segment.transform.SetParent(transform);
         
         if (atRight)

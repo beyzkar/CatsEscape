@@ -438,8 +438,8 @@ Transform:
   m_GameObject: {fileID: 82623864}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 109.9, y: 0, z: -11.8}
-  m_LocalScale: {x: 50, y: 50, z: 50}
+  m_LocalPosition: {x: -2222.5, y: -1065.9, z: 50}
+  m_LocalScale: {x: 0.9, y: 0.9, z: 0.9}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1499277062}
@@ -2688,6 +2688,8 @@ MonoBehaviour:
   minX: -100
   maxX: 100
   returnSpeed: 2
+  useViewportClamping: 1
+  xScrollLimit: 0.5
   flipSpeed: 25
   acceleration: 20
   deceleration: 25
@@ -10906,8 +10908,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 59.5, y: 3.04}
-  m_SizeDelta: {x: 300, y: 50}
+  m_AnchoredPosition: {x: -50, y: -10}
+  m_SizeDelta: {x: 1000, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &855678951
 GameObject:
@@ -15704,9 +15706,9 @@ RectTransform:
   - {fileID: 843177599}
   m_Father: {fileID: 939517047}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -300, y: -100}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 966, y: 485}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1502337361
@@ -17184,12 +17186,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33f3f52b5e08d45edb592e4cb7a08249, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundSpawner
-  groundNormalPrefab: {fileID: 0}
-  normalYOffset: 0
+  groundNormalPrefab: {fileID: 4839023012948691586, guid: c7beb8ef7eae2435296db519a8634c12, type: 3}
+  normalYOffset: 1
   groundPitPrefab: {fileID: 5264130352985418374, guid: 95cc25135d96d403c8ddf0189083418d, type: 3}
   pitYOffset: 4.5
-  pitVFXPrefab: {fileID: 0}
-  vfxYOffset: -1
   groundWidth: 18
   groundY: -4.48
   initialAmount: 10
@@ -20447,10 +20447,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2129417634}
     m_Modifications:
-    - target: {fileID: 3729397357167096067, guid: c7cbfeaf6e49d47d89aa4447dcca63d1, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1000
-      objectReference: {fileID: 0}
     - target: {fileID: 3729397357167096067, guid: c7cbfeaf6e49d47d89aa4447dcca63d1, type: 3}
       propertyPath: m_LocalPosition.x
       value: -20.83

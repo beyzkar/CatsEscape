@@ -41,6 +41,13 @@ public class PlayerMovement : MonoBehaviour
     [Header("Return Speed")]
     public float returnSpeed = 2f;
 
+    [Header("Viewport Clamping")]
+    public bool useViewportClamping = true;
+    [Range(0.1f, 10f)] public float xScrollLimit = 5f; // Screen width multiplier (1.0 = full screen)
+
+    public float ScreenMaxX { get; private set; } // Actual right edge of screen
+    public float viewportPaddingX = 3.5f; // Margin to keep cat from clipping edge (increased to match photo)
+
     [Header("Transition Smoothing")]
     public float flipSpeed = 25f; // Mario-style scale flip speed
     public float acceleration = 20f;
@@ -50,6 +57,7 @@ public class PlayerMovement : MonoBehaviour
     private float originalAbsScaleX;
 
     private PlayerObstacleRules rules;
+    private Animator anim;
 
     [Header("Intro Walk")]
     public float introSpeed = 3f;
@@ -69,6 +77,8 @@ public class PlayerMovement : MonoBehaviour
         if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         
         rules = GetComponent<PlayerObstacleRules>();
+        // Initial search, but we will re-search in Update if this one becomes inactive
+        anim = GetComponentInChildren<Animator>(); 
 
         // Force orientation: Face Right (if cat walks Left) or Face Left (if cat walks Right)
         // Adjust this if your cat is backwards
@@ -91,6 +101,11 @@ public class PlayerMovement : MonoBehaviour
     public void SetDead(bool isDead)
     {
         dead = isDead;
+        if (dead && anim != null) 
+        {
+            anim.SetBool("walking", false);
+            anim.SetBool("Idle", true);
+        }
     }
 
     void Update()
@@ -99,6 +114,11 @@ public class PlayerMovement : MonoBehaviour
         if (!introFinished)
         {
             DoIntroWalk();
+            if (anim != null) 
+            {
+                anim.SetBool("walking", true);
+                anim.SetBool("Idle", false);
+            }
             return;
         } 
 
@@ -132,6 +152,20 @@ public class PlayerMovement : MonoBehaviour
         float accelRate = (Mathf.Abs(desiredVelocity) > 0.01f) ? acceleration : deceleration;
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
         targetVelocityX = currentHorizontalVelocity;
+
+        // --- DYNAMIC ANIMATOR FETCHING (For multiple character support) ---
+        if (anim == null || !anim.gameObject.activeInHierarchy)
+        {
+            anim = GetComponentInChildren<Animator>();
+        }
+
+        // --- ANIMATION CONTROL (Instant Idle) ---
+        if (anim != null)
+        {
+            bool isMovingInput = (hInput != 0);
+            anim.SetBool("walking", isMovingInput);
+            anim.SetBool("Idle", !isMovingInput);
+        }
         
         // --- NORMAL ROTATION (Instant Flip) ---
         if (hInput > 0) { WorldDirection = 1; transform.localRotation = Quaternion.Euler(0, 0, 0); }
@@ -152,22 +186,61 @@ public class PlayerMovement : MonoBehaviour
         // Apply horizontal velocity while preserving vertical velocity from gravity/jumps
         float finalVelocityX = targetVelocityX;
 
-        // If stuck, don't allow horizontal movement unless specifically escaping (handled by unstick logic)
+        // --- PREVENT JITTER (Early Velocity Suppression) ---
+        // Use boundaries from the previous LateUpdate for solid physics feel
+        if (transform.position.x <= minX && finalVelocityX < 0) finalVelocityX = 0;
+        if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0;
+
+        // If stuck, don't allow horizontal movement
         if (rules != null && rules.IsStuck)
         {
             finalVelocityX = 0f;
         }
 
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
+    }
 
-        // --- HARD POSITION CLAMP ---
-        // Ensuring the cat NEVER goes beyond the defined X boundaries
-        float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
-        if (clampedX != transform.position.x)
+    void LateUpdate()
+    {
+        // --- FINAL POSITION CLAMPING (Runs after all movement/physics) ---
+        if (useViewportClamping)
         {
-            transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            // Don't reset currentHorizontalVelocity here so it can still drive world scroll
+            Camera cam = Camera.main;
+            if (cam == null) cam = FindObjectOfType<Camera>();
+            if (cam == null) return;
+
+            float zDist = Mathf.Abs(cam.transform.position.z);
+            Vector3 bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
+            Vector3 topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
+            Vector3 screenTopRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+
+            // Update bounds for other scripts
+            minX = bottomLeft.x + viewportPaddingX;
+            maxX = topRight.x;
+            ScreenMaxX = screenTopRight.x;
+
+            float minY = bottomLeft.y;
+            float maxY = topRight.y;
+
+            // Strict position enforcement
+            float cx = Mathf.Clamp(transform.position.x, minX, maxX);
+            float cy = Mathf.Clamp(transform.position.y, minY, maxY);
+
+            if (cx != transform.position.x || cy != transform.position.y)
+            {
+                transform.position = new Vector3(cx, cy, transform.position.z);
+                if (cx != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            }
+        }
+        else
+        {
+            // Legacy clamping fallback
+            float cx = Mathf.Clamp(transform.position.x, minX, maxX);
+            if (cx != transform.position.x)
+            {
+                transform.position = new Vector3(cx, transform.position.y, transform.position.z);
+                rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            }
         }
     }
 
@@ -175,10 +248,11 @@ public class PlayerMovement : MonoBehaviour
     {
         // Move cat towards the stopping point
         float step = introSpeed * Time.deltaTime;
-        transform.position = Vector3.MoveTowards(transform.position, new Vector3(stopX, transform.position.y, transform.position.z), step);
+        Vector3 targetPos = new Vector3(stopX, transform.position.y, transform.position.z);
+        transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
 
-        // Check if reached
-        if (Mathf.Abs(transform.position.x - stopX) < 0.01f)
+        // Check if reached OR clamped (in case clamping stops it earlier)
+        if (Mathf.Abs(transform.position.x - stopX) < 0.1f || transform.position.x >= maxX - 0.1f)
         {
             introFinished = true;
         }
