@@ -17,13 +17,13 @@ public class LeaderboardManager : MonoBehaviour
 
     public static LeaderboardManager Instance { get; private set; }
 
-    [Header("UI Yerlesimi")]
+    [Header("UI Layout")]
     public TMP_InputField nameSpace; 
     public GameObject scoreboard; 
     public GameObject leaderboardPanel; 
     public TextMeshProUGUI[] entryTexts; 
 
-    [Header("Akis Kontrolu")]
+    [Header("Flow Control")]
     public GameObject nextPanelToOpen; 
 
     private string savePath;
@@ -34,30 +34,24 @@ public class LeaderboardManager : MonoBehaviour
         if (Instance == null) 
         {
             Instance = this;
-            Debug.Log($"LeaderboardManager: [{gameObject.name}] üzerinde Instance atandı.");
+            DontDestroyOnLoad(gameObject);
         }
         else 
         {
-            Debug.LogWarning($"LeaderboardManager: [{gameObject.name}] üzerinde kopya script bulundu! Bu objeyi siliyorum.");
             Destroy(gameObject);
             return;
         }
 
-        // Kayıt yerini Assets klasörü (proje içi) olarak değiştiriyoruz
         savePath = Path.Combine(Application.dataPath, "leaderboard.json");
         LoadScores();
         
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
         if (scoreboard != null) scoreboard.SetActive(false);
-        
-        Debug.Log("LeaderboardManager: Sistem hazır ve çalışıyor!");
     }
 
     public void CheckForHighScore(int currentScore)
     {
-        Debug.Log($"LeaderboardManager: Save Score ekranı açılıyor (Skor: {currentScore})");
-        
-        // Artık yüksek skor olup olmadığına bakmıyoruz, her zaman giriş panelini açıyoruz.
+        // Open Save Score panel
         if (scoreboard != null) scoreboard.SetActive(true);
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
     }
@@ -71,45 +65,35 @@ public class LeaderboardManager : MonoBehaviour
 
     public void OnSaveButtonClick()
     {
-        Debug.Log("LeaderboardManager: Save butonuna basıldı!");
-        
         if (nameSpace == null)
         {
-            Debug.LogError("LeaderboardManager: 'Name Space' (InputField) referansı boş! Lütfen Inspector'dan sürükle.");
+            Debug.LogError("LeaderboardManager: 'Name Space' (InputField) reference is missing!");
             return;
         }
 
         string name = !string.IsNullOrEmpty(nameSpace.text) ? nameSpace.text : "Player";
         int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
         
-        Debug.Log($"LeaderboardManager: Kaydediliyor -> İsim: {name}, Skor: {currentXP}");
         SaveAndShowLeaderboard(name, currentXP);
     }
 
     public void OnSkipAndMainMenuButtonClick()
     {
-        Debug.Log("LeaderboardManager: Skip ve Ana Menü butonuna basıldı. Seviye sıfırlanıyor.");
-        
-        // Seviye sürekliliğini sıfırla
         LevelManager.ResetPersistentLevel();
-
-        // Zaman ölçeğini ve oyun hızını sıfırla (GameOver ekranından buralar donmuş olabilir)
-        Time.timeScale = 1f;
-        GameSpeed.Multiplier = 1f;
-        
+        ResetGameDynamics();
         SceneManager.LoadScene("MainMenu");
     }
 
     public void OnRetryButtonClick()
     {
-        Debug.Log("LeaderboardManager: Retry butonuna basıldı.");
-        
-        // Reset time and speed scales before reloading
+        ResetGameDynamics();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private void ResetGameDynamics()
+    {
         Time.timeScale = 1f;
         GameSpeed.Multiplier = 1f;
-        
-        // Reload the current scene
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     public void SaveAndShowLeaderboard(string playerName, int currentXP)
@@ -120,38 +104,19 @@ public class LeaderboardManager : MonoBehaviour
         SaveScores();
         UpdateLeaderboardUI();
 
-        Debug.Log("LeaderboardManager: Kayıt tamamlandı. Liste paneli açılıyor.");
         if (scoreboard != null) scoreboard.SetActive(false);
-        if (leaderboardPanel != null) 
-        {
-            leaderboardPanel.SetActive(true);
-            Debug.Log("LeaderboardManager: leaderboardPanel aktif edildi.");
-        }
-        else
-        {
-            Debug.LogError("LeaderboardManager: 'leaderboardPanel' referansı boş!");
-        }
+        if (leaderboardPanel != null) leaderboardPanel.SetActive(true);
     }
 
     public void OnContinueButtonClick()
     {
-        Debug.Log("LeaderboardManager: Devam et butonuna basıldı.");
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
-        
-        if (nextPanelToOpen != null)
-        {
-            nextPanelToOpen.SetActive(true);
-            Debug.Log($"LeaderboardManager: {nextPanelToOpen.name} paneli açıldı.");
-        }
+        if (nextPanelToOpen != null) nextPanelToOpen.SetActive(true);
     }
 
     private void UpdateLeaderboardUI()
     {
-        if (entryTexts == null || entryTexts.Length == 0)
-        {
-            Debug.LogWarning("LeaderboardManager: 'Entry Texts' listesi boş!");
-            return;
-        }
+        if (entryTexts == null || entryTexts.Length == 0) return;
 
         for (int i = 0; i < entryTexts.Length; i++)
         {
@@ -168,7 +133,6 @@ public class LeaderboardManager : MonoBehaviour
     {
         string json = JsonUtility.ToJson(new LeaderboardWrapper { allScores = scores }, true);
         File.WriteAllText(savePath, json);
-        Debug.Log($"LeaderboardManager: Skorlar kaydedildi -> {savePath}");
     }
 
     private void LoadScores()
@@ -179,7 +143,6 @@ public class LeaderboardManager : MonoBehaviour
             LeaderboardWrapper wrapper = JsonUtility.FromJson<LeaderboardWrapper>(json);
             scores = wrapper.allScores ?? new List<ScoreData>();
             scores = scores.OrderByDescending(s => s.xp).Take(5).ToList();
-            Debug.Log("LeaderboardManager: Mevcut skorlar yüklendi.");
         }
     }
 

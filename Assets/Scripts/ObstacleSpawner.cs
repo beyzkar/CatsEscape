@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
+// Manages the procedural spawning of obstacles, enemies, and power-ups across different levels
 public class ObstacleSpawner : MonoBehaviour
 {
     public static ObstacleSpawner Instance { get; private set; }
@@ -8,11 +9,12 @@ public class ObstacleSpawner : MonoBehaviour
     void Awake()
     {
         if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
     [Header("Prefabs")]
     public GameObject obstaclePrefab;   // ObstacleBag
-    public GameObject enemyPrefab;      // Was Bodyguard
+    public GameObject enemyPrefab;      // Standard Enemy
     public GameObject wallPrefab;       // Wall
     public GameObject longWallPrefab;   // LongWall
     public GameObject fishPrefab;       // Fish
@@ -45,7 +47,7 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level2Settings {
         [Range(0f, 1f)] public float bagChance = 0.4f;
         [Range(0f, 1f)] public float enemyChance = 0.4f;
-        public GameObject levelEnemyPrefab; // Level unique enemy
+        public GameObject levelEnemyPrefab;
         [Range(0f, 1f)] public float fishChance = 0.2f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
     }
@@ -53,7 +55,7 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level3Settings {
         [Range(0f, 1f)] public float bagChance = 0.3f;
         [Range(0f, 1f)] public float enemyChance = 0.3f;
-        public GameObject levelEnemyPrefab; // Level unique enemy
+        public GameObject levelEnemyPrefab;
         [Range(0f, 1f)] public float wallChance = 0.2f;
         [Range(0f, 1f)] public float longWallChance = 0.1f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
@@ -63,17 +65,17 @@ public class ObstacleSpawner : MonoBehaviour
     public class Level4Settings {
         [Range(0f, 1f)] public float bagChance = 0.25f;
         [Range(0f, 1f)] public float enemyChance = 0.25f;
-        public GameObject levelEnemyPrefab; // Level unique enemy
+        public GameObject levelEnemyPrefab;
         [Range(0f, 1f)] public float wallChance = 0.25f;
         [Range(0f, 1f)] public float fishChance = 0.1f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
     }
     [System.Serializable]
     public class Level5Settings {
-        [Range(0f, 1f)] public float bagChance = 0.7f;
+        // No heavy obstacles in Level 5
         [Range(0f, 1f)] public float fishChance = 0.2f;
         [Range(0f, 1f)] public float potionChance = 0.1f;
-        [Range(0f, 1f)] public float pitChance = 0.2f; // New: Ground pit probability
+        [Range(0f, 1f)] public float pitChance = 0.2f; 
     }
 
     [Header("Level Specific Settings")]
@@ -97,21 +99,19 @@ public class ObstacleSpawner : MonoBehaviour
                 yield return null;
                 continue;
             }
+
             yield return new WaitForSeconds(Random.Range(minDelay, maxDelay));
 
-            int currentLevel = 1;
-            if (LevelManager.Instance != null) currentLevel = LevelManager.Instance.currentLevel;
+            int currentLevel = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 1;
 
             float bag = 0, enemy = 0, wall = 0, longWall = 0, fish = 0, potion = 0;
             
-            // ... (switch remains same)
-
             switch (currentLevel)
             {
                 case 1:
                     bag = level1.bagChance;
                     fish = level1.fishChance;
-                    potion = 0.25f; // Set to a higher default for visibility
+                    potion = level1.potionChance;
                     break;
                 case 2:
                     bag = level2.bagChance;
@@ -136,110 +136,85 @@ public class ObstacleSpawner : MonoBehaviour
                     break;
                 case 5:
                 default:
-                    // Strictly NO obstacles in Level 5
-                    bag = 0f;
-                    enemy = 0f; // Was bodyguard
-                    wall = 0f;
-                    longWall = 0f;
-                    
-                    // Allow only Fish and Potions
                     fish = level5.fishChance;
                     potion = level5.potionChance;
                     break;
             }
 
-            // LEVEL 5 Check: Don't spawn any object if the ground below is a pit (to keep visuals clean)
+            // Level 5 Safety: Skip spawning items directly above pits
             if (currentLevel == 5 && GroundSpawner.Instance != null && GroundSpawner.Instance.IsPitAtX(bagSpawnX))
             {
-                // Debug.Log("[ObstacleSpawner] Spawn skipped because of pit at " + bagSpawnX);
                 continue;
             }
 
             float totalChance = bag + enemy + wall + longWall + fish + potion;
-            if (totalChance <= 0) 
-            {
-                Debug.LogWarning("[ObstacleSpawner] Total chance is 0! Check Inspector settings.");
-                continue; 
-            }
+            if (totalChance <= 0) continue; 
             
             float rnd = Random.Range(0f, totalChance);
             float currentLimit = 0f;
-            
 
-            // Check Bag
+            // Spawn Bag
             currentLimit += bag;
             if (rnd < currentLimit)
             {
                 if (obstaclePrefab != null)
-                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, obstaclePrefab.transform.position.z), obstaclePrefab.transform.rotation);
+                    Instantiate(obstaclePrefab, new Vector3(bagSpawnX, bagSpawnY, 0f), Quaternion.identity);
                 continue;
             }
 
-            // Check Enemy (Was Bodyguard)
+            // Spawn Enemy
             currentLimit += enemy;
             if (rnd < currentLimit)
             {
-                // Determine which prefab to use (Level-specific or Default)
-                GameObject prefabToSpawn = enemyPrefab;
-                if (currentLevel == 2 && level2.levelEnemyPrefab != null) prefabToSpawn = level2.levelEnemyPrefab;
-                else if (currentLevel == 3 && level3.levelEnemyPrefab != null) prefabToSpawn = level3.levelEnemyPrefab;
-                else if (currentLevel == 4 && level4.levelEnemyPrefab != null) prefabToSpawn = level4.levelEnemyPrefab;
+                GameObject prefab = enemyPrefab;
+                if (currentLevel == 2 && level2.levelEnemyPrefab != null) prefab = level2.levelEnemyPrefab;
+                else if (currentLevel == 3 && level3.levelEnemyPrefab != null) prefab = level3.levelEnemyPrefab;
+                else if (currentLevel == 4 && level4.levelEnemyPrefab != null) prefab = level4.levelEnemyPrefab;
 
-                if (prefabToSpawn != null)
-                    Instantiate(prefabToSpawn, new Vector3(enemySpawnX, enemySpawnY, prefabToSpawn.transform.position.z), prefabToSpawn.transform.rotation);
+                if (prefab != null)
+                    Instantiate(prefab, new Vector3(enemySpawnX, enemySpawnY, 0f), Quaternion.identity);
                 continue;
             }
 
-            // Check Wall
+            // Spawn Wall
             currentLimit += wall;
             if (rnd < currentLimit)
             {
                 if (wallPrefab != null)
                 {
                     float randomScaleY = Random.value < 0.5f ? wallScaleY1 : wallScaleY2;
-                    GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, wallPrefab.transform.position.z), wallPrefab.transform.rotation);
+                    GameObject w = Instantiate(wallPrefab, new Vector3(wallSpawnX, wallSpawnY, 0f), Quaternion.identity);
                     w.transform.localScale = new Vector3(w.transform.localScale.x, randomScaleY, w.transform.localScale.z);
                 }
                 continue;
             }
 
-            // Check LongWall
+            // Spawn LongWall
             currentLimit += longWall;
             if (rnd < currentLimit)
             {
                 if (longWallPrefab != null)
-                {
                     Instantiate(longWallPrefab, new Vector3(longWallSpawnX, longWallSpawnY, 0f), Quaternion.identity);
-                }
-                else
-                {
-                    Debug.LogWarning("LongWall chosen but longWallPrefab is NULL! Please assign it in the Inspector.");
-                }
                 continue;
             }
 
-
-            // Check Fish
+            // Spawn Fish
             currentLimit += fish;
             if (rnd < currentLimit)
             {
                 if (fishPrefab != null)
-                    Instantiate(fishPrefab, new Vector3(fishSpawnX, fishPrefab.transform.position.y, fishPrefab.transform.position.z), fishPrefab.transform.rotation);
+                    Instantiate(fishPrefab, new Vector3(fishSpawnX, fishPrefab.transform.position.y, 0f), Quaternion.identity);
                 continue;
             }
 
-            // Check Potion
+            // Spawn Potion
             currentLimit += potion;
             if (rnd < currentLimit)
             {
                 if (potionPrefab != null)
                 {
                     float randomY = Random.Range(-2f, 1.5f);
-                    GameObject p = Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
-                }
-                else
-                {
-                    Debug.LogWarning("[ObstacleSpawner] Potion chosen but potionPrefab is NULL!");
+                    Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
                 }
                 continue;
             }

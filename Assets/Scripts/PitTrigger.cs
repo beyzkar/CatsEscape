@@ -2,29 +2,17 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
 
-/// <summary>
-/// PitTrigger: Karakter çukura düştüğünde ölme ve yeniden başlama mantığını yönetir.
-/// Hem 2D hem de 3D projelerde çalışacak şekilde esnek tasarlanmıştır.
-/// </summary>
+// Handles player death and scene restart when falling into a pit
 public class PitTrigger : MonoBehaviour
 {
-    [Header("Ayarlar")]
-    public float restartDelay = 1.0f; // Yeniden başlamadan önceki bekleme süresi
-    public Color gizmoColor = new Color(1, 0, 0, 0.5f); // Editördeki çukur rengi
+    [Header("Settings")]
+    public float restartDelay = 1.0f; // Time to wait before restarting the scene
+    public Color gizmoColor = new Color(1, 0, 0, 0.5f); // Visualization color in the Inspector
 
     private bool isRestarting = false;
 
-    // 2D Çarpışma Algılama
+    // 2D Collision Detection
     private void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (collision.CompareTag("Player") && !isRestarting)
-        {
-            HandlePlayerFall(collision.gameObject);
-        }
-    }
-
-    // 3D Çarpışma Algılama (Esneklik için)
-    private void OnTriggerEnter(Collider collision)
     {
         if (collision.CompareTag("Player") && !isRestarting)
         {
@@ -35,45 +23,29 @@ public class PitTrigger : MonoBehaviour
     private void HandlePlayerFall(GameObject player)
     {
         isRestarting = true;
-        Debug.Log("Oyuncu çukura düştü!");
+        Debug.Log("[PitTrigger] Player fell into the pit!");
 
-        // 1. Oyuncu Kontrolünü Dondur
+        // 1. Freeze player controls and physics
         FreezePlayer(player);
 
-        // 2. Varsa mevcut Die() fonksiyonunu tetikle (Projenin geri kalanıyla uyum için)
-        // Eğer PlayerObstacleRules veya benzeri bir scriptte Die() varsa onu çağırır.
+        // 2. Trigger death logic (Universal message for compatibility)
         player.SendMessage("Die", SendMessageOptions.DontRequireReceiver);
 
-        // 3. Yeniden Başlatma Coroutine'ini çalıştır
+        // 3. Start the restart sequence
         StartCoroutine(RestartSequence());
     }
 
     private void FreezePlayer(GameObject player)
     {
-        // Rigidbody2D Kontrolü
+        // Physics freeze
         Rigidbody2D rb2d = player.GetComponent<Rigidbody2D>();
         if (rb2d != null)
         {
             rb2d.linearVelocity = Vector2.zero;
-            rb2d.simulated = false; // Fizik motorundan çıkar
+            rb2d.simulated = false; // Disable physics simulation
         }
 
-        // Rigidbody (3D) Kontrolü
-        Rigidbody rb = player.GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.isKinematic = true;
-        }
-
-        // CharacterController (3D) Kontrolü
-        CharacterController cc = player.GetComponent<CharacterController>();
-        if (cc != null)
-        {
-            cc.enabled = false;
-        }
-
-        // Varsa PlayerMovement scriptini durdur (dead = true yaparak)
+        // Stop movement logic
         player.SendMessage("SetDead", true, SendMessageOptions.DontRequireReceiver);
     }
 
@@ -81,7 +53,7 @@ public class PitTrigger : MonoBehaviour
     {
         yield return new WaitForSeconds(restartDelay);
         
-        // Mevcut sahneyi yeniden yükle
+        // Reload current active scene
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
@@ -93,30 +65,19 @@ public class PitTrigger : MonoBehaviour
 
         foreach (Transform child in transform)
         {
-            // Çocuğu collider'ın merkezine oturt
             child.localPosition = (Vector3)box2d.offset;
-            // Çocuğun boyutunu collider boyutuna ayarla (Sprite Renderer'ın scale'ini kullanarak)
             child.localScale = new Vector3(box2d.size.x, box2d.size.y, 1f);
         }
     }
 
-    // Editörde çukuru görselleştirme
+    // Visualize the pit in the Editor
     private void OnDrawGizmos()
     {
         BoxCollider2D box2d = GetComponent<BoxCollider2D>();
-        BoxCollider box3d = GetComponent<BoxCollider>();
+        if (box2d == null) return;
 
         Gizmos.color = gizmoColor;
-        Gizmos.matrix = transform.localToWorldMatrix; // Önemli: Ölçeği ve rotasyonu hesaba kat
-
-        if (box2d != null)
-        {
-            // Matrix kullandığımız için sadece offset ve size yeterlidir
-            Gizmos.DrawCube((Vector3)box2d.offset, (Vector3)box2d.size);
-        }
-        else if (box3d != null)
-        {
-            Gizmos.DrawCube(box3d.center, box3d.size);
-        }
+        Gizmos.matrix = transform.localToWorldMatrix; // Apply local scale/rotation
+        Gizmos.DrawCube((Vector3)box2d.offset, (Vector3)box2d.size);
     }
 }

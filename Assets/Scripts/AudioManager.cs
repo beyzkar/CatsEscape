@@ -42,32 +42,25 @@ public class AudioManager : MonoBehaviour
     [Range(0f, 1f)] public float fallingVolume = 1f;
 
     [Header("Global Settings")]
-    [Range(0f, 1f)]
-    public float backgroundGlobalVolume = 0.5f;
-    [Range(0f, 1f)]
-    public float sfxGlobalVolume = 0.5f;
+    [Range(0f, 1f)] public float backgroundGlobalVolume = 0.5f;
+    [Range(0f, 1f)] public float sfxGlobalVolume = 0.5f;
 
     private void Awake()
     {
-        //Singleton yapısı sayesinde oyunun herhangi bir yerinde müziğin kesilmeden devam etmesini sağlıyor
         if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
             InitializeSources();
-            Debug.Log("[AudioManager] Singleton initialized and persistent.");
         }
         else
         {
-            Debug.Log("[AudioManager] Duplicate detected in " + SceneManager.GetActiveScene().name + ". Destroying.");
             Destroy(gameObject);
-            return;
         }
     }
 
-    private void InitializeSources() //akıllı ses ekleme (eğer bir ses dosyasını eklemeyi unutursam kod bunu otomatik olarak ekler)
+    private void InitializeSources()
     {
-        // Check for existing sources or add new ones
         AudioSource[] sources = GetComponents<AudioSource>();
         
         if (backgroundSource == null && sources.Length > 0) backgroundSource = sources[0];
@@ -78,26 +71,14 @@ public class AudioManager : MonoBehaviour
 
         backgroundSource.loop = true;
         backgroundSource.playOnAwake = false;
-        
-        Debug.Log("[AudioManager] Sources initialized: BG=" + (backgroundSource != null) + ", SFX=" + (sfxSource != null));
     }
 
-    private void OnEnable()
-    {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnDisable()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
+    private void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
+    private void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (Instance == this)
-        {
-            PlayBackgroundMusic();
-        }
+        if (Instance == this) PlayBackgroundMusic();
     }
 
     private void Update()
@@ -105,21 +86,15 @@ public class AudioManager : MonoBehaviour
         if (Instance != this) return;
 
         if (backgroundSource != null)
-        {
             backgroundSource.volume = backgroundGlobalVolume * backgroundMusicVolume;
-        }
+        
         if (sfxSource != null)
-        {
             sfxSource.volume = sfxGlobalVolume;
-        }
     }
 
     private void Start()
     {
-        if (Instance == this)
-        {
-            PlayBackgroundMusic();
-        }
+        if (Instance == this) PlayBackgroundMusic();
     }
 
     public void PlayBackgroundMusic()
@@ -128,7 +103,6 @@ public class AudioManager : MonoBehaviour
         {
             backgroundSource.clip = backgroundMusic;
             backgroundSource.Play();
-            Debug.Log("[AudioManager] Playing background music.");
         }
     }
 
@@ -137,25 +111,16 @@ public class AudioManager : MonoBehaviour
         if (clip != null && sfxSource != null)
         {
             sfxSource.PlayOneShot(clip, volumeScale);
-            // Debug statements can be noisy, but useful for debugging regression
-            // Debug.Log("[AudioManager] Playing SFX: " + clip.name + " at scale " + volumeScale);
-        }
-        else if (clip == null)
-        {
-            Debug.LogWarning("[AudioManager] Attempted to play a null SFX clip.");
         }
     }
 
     public void StopBackgroundMusic()
     {
         if (backgroundSource != null && backgroundSource.isPlaying)
-        {
             backgroundSource.Stop();
-        }
     }
 
-    // --- Specific Play Methods ---
-
+    // --- Helper Methods ---
     public void PlayJump() { PlaySFX(jumpSfx, jumpVolume); }
     public void PlayCrush() { PlaySFX(crushSfx, crushVolume); }
     public void PlayGameOverSFX() { PlaySFX(gameOverSfx, gameOverSfxVolume); }
@@ -167,18 +132,8 @@ public class AudioManager : MonoBehaviour
     public void PlayPotionDecrease() { PlaySFX(potionDecreaseSfx, potionDecreaseVolume); }
     public void PlayFalling() { PlaySFX(fallingSfx, fallingVolume); }
 
-    public void PlayGameOverSound()
-    {
-        if (gameOverClip != null) PlaySFX(gameOverClip, gameOverVolume);
-    }
-
-    public void PlayLevelWinSound()
-    {
-        if (levelWinClip != null) PlaySFX(levelWinClip, levelWinVolume);
-    }
-
-    public void PlayFinalWinSound()
-    {
-        if (finalWinClip != null) PlaySFX(finalWinClip, finalWinVolume);
-    }
+    public void PlayGameOverSound() { if (gameOverClip != null) PlaySFX(gameOverClip, gameOverVolume); }
+    public void PlayLevelWinSound() { if (levelWinClip != null) PlaySFX(levelWinClip, levelWinVolume); }
+    public void PlayFinalWinSound() { if (finalWinClip != null) PlaySFX(finalWinClip, finalWinVolume); }
 }
+

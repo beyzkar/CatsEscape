@@ -781,6 +781,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Neko Cat 01
       objectReference: {fileID: 0}
+    - target: {fileID: 658522301777592603, guid: b378c8c7799eba342a7c00e83058151c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6091249284180459995, guid: b378c8c7799eba342a7c00e83058151c, type: 3}
       propertyPath: m_Controller
       value: 
@@ -2690,9 +2694,12 @@ MonoBehaviour:
   returnSpeed: 2
   useViewportClamping: 1
   xScrollLimit: 0.5
+  viewportPaddingX: 0.5
   flipSpeed: 25
   acceleration: 20
   deceleration: 25
+  rotationRight: 120
+  rotationLeft: 300
   introSpeed: 30
   stopX: -4
 --- !u!114 &489111423
@@ -13823,7 +13830,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1200503557
 Transform:
   m_ObjectHideFlags: 0

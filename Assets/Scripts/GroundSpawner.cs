@@ -23,12 +23,9 @@ public class GroundSpawner : MonoBehaviour
     public float groundWidth = 12f;       // Her bir zemin prefabının genişliği (Unity birimi cinsinden)
     public float groundY = -2.5f;         // Zeminlerin oluşacağı dikey konum
     public int initialAmount = 6;         // Oyun başında kaç parça hazır dursun
-    public float spawnTriggerX = -10f;    // En arkadaki parça buradan sola geçtiğinde yenisini ekle
-    public float destroyLimitX = -30f;    // Çok geride kalan parçaları silme sınırı
 
     [Header("Level Geçiş Ayarları")]
     public GameObject staticEnvironment;  // Level 1-2'deki sabit zeminleri tutan obje (Environment)
-    public int startSpawnerLevel = 5;     // Spawner'ın ve çukurların aktif olacağı seviye
     
     [Header("Oyun Mantığı")]
     public int minSafeDistance = 3;       // Başlangıçta kaç parça güvenli (çukursuz) gelsin
@@ -40,13 +37,11 @@ public class GroundSpawner : MonoBehaviour
 
     void Start()
     {
-        // Başlangıçta seviye 3'ten küçükse hiçbir şey yapma
         CheckLevelAndInitialize();
     }
 
     void Update()
     {
-        // Zaman donmuşsa (Örn: Game Over veya Pause) işlem yapma
         if (Time.timeScale <= 0f) return;
 
         CheckLevelAndInitialize();
@@ -69,27 +64,28 @@ public class GroundSpawner : MonoBehaviour
             nextSpawnX -= moveStep;
 
             // Spawning: Handle both directions
-            // Forward (Right)
             float rightLimit = (PlayerMovement.Instance.ScreenMaxX > 0) ? PlayerMovement.Instance.ScreenMaxX : PlayerMovement.Instance.maxX;
+            
+            // Forward (Right side)
             if (activeGrounds.Count > 0 && activeGrounds[activeGrounds.Count - 1].transform.position.x < (rightLimit + groundWidth))
             {
                 SpawnNextSegment(true, true);
             }
 
-            // Backward (Left)
+            // Backward (Left side)
             if (activeGrounds.Count > 0 && activeGrounds[0].transform.position.x > (PlayerMovement.Instance.minX - groundWidth))
             {
                 SpawnNextSegment(true, false);
             }
 
-            // Cleanup: remove far away segments to save performance
+            // Cleanup: remove far away segments
             if (activeGrounds.Count > 0 && activeGrounds[0].transform.position.x < (PlayerMovement.Instance.minX - groundWidth * 3))
             {
-                RemoveOldestSegment(0); // Left side
+                RemoveOldestSegment(0);
             }
             if (activeGrounds.Count > 1 && activeGrounds[activeGrounds.Count - 1].transform.position.x > (PlayerMovement.Instance.maxX + groundWidth * 3))
             {
-                RemoveOldestSegment(activeGrounds.Count - 1); // Right side
+                RemoveOldestSegment(activeGrounds.Count - 1);
             }
         }
     }
@@ -97,28 +93,25 @@ public class GroundSpawner : MonoBehaviour
     [ContextMenu("Reset Y Offsets")]
     public void ResetOffsets()
     {
-        groundY = -2.5f; // Başlangıç standart değeri
+        groundY = -2.5f;
         normalYOffset = 0f;
         pitYOffset = 0f;
-        Debug.Log("GroundSpawner: Y ofsetleri sıfırlandı. Köprü artık prefabdaki konumunda çıkmalı.");
+        Debug.Log("GroundSpawner: Y ofsetleri sıfırlandı.");
     }
 
     void CheckLevelAndInitialize()
     {
         int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 1;
 
-        // SEVİYE 5'TEN KÜÇÜKSE (Level 1, 2, 3, 4): Dinamik sistemi kapat, sabit sistemi aç
         if (currentLevel < 5)
         {
             isSpawnerStarted = false;
             
-            // Sabit zemini (Hierarchy'deki Environment) görünür yap
             if (staticEnvironment != null && !staticEnvironment.activeInHierarchy)
             {
                 staticEnvironment.SetActive(true);
             }
 
-            // Oluşmuş dinamik parçalar varsa temizle (Çukurları sil)
             if (activeGrounds.Count > 0)
             {
                 foreach (var g in activeGrounds) if (g != null) Destroy(g);
@@ -126,20 +119,15 @@ public class GroundSpawner : MonoBehaviour
                 nextSpawnX = 0f;
             }
         }
-        // SADECE LEVEL 5'TE: Dinamik sistemi başlat
         else
         {
             if (!isSpawnerStarted)
             {
                 isSpawnerStarted = true;
-                
-                // Spawner başlarken zeminlerin kedinin biraz gerisinden başlamasını sağla
                 nextSpawnX = -20f; 
 
-                // Sabit zemini gizle
                 if (staticEnvironment != null) staticEnvironment.SetActive(false);
 
-                // İlk parçaları oluştur
                 for (int i = 0; i < initialAmount; i++)
                 {
                     SpawnNextSegment(i >= minSafeDistance);
@@ -148,54 +136,35 @@ public class GroundSpawner : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Yeni bir zemin segmanı oluşturur ve listeye ekler.
-    /// </summary>
     public void SpawnNextSegment(bool allowPit, bool atRight = true)
     {
         GameObject prefabToSpawn = groundNormalPrefab;
-
-        // LevelManager'dan mevcut seviyeyi kontrol et
-        int currentLevel = 1;
-        if (LevelManager.Instance != null)
-        {
-            currentLevel = LevelManager.Instance.currentLevel;
-        }
-
+        int currentLevel = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 1;
         float currentOffset = normalYOffset;
 
-        // Sadece Level 5'te ve şans yaver giderse çukur çıkar (Level 3-4'ten kaldırıldı)
         float currentPitChance = 0.2f;
         if (ObstacleSpawner.Instance != null)
         {
             currentPitChance = ObstacleSpawner.Instance.level5.pitChance;
         }
 
-        // Köprüler arası mesafe kontrolü: En az 2 normal parça geçmeli
         int minDistanceBetweenPits = 2;
         if (allowPit && currentLevel == 5 && segmentsSinceLastPit >= minDistanceBetweenPits && Random.value < currentPitChance)
         {
             prefabToSpawn = groundPitPrefab;
             currentOffset = pitYOffset;
-            segmentsSinceLastPit = 0; // Köprü oluştu, sayacı sıfırla
+            segmentsSinceLastPit = 0;
         }
         else
         {
-            segmentsSinceLastPit++; // Normal parça oluştu, sayacı arttır
+            segmentsSinceLastPit++;
         }
 
-        if (prefabToSpawn == null)
-        {
-            Debug.LogWarning("GroundSpawner: Spawn edilecek prefab atanmamış!");
-            return;
-        }
+        if (prefabToSpawn == null) return;
 
-        // Determine spawn Position
         float spawnX = atRight ? nextSpawnX : (activeGrounds[0].transform.position.x - groundWidth);
 
-        // Objeyi oluştur ve listeye ekle
         GameObject segment = Instantiate(prefabToSpawn, new Vector3(spawnX, groundY + currentOffset, 0), Quaternion.identity);
-        
         segment.transform.SetParent(transform);
         
         if (atRight)
@@ -206,13 +175,9 @@ public class GroundSpawner : MonoBehaviour
         else
         {
             activeGrounds.Insert(0, segment);
-            // nextSpawnX stays the same as it's the rightmost point
         }
     }
 
-    /// <summary>
-    /// Fazlalık zemin parçalarını siler.
-    /// </summary>
     void RemoveOldestSegment(int index)
     {
         if (index < 0 || index >= activeGrounds.Count) return;
@@ -220,22 +185,17 @@ public class GroundSpawner : MonoBehaviour
         GameObject target = activeGrounds[index];
         activeGrounds.RemoveAt(index);
         
-        // If we removed the rightmost, we need to adjust nextSpawnX
-        if (index == activeGrounds.Count) // After removal, previous Count is index+1
+        if (index == activeGrounds.Count) 
         {
             nextSpawnX -= groundWidth;
         }
-        // If we remove the leftmost, we don't need to change nextSpawnX
         
         Destroy(target);
     }
 
-    /// <summary>
-    /// Verilen X pozisyonunda bir çukur olup olmadığını kontrol eder.
-    /// </summary>
     public bool IsPitAtX(float xPosition)
     {
-        float margin = groundWidth * 0.8f; // Larger margin for safety
+        float margin = groundWidth * 0.8f;
         foreach (var ground in activeGrounds)
         {
             if (ground == null) continue;
@@ -243,24 +203,18 @@ public class GroundSpawner : MonoBehaviour
             float dist = Mathf.Abs(ground.transform.position.x - xPosition);
             if (dist < margin)
             {
-                // Identification: Check name, children name, or PitTrigger component
                 bool isPit = ground.name.Contains("Pit") || 
                              ground.name.Contains("pit") || 
                              ground.GetComponentInChildren<PitTrigger>() != null ||
                              (ground.transform.Find("Pit") != null) ||
                              (ground.transform.Find("PitTrigger") != null);
 
-                if (isPit)
-                {
-                    Debug.Log($"[GroundSpawner] Pit detected at X:{ground.transform.position.x} (dist:{dist} to checkX:{xPosition}). Blocking spawn.");
-                    return true;
-                }
+                if (isPit) return true;
             }
         }
         return false;
     }
 
-    // Editörde diziliş mesafesini görmek için opsiyonel
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;

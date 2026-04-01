@@ -1,78 +1,74 @@
 using UnityEngine;
 
+// Core player movement controller: handles horizontal movement, jumping, and rotation/flipping
 public class PlayerMovement : MonoBehaviour
 {
     public static PlayerMovement Instance { get; private set; }
+
+    [Header("Jump Settings")]
     public float jumpForce = 12f;
     private float currentJumpForce;
     public int maxJumps = 2; 
+    private int jumpsLeft;
 
     [Header("Level 5 Fall Settings")]
     public float deathThresholdY = -4.2f; // Height at which jumping is disabled in Level 5
 
-    public Transform groundCheck; //yere değip değmediğini kontrol ettiğimiz yer 
+    [Header("Ground Detection")]
+    public Transform groundCheck; // Point used to detect if the player is on the ground
     public float groundCheckRadius = 0.15f;
-    public LayerMask groundLayer; //yerin hangi layer olduğunu belirtir (sadece bu layer temas sayılır )
+    public LayerMask groundLayer; // Specifies which layer is ground
     /*
-     Layer
-       nesneleri gruplandırır
-       fizik ve algılama kontrolü sağlar
-       hataları önler
-       sperformansı artırır
+     Layer:
+       - Groups objects
+       - Provides physics and detection control
+       - Prevents errors
+       - Improves performance
      */
 
-    private Rigidbody2D rb; //Rigibody2D: nesneye fizik kazandırır.
+    private Rigidbody2D rb; // Rigidbody2D: Adds physics to the object
     /*
-     yerçekimi uygular
-     düşmesini sağlar
-     kuvvet uygulayabilirsin
-     çarpışmalara tepki verir
+     - Applies gravity
+     - Enables falling
+     - Allows applying forces
+     - Reacts to collisions
      */
-    private int jumpsLeft;
     private bool isGrounded;
-    public bool IsGrounded => isGrounded; // Diğer scriptlerin (LevelManager) kedinin yere basıp basmadığını görmesi için
-    public int WorldDirection { get; private set; } = 1;
-    
-    [Header("Movement Settings")]
+    public bool IsGrounded => isGrounded;
+
+    [Header("Horizontal Movement")]
     public float moveRightSpeed = 5f;
     public float moveLeftSpeed = 5f; 
-    public float minX = -5.3f; // Narrower left boundary
-    public float maxX = 5f;
-    [Header("Return Speed")]
-    public float returnSpeed = 2f;
-
-    [Header("Viewport Clamping")]
-    public bool useViewportClamping = true;
-    [Range(0.1f, 10f)] public float xScrollLimit = 5f; // Screen width multiplier (1.0 = full screen)
-
-    public float ScreenMaxX { get; private set; } // Actual right edge of screen
-    public float viewportPaddingX = 3.5f; // Margin to keep cat from clipping edge (increased to match photo)
-
-    [Header("Transition Smoothing")]
-    public float flipSpeed = 25f; // Mario-style scale flip speed
+    public float minX = -5.3f; // Initial left boundary
+    public float maxX = 5f;    // Initial right boundary
     public float acceleration = 20f;
     public float deceleration = 25f;
     private float currentHorizontalVelocity = 0f;
-    private float targetScaleX = 1f;
-    private float originalAbsScaleX;
+    private float targetVelocityX = 0f;
+
+    [Header("Viewport Clamping")]
+    public bool useViewportClamping = true;
+    [Range(0.1f, 10f)] public float xScrollLimit = 5f; // Boundary multiplier
+    public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
+    public float viewportPaddingX = 3.5f; // Safety margin for character bounds
 
     [Header("Visual Orientation")]
     public float rotationRight = 120f;
-    public float rotationLeft = 300f; // 120 + 180 = 300 (or -60)
-    
-    private PlayerObstacleRules rules;
-    private Animator anim;
+    public float rotationLeft = 300f; 
+    public int WorldDirection { get; private set; } = 1;
 
-    [Header("Intro Walk")]
+    [Header("Intro Settings")]
     public float introSpeed = 3f;
     public float stopX = -4f;
     private bool introFinished = false;
     private bool dead = false;
     
-    // Mobile Input Flags
+    // Internal references and state
+    private PlayerObstacleRules rules;
+    private Animator anim;
+    private float originalAbsScaleX;
     private bool mobileLeft = false;
     private bool mobileRight = false;
-
 
     void Awake()
     {
@@ -81,16 +77,11 @@ public class PlayerMovement : MonoBehaviour
         if (rb != null) 
         {
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            rb.constraints = RigidbodyConstraints2D.FreezeRotation; // CRITICAL: Stop physics-based rotation
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation; // Lock physics rotation
         }
         
         rules = GetComponent<PlayerObstacleRules>();
-        // Initial search, but we will re-search in Update if this one becomes inactive
         anim = GetComponentInChildren<Animator>(); 
-
-        // Force orientation: Face Right (if cat walks Left) or Face Left (if cat walks Right)
-        // Adjust this if your cat is backwards
-        transform.localRotation = Quaternion.Euler(0, 0, 0); 
     }
 
     void Start()
@@ -98,13 +89,10 @@ public class PlayerMovement : MonoBehaviour
         currentJumpForce = jumpForce;
         jumpsLeft = maxJumps;
         originalAbsScaleX = Mathf.Abs(transform.localScale.x);
-        targetScaleX = originalAbsScaleX;
         
-        // Ensure starting position is off-screen if needed
-        // transform.position = new Vector3(-12f, transform.position.y, 0f);
+        // Ensure parent rotation is locked at identity
+        transform.localRotation = Quaternion.identity; 
     }
-
-    private float targetVelocityX = 0f;
 
     public void SetDead(bool isDead)
     {
@@ -119,11 +107,13 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         if (dead) return;
+
+        // Handle Intro Sequence
         if (!introFinished)
         {
             DoIntroWalk();
             
-            // Ensure cat faces right and is locked during intro
+            // Lock visuals for intro
             transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
             transform.localRotation = Quaternion.identity;
             if (anim != null) anim.transform.localRotation = Quaternion.Euler(0, rotationRight, 0);
@@ -136,6 +126,7 @@ public class PlayerMovement : MonoBehaviour
             return;
         } 
 
+        // Handle Death State
         if (rules != null && rules.IsDead) 
         {
             targetVelocityX = 0f;
@@ -148,32 +139,29 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // --- GROUND CHECK ---
+        // Ground check logic
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-
-        // Ensure jumps are only reset when truly grounded and not in the middle of a jump
         if (isGrounded && rb.linearVelocity.y <= 0.1f)
         {
             jumpsLeft = maxJumps;
         }
 
-        // --- HORIZONTAL MOVEMENT (Smoothed) ---
-        float hInput = Input.GetAxisRaw("Horizontal"); // Support keyboard
-        if (mobileLeft) hInput = -1f;   // Support mobile
+        // Input processing
+        float hInput = Input.GetAxisRaw("Horizontal");
+        if (mobileLeft) hInput = -1f;
         if (mobileRight) hInput = 1f;
 
+        // Smoothed velocity calculation
         float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
         float accelRate = (Mathf.Abs(desiredVelocity) > 0.01f) ? acceleration : deceleration;
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
         targetVelocityX = currentHorizontalVelocity;
 
-        // --- DYNAMIC ANIMATOR FETCHING (For multiple character support) ---
+        // Dynamic animator fetch for multiple character skins
         if (anim == null || !anim.gameObject.activeInHierarchy)
-        {
             anim = GetComponentInChildren<Animator>();
-        }
 
-        // --- ANIMATION CONTROL (Instant Idle) ---
+        // Animation state management
         if (anim != null)
         {
             bool isMovingInput = (hInput != 0);
@@ -181,31 +169,21 @@ public class PlayerMovement : MonoBehaviour
             anim.SetBool("Idle", !isMovingInput);
         }
         
-        // --- DIRECTION FLIPPING (2D Scale-based) ---
-        if (hInput > 0) 
-        { 
-            WorldDirection = 1; 
-            targetScaleX = originalAbsScaleX; 
-        }
-        else if (hInput < 0) 
-        { 
-            WorldDirection = -1; 
-            targetScaleX = -originalAbsScaleX; 
-        }
+        // Direction and Rotation management
+        if (hInput > 0) WorldDirection = 1;
+        else if (hInput < 0) WorldDirection = -1;
 
-        // Apply scale (reset to original positive scale to avoid double-flipping with rotation)
+        // Explicit transform and child rotation enforcement
         transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
         transform.localRotation = Quaternion.identity;
 
-        // FORCE child rotation to specific angles (120 vs 300)
         if (anim != null)
         {
             float targetRY = (WorldDirection == 1) ? rotationRight : rotationLeft;
             anim.transform.localRotation = Quaternion.Euler(0, targetRY, 0);
         }
 
-        // --- JUMP INPUT (Keyboard + Mobile Buttons) ---
-        // MouseButtonDown(0) removed to prevent conflict with UI button clicks in simulator
+        // Jump input handling
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
         {
             MobileJumpDown();
@@ -216,75 +194,62 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!introFinished || (rules != null && rules.IsDead)) return;
 
-        // Apply horizontal velocity while preserving vertical velocity from gravity/jumps
         float finalVelocityX = targetVelocityX;
 
-        // --- PREVENT JITTER (Early Velocity Suppression) ---
-        // Use boundaries from the previous LateUpdate for solid physics feel
+        // Boundary safety check for physics velocity
         if (transform.position.x <= minX && finalVelocityX < 0) finalVelocityX = 0;
         if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0;
 
-        // If stuck, don't allow horizontal movement
-        if (rules != null && rules.IsStuck)
-        {
-            finalVelocityX = 0f;
-        }
+        // Stop movement if stuck against an obstacle
+        if (rules != null && rules.IsStuck) finalVelocityX = 0f;
 
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
     }
 
     void LateUpdate()
     {
-        // --- FINAL POSITION CLAMPING (Runs after all movement/physics) ---
-        if (useViewportClamping)
+        if (!useViewportClamping)
         {
-            Camera cam = Camera.main;
-            if (cam == null) cam = FindObjectOfType<Camera>();
-            if (cam == null) return;
-
-            float zDist = Mathf.Abs(cam.transform.position.z);
-            Vector3 bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
-            Vector3 topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
-            Vector3 screenTopRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
-
-            // Update bounds for other scripts
-            minX = bottomLeft.x + viewportPaddingX;
-            maxX = topRight.x;
-            ScreenMaxX = screenTopRight.x;
-
-            float minY = bottomLeft.y;
-            float maxY = topRight.y;
-
-            // Strict position enforcement
-            float cx = Mathf.Clamp(transform.position.x, minX, maxX);
-            float cy = Mathf.Clamp(transform.position.y, minY, maxY);
-
-            if (cx != transform.position.x || cy != transform.position.y)
+            // Simple clamping fallback
+            float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
+            if (clampedX != transform.position.x)
             {
-                transform.position = new Vector3(cx, cy, transform.position.z);
-                if (cx != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            }
-        }
-        else
-        {
-            // Legacy clamping fallback
-            float cx = Mathf.Clamp(transform.position.x, minX, maxX);
-            if (cx != transform.position.x)
-            {
-                transform.position = new Vector3(cx, transform.position.y, transform.position.z);
+                transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
                 rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
             }
+            return;
+        }
+
+        Camera cam = Camera.main;
+        if (cam == null) return;
+
+        float zDist = Mathf.Abs(cam.transform.position.z);
+        Vector3 bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
+        Vector3 topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
+        Vector3 screenTopRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+
+        // Update bounds for current frame
+        minX = bottomLeft.x + viewportPaddingX;
+        maxX = topRight.x;
+        ScreenMaxX = screenTopRight.x;
+
+        // Enforce strict clamping
+        float cx = Mathf.Clamp(transform.position.x, minX, maxX);
+        float cy = Mathf.Clamp(transform.position.y, bottomLeft.y, topRight.y);
+
+        if (cx != transform.position.x || cy != transform.position.y)
+        {
+            transform.position = new Vector3(cx, cy, transform.position.z);
+            if (cx != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         }
     }
 
     void DoIntroWalk()
     {
-        // Move cat towards the stopping point
         float step = introSpeed * Time.deltaTime;
         Vector3 targetPos = new Vector3(stopX, transform.position.y, transform.position.z);
         transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
 
-        // Check if reached OR clamped (in case clamping stops it earlier)
         if (Mathf.Abs(transform.position.x - stopX) < 0.1f || transform.position.x >= maxX - 0.1f)
         {
             introFinished = true;
@@ -307,52 +272,32 @@ public class PlayerMovement : MonoBehaviour
             AudioManager.Instance.PlayJump();
 
         jumpsLeft--;
-        //Debug.Log("After jump | jumpsLeft=" + jumpsLeft); jumpın çalıp çalışmadığını kontrol eder.
     }
 
-    public void SetJumpMultiplier(float multiplier)
-    {
-        currentJumpForce = jumpForce * multiplier;
-    }
+    public void SetJumpMultiplier(float multiplier) => currentJumpForce = jumpForce * multiplier;
+    public void ResetJumpMultiplier() => currentJumpForce = jumpForce;
 
-    public void ResetJumpMultiplier()
-    {
-        currentJumpForce = jumpForce;
-    }
-
-    // --- MOBILE INPUT METHODS ---
+    // Mobile input flags management
     public void SetMoveLeft(bool isMoving) { mobileLeft = isMoving; }
     public void SetMoveRight(bool isMoving) { mobileRight = isMoving; }
     
-    // Properties for external scripts (like PlayerObstacleRules) to check input state
     public bool IsMovingLeft => Input.GetKey(KeyCode.LeftArrow) || mobileLeft;
     public bool IsMovingRight => Input.GetKey(KeyCode.RightArrow) || mobileRight;
     
-    // EXPOSE velocity for World Scrolling
     public float CurrentVelocityX => currentHorizontalVelocity;
     
     public void MobileJumpDown()
     {
         if (dead) return;
         
-        // Level 5 specific: Disable jump if too low (falling into pit)
-        bool isTooLowInLevel5 = false;
+        // Level 5 specific check for pit depths
+        bool canJump = true;
         if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
         {
-            if (transform.position.y < deathThresholdY)
-            {
-                isTooLowInLevel5 = true;
-            }
+            if (transform.position.y < deathThresholdY) canJump = false;
         }
 
-        if (!isTooLowInLevel5)
-        {
-            TryJump();
-        }
-        else
-        {
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayFalling();
-        }
+        if (canJump) TryJump();
+        else if (AudioManager.Instance != null) AudioManager.Instance.PlayFalling();
     }
 }

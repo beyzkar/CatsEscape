@@ -3,10 +3,8 @@ using UnityEngine;
 
 public class LoopTile : MonoBehaviour
 {
-    public float tileWidth = 40f;  // Ground'un dünya genişliği
-    public float resetX = -40f;    // Bu X’in altına inince resetle
-    public float startX = 40f;     // Buraya geri koy
-
+    public float resetX = -40f;    
+    public float startX = 40f;    
     void Update()
     {
         if (transform.position.x <= resetX)

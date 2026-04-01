@@ -11,9 +11,7 @@ public class EnhancedParallax : MonoBehaviour
     }
 
     public ParallaxLayer[] layers;
-    public float baseSpeed = 5f;
 
-    // Unity'de herhangi bir ayarı değiştirdiğinde veya sahnede bu objeye dokunduğunda otomatik hizalar
     void OnValidate()
     {
         // Editör modunda çalışması için
@@ -43,23 +41,20 @@ public class EnhancedParallax : MonoBehaviour
                     if (currentSpriteHeight > 0)
                     {
                         float scale = targetHeight / currentSpriteHeight;
-                        // Uniform scale to prevent distortion
                         child.localScale = new Vector3(scale, scale, 1f);
                     }
                 }
             }
         }
         
-        // After scaling, we must realign
         AlignAllLayers();
         Debug.Log("Background fitted to camera height.");
     }
 
-    // Unity'de script ismine sağ tıklayıp "Align All Layers" dersen resimleri otomatik uca ekler
     [ContextMenu("Align All Layers")]
     public void AlignAllLayers()
     {
-        if (Application.isPlaying || layers == null) return; // Liste boşsa veya oyun açıksa yapma
+        if (Application.isPlaying || layers == null) return;
 
         foreach (var layer in layers)
         {
@@ -81,17 +76,9 @@ public class EnhancedParallax : MonoBehaviour
         }
     }
 
-    void OnEnable()
-    {
-        InitializeLayers();
-    }
-
-    private PlayerMovement player;
-
     void Start()
     {
         InitializeLayers();
-        player = FindFirstObjectByType<PlayerMovement>();
     }
 
     [ContextMenu("Initialize Layers")]
@@ -124,16 +111,16 @@ public class EnhancedParallax : MonoBehaviour
         {
             if (layers[i].layerParent == null) continue;
 
+            // Recalculate width if missing
             if (layers[i].width <= 0) 
             {
-                // Try to initialize on the fly if width is not set
-                Transform firstChild = layers[i].layerParent.GetChild(0);
-                SpriteRenderer sr = firstChild.GetComponent<SpriteRenderer>();
-                if (sr != null && sr.sprite != null)
+                if (layers[i].layerParent.childCount > 0)
                 {
-                    layers[i].width = sr.sprite.bounds.size.x * firstChild.localScale.x;
+                    Transform firstChild = layers[i].layerParent.GetChild(0);
+                    SpriteRenderer sr = firstChild.GetComponent<SpriteRenderer>();
+                    if (sr != null && sr.sprite != null)
+                        layers[i].width = sr.sprite.bounds.size.x * firstChild.localScale.x;
                 }
-                
                 if (layers[i].width <= 0) continue;
             }
 
@@ -142,7 +129,7 @@ public class EnhancedParallax : MonoBehaviour
             Vector3 pos = layers[i].layerParent.localPosition;
             pos.x -= movement * Mathf.Abs(layers[i].speed);
 
-            // Loop logic: must handle both directions
+            // Seamless infinite loop handling for both directions
             if (movement > 0)
             {
                 if (pos.x <= -layers[i].width) pos.x += layers[i].width;

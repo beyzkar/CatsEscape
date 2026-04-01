@@ -1,26 +1,14 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CharacterSelectionUI : MonoBehaviour
 {
     public MainMenuManager mainMenuManager; // MainMenuManager referansı
-    public UnityEngine.UI.Button ladyMitoButton;
-    public UnityEngine.UI.Button sirNoriButton;
+    public Button ladyMitoButton;
+    public Button sirNoriButton;
 
     private void Awake()
     {
-        // Butonları otomatik bul (isimle) eğer sürüklenmemişse
-        if (ladyMitoButton == null)
-        {
-            GameObject b = GameObject.Find("LadyMitoButton");
-            if (b != null) ladyMitoButton = b.GetComponent<UnityEngine.UI.Button>();
-        }
-
-        if (sirNoriButton == null)
-        {
-            GameObject b = GameObject.Find("SirNoriButton");
-            if (b != null) sirNoriButton = b.GetComponent<UnityEngine.UI.Button>();
-        }
-
         // Programatik olarak listener ekle (Unity Scene'deki kaybolan OnClick referanslarını garanti altına almak için)
         if (ladyMitoButton != null)
         {
@@ -47,10 +35,5 @@ public class CharacterSelectionUI : MonoBehaviour
         {
             mainMenuManager.PerformStartGame();
         }
-    }
-
-    public void ClosePanel()
-    {
-        gameObject.SetActive(false);
     }
 }

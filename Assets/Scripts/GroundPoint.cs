@@ -10,32 +10,32 @@ public class GroundPoint : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // Debug: Çarpışma algılandı mı?
         if (collision.collider.CompareTag("Player"))
         {
-            Debug.Log("GroundPoint: Collision detected! Object: " + gameObject.name + " | Level: " + (LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 0));
-            
-            if (!hasGivenPoint && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
-            {
-                hasGivenPoint = true;
-                LevelManager.Instance.ObstaclePassed();
-                Debug.Log("GroundPoint: Level 5 Point Awarded! Total: " + LevelManager.Instance.obstaclesPassed);
-            }
+            HandlePlayerContact();
         }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // Debug: Trigger algılandı mı?
         if (collision.CompareTag("Player"))
         {
-            Debug.Log("GroundPoint: Trigger detected! Object: " + gameObject.name + " | Level: " + (LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 0));
+            HandlePlayerContact();
+        }
+    }
 
-            if (!hasGivenPoint && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
+    private void HandlePlayerContact()
+    {
+        // Sadece Level 5'te ve daha önce puan verilmemişse çalışır
+        if (!hasGivenPoint && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
+        {
+            hasGivenPoint = true;
+            LevelManager.Instance.ObstaclePassed();
+            
+            // Opsiyonel: Sadece önemli ilerlemeleri logla
+            if (LevelManager.Instance.obstaclesPassed % 2 == 0)
             {
-                hasGivenPoint = true;
-                LevelManager.Instance.ObstaclePassed();
-                Debug.Log("GroundPoint (Trigger): Level 5 Point Awarded! Total: " + LevelManager.Instance.obstaclesPassed);
+                Debug.Log($"GroundPoint: Level 5 Progress: {LevelManager.Instance.obstaclesPassed}/10");
             }
         }
     }

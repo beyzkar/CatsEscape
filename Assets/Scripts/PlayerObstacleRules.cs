@@ -3,9 +3,7 @@ using System.Collections;
 
 public class PlayerObstacleRules : MonoBehaviour
 {
-    [Header("Side hit freeze")]
     public float topNormalThreshold = 0.4f;
-    public float sideNormalThreshold = 0.6f;
 
     [Header("Hearts (Wall hits)")]
     public GameObject[] heartUI;
@@ -43,8 +41,6 @@ public class PlayerObstacleRules : MonoBehaviour
     
     [Header("Effects")]
     public ParticleSystem sparkleEffect;
-
-    private float startX;
     [Header("Hit Recovery")]
     public float hitRecoveryDuration = 0.8f;
     private float hitRecoveryTimer = 0f;
@@ -61,13 +57,15 @@ public class PlayerObstacleRules : MonoBehaviour
         movementScript = GetComponent<PlayerMovement>();
         animator = GetComponentInChildren<Animator>();
         bgVideo = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
-        startX = transform.position.x;
         originalScale = transform.localScale;
         
         // Nudge Z closer to camera to stay in front of 2D sprites (at Z=0)
         transform.position = new Vector3(transform.position.x, transform.position.y, -5f);
         
+        // Cache renderers and sorting
+        allRenderers = GetComponentsInChildren<Renderer>(true);
         UpdateSortingOrder(100);
+        
         if (sparkleEffect != null) sparkleEffect.gameObject.SetActive(false);
         
         UpdateGameSpeed();
@@ -173,127 +171,104 @@ public class PlayerObstacleRules : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D col)
     {
         if (dead) return;
+        Vector2 normal = col.contactCount > 0 ? col.GetContact(0).normal : Vector2.left;
+        HandleInteraction(col.gameObject, normal, false);
+    }
 
-        bool isEnemy = IsEnemy(col.gameObject);
-
-        if (isEnemy)
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (dead) return;
+        
+        if (other.CompareTag("Fish"))
         {
-            if (isInvincible) return;
+            CollectFish();
+            Destroy(other.gameObject);
+            return;
+        }
 
-            // Removed `col.gameObject != lastHitWall` to ensure damage triggers even if lastHitWall wasn't cleared.
-            // damageCooldown already prevents multiple hearts lost in a single collision frame.
-            if (damageCooldown <= 0)
+        if (other.CompareTag("Potion"))
+        {
+            CollectPotion();
+            Destroy(other.gameObject);
+            return;
+        }
+
+        HandleInteraction(other.gameObject, Vector2.left, true);
+    }
+
+    private void HandleInteraction(GameObject other, Vector2 normal, bool isTrigger)
+    {
+        bool isEnemy = IsEnemy(other);
+        bool isBush = other.CompareTag("Bush");
+        bool isWall = other.CompareTag("Wall") || other.CompareTag("LongWall");
+        bool isObstacle = other.CompareTag("Obstacle");
+
+        if (!isEnemy && !isBush && !isWall && !isObstacle) return;
+
+        bool hitTop = isTrigger ? (transform.position.y > other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (normal.y > topNormalThreshold);
+
+        if (hitTop && !isTrigger) // Crush logic (only for physics collisions)
+        {
+            if (isObstacle)
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
+                if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
+                Destroy(other);
+            }
+            if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
+            return;
+        }
+
+        if (isInvincible && (isEnemy || isBush || isWall)) 
+        {
+            if (isWall && isTrigger && other.CompareTag("LongWall")) 
+                if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
+            return;
+        }
+
+        if (jumpGraceTimer > 0 && other == lastHitWall)
+        {
+            if (isWall && jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
+            else if (!isWall) return;
+        }
+
+        if (damageCooldown <= 0)
+        {
+            bool isLethal = isEnemy || isBush || (!isWall && !isObstacle);
+            
+            if (isLethal)
             {
                 if (isPotionActive)
                 {
                     ResetPotionEffect();
-                    damageCooldown = 0.2f; // Minimal cooldown to prevent multi-frame hits from SAME object
-                    lastHitWall = col.gameObject;
-                    
-                    // Impact sound but no heart lost
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-                    
-                    // Still freeze if it's a side hit to maintain game feel
-                    Vector2 hitNormal = col.GetContact(0).normal;
-                    if (Mathf.Abs(hitNormal.x) > 0.4f)
-                    {
-                        EnterStuckState(col.gameObject);
-                    }
-                    return;
+                    damageCooldown = 0.2f;
                 }
-
-                lastHitWall = col.gameObject;
-                LoseHeart();
-                damageCooldown = DAMAGE_COOLDOWN_TIME;
-
-                ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
-                if (moveScript != null) moveScript.canRewardCleanJump = false;
-
-                // Only freeze the world if it's a side hit
-                Vector2 normal = col.GetContact(0).normal;
-                if (Mathf.Abs(normal.x) > 0.4f)
+                else
                 {
-                    EnterStuckState(col.gameObject);
-                }
-            }
-            return;
-        }
-
-        bool isWall = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall");
-        if (!col.collider.CompareTag("Obstacle") && !isWall) return;
-
-        bool hitTop = false;
-        for (int i = 0; i < col.contactCount; i++)
-        {
-            Vector2 n = col.GetContact(i).normal;
-            if (n.y > topNormalThreshold)
-            {
-                hitTop = true;
-                break;
-            }
-        }
-
-        if (hitTop)
-        {
-            if (col.collider.CompareTag("Obstacle") || col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall"))
-            {
-                if (col.collider.CompareTag("Obstacle")) 
-                {
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
-                    if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
-                    Destroy(col.gameObject);
+                    LoseHeart();
+                    damageCooldown = DAMAGE_COOLDOWN_TIME;
                 }
                 
-                if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
+                if (isBush) hitRecoveryTimer = hitRecoveryDuration;
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
             }
-            return;
+            else if (isWall || isObstacle) // Harmless wall/bag hits
+            {
+                if (isPotionActive) ResetPotionEffect();
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+                if (isWall && isTrigger) if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
+            }
+            
+            lastHitWall = other;
+            ObstacleMove move = other.GetComponent<ObstacleMove>();
+            if (move != null) move.canRewardCleanJump = false;
         }
 
-        if (!hitTop && !stuck)
+        // Side hit freeze
+        if (!hitTop)
         {
-            if (jumpGraceTimer > 0 && col.gameObject == lastHitWall)
-            {
-                if (col.gameObject.CompareTag("Wall"))
-                {
-                    if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
-                }
-                else return;
-            }
-
-            ObstacleMove moveScript = col.gameObject.GetComponent<ObstacleMove>();
-            if (moveScript != null) moveScript.canRewardCleanJump = false;
-
-            // NEW: Cancel Potion growth effect on ANY obstacle or wall collision
-            if (isPotionActive) ResetPotionEffect();
-
-            if (isWall || col.collider.CompareTag("Obstacle"))
-            {
-                if (damageCooldown <= 0)
-                {
-                    // Only special obstacles cost hearts; Bags and Walls are harmless (User request)
-                    bool isObstacleBag = col.collider.CompareTag("Obstacle");
-                    bool isAnyWall = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall");
-
-                    if (!isObstacleBag && !isAnyWall)
-                    {
-                        if (isPotionActive)
-                        {
-                            ResetPotionEffect();
-                            damageCooldown = 0.2f;
-                            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-                            EnterStuckState(col.gameObject);
-                        }
-                        else
-                        {
-                            LoseHeart(); // Full heart loss for lethal obstacles (Enemies, Spikes, etc.)
-                            damageCooldown = DAMAGE_COOLDOWN_TIME;
-                        }
-                    }
-                    
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-                }
-                EnterStuckState(col.gameObject);
-            }
+            bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.4f);
+            if (shouldFreeze) EnterStuckState(other);
         }
     }
 
@@ -310,7 +285,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlayHeartLost();
 
-        // Level 5 ilerlemesini sıfırla (İstek üzerine)
+        // Reset Level 5 progress (on user request)
         if (LevelManager.Instance != null) LevelManager.Instance.ResetProgress();
 
         StartCoroutine(FlashRecoveryEffect());
@@ -481,135 +456,27 @@ public class PlayerObstacleRules : MonoBehaviour
         if (GameOverManager.Instance != null) GameOverManager.Instance.ShowGameOver();
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (dead) return;
 
-        bool isEnemy = IsEnemy(other.gameObject);
-        bool isBush = other.CompareTag("Bush");
+    private void OnTriggerStay2D(Collider2D other) => HandleStay(other.gameObject);
+    private void OnCollisionStay2D(Collision2D col) => HandleStay(col.gameObject);
 
-        if (isEnemy || isBush)
-        {
-            if (isInvincible) return;
-
-            if (damageCooldown <= 0)
-            {
-                if (isPotionActive)
-                {
-                    ResetPotionEffect();
-                    damageCooldown = 0.2f;
-                    lastHitWall = other.gameObject;
-                    
-                    if (isBush) hitRecoveryTimer = hitRecoveryDuration;
-                    
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-
-                    if (transform.position.y < other.bounds.center.y + 0.5f)
-                    {
-                        EnterStuckState(other.gameObject);
-                    }
-                    return;
-                }
-
-                lastHitWall = other.gameObject;
-                LoseHeart();
-                damageCooldown = DAMAGE_COOLDOWN_TIME;
-
-                if (isBush)
-                {
-                    hitRecoveryTimer = hitRecoveryDuration;
-                }
-
-                ObstacleMove moveScript = other.gameObject.GetComponent<ObstacleMove>();
-                if (moveScript != null) moveScript.canRewardCleanJump = false;
-
-                // Only freeze if we are not significantly above the obstacle
-                if (transform.position.y < other.bounds.center.y + 0.5f)
-                {
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-                    EnterStuckState(other.gameObject);
-                }
-            }
-            return;
-        }
-        bool isWall = other.CompareTag("Wall") || other.CompareTag("LongWall");
-        if (isWall && !stuck)
-        {
-            if (isInvincible) return;
-
-            if (jumpGraceTimer > 0 && other.gameObject == lastHitWall)
-            {
-                if (jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
-            }
-
-            // Only special obstacles cost hearts; Wall and LongWall are now used for effect/sound without damage
-            if (!other.CompareTag("LongWall") && !other.CompareTag("Wall"))
-            {
-                LoseHeart(); // Other hits result in heart loss
-            }
-
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-            
-            // Pass reporting for triggers (especially LongWall)
-            if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
-
-            // Only freeze if we are not significantly above the obstacle
-            if (transform.position.y < other.bounds.center.y + 0.5f)
-            {
-                EnterStuckState(other.gameObject);
-            }
-        }
-
-        if (other.CompareTag("Fish"))
-        {
-            CollectFish();
-            Destroy(other.gameObject);
-        }
-
-        if (other.CompareTag("Potion"))
-        {
-            CollectPotion();
-            Destroy(other.gameObject);
-        }
-    }
-
-    private void OnTriggerStay2D(Collider2D other)
+    private void HandleStay(GameObject other)
     {
         if (dead || stuck) return;
-        
-        bool isBlockingObstacle = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Enemy") || other.CompareTag("Bush");
-        if (isBlockingObstacle && (other.gameObject != lastHitWall || !stuck))
-        {
-            EnterStuckState(other.gameObject);
-        }
-    }
-
-    private void OnCollisionStay2D(Collision2D col)
-    {
-        if (dead || stuck) return;
-
-        bool isBlockingObstacle = col.collider.CompareTag("Wall") || col.collider.CompareTag("LongWall") || col.collider.CompareTag("Enemy") || col.collider.CompareTag("Bush");
-        if (isBlockingObstacle)
-        {
-            EnterStuckState(col.gameObject);
-        }
+        bool isBlocking = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Enemy") || other.CompareTag("Bush");
+        if (isBlocking && other != lastHitWall) EnterStuckState(other);
     }
 
     public void UpdateSortingOrder(int order)
     {
-        allRenderers = GetComponentsInChildren<Renderer>(true);
-        if (allRenderers != null)
+        if (allRenderers == null) allRenderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in allRenderers) 
         {
-            foreach (var r in allRenderers) 
+            if (r != null) 
             {
-                if (r != null) 
-                {
-                    // Don't override the sparkle effect's custom sorting
-                    if (sparkleEffect != null && r == sparkleEffect.GetComponent<Renderer>()) continue;
-                    
-                    r.sortingLayerName = "Default";
-                    r.sortingOrder = order;
-                }
+                if (sparkleEffect != null && r == sparkleEffect.GetComponent<Renderer>()) continue;
+                r.sortingLayerName = "Default";
+                r.sortingOrder = order;
             }
         }
     }

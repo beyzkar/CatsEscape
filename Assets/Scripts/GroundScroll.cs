@@ -4,10 +4,6 @@ public class GroundScroll : MonoBehaviour
 {
     public static GroundScroll Instance { get; private set; }
 
-    public float speed = 6f;
-    public float speedIncreasePerSecond = 0.05f; //her saniye oyunun ne kadar hızlanacağını gösterir.
-    public float maxSpeed = 12f;
-
     void Awake()
     {
         if (Instance == null) Instance = this;

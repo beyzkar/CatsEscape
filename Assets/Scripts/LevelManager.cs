@@ -11,10 +11,10 @@ public class LevelManager : MonoBehaviour
     public int currentLevel = 1;
     public int obstaclesPassed = 0;
     
-    // Seviye sürekliliği için static değişken (-1: Henüz atanmadı demek)
+    // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    // Seviye hedefleri: Level 1 (10), Level 2 (15), Level 3 (25), Level 4 (35), Level 5 (50)
+    // Level Goals: Level 1 (10), Level 2 (10), Level 3 (10), Level 4 (10), Level 5 (10)
     private int[] levelGoals = { 0, 10, 10, 10, 10, 10 };
 
     [Header("Speed Settings")]
@@ -22,31 +22,29 @@ public class LevelManager : MonoBehaviour
 
     [Header("UI Panels")]
     public GameObject victoryPanel;
-    public TMP_Text levelStatusText; // Victory panelindeki yazı
-    public TMP_Text inGameLevelText; // Oyun içindeki üst orta yazı
-    public GameObject normalLevelContent; // NormalLEvelContent nesnesini buraya sürükleyin
-    public GameObject finalLevelContent;  // FinalLevelContent nesnesini buraya sürükleyin
-    public Button continueButton;         // ContinueButton nesnesini buraya sürükleyin
-    public Button mainMenuButton;         // MainMenuButton nesnesini buraya sürükleyin
+    public TMP_Text levelStatusText; // Text in the victory panel
+    public TMP_Text inGameLevelText; // On-screen level display
+    public GameObject normalLevelContent;
+    public GameObject finalLevelContent;
     
     [Header("Backgrounds")]
-    public GameObject[] levelBackgrounds; // 5 tane harita objesini buraya sürükleyin
+    public GameObject[] levelBackgrounds; // List of 5 background objects
 
     [System.Serializable]
     public class ThemeAssets
     {
-        public Sprite obstacleSprite; // ObstacleBag görseli
+        public Sprite obstacleSprite; // ObstacleBag sprite
         public Vector3 obstacleScale = Vector3.one; 
-        public Sprite wallSprite;     // Wall görseli
+        public Sprite wallSprite;     // Wall sprite
         public Vector3 wallScale = Vector3.one;
         
         [FormerlySerializedAs("yOffset")]
-        public float obstacleYOffset = 0f; // ObstacleBag için Y ayarı
-        public float wallYOffset = 0f;     // Duvarlar için Y ayarı
+        public float obstacleYOffset = 0f; // Y-offset for ObstacleBag
+        public float wallYOffset = 0f;     // Y-offset for Walls
     }
 
     [Header("Theme Assets")]
-    public ThemeAssets[] levelThemes; // Her level için sprite'ları buraya ekleyin (5 elemanlı)
+    public ThemeAssets[] levelThemes; // Theme assets for 5 levels
 
     public ThemeAssets GetCurrentTheme()
     {
@@ -76,23 +74,19 @@ public class LevelManager : MonoBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
-        // Seviye sürekliliğini sağla
+        // Ensure level persistence
         if (savedLevel == -1)
         {
-            // İlk açılışta Inspector'daki değeri baz al (Test kolaylığı için)
             savedLevel = currentLevel;
         }
         else
         {
-            // Sonraki yüklemelerde (Retry vb.) kaydedilen seviyeyi kullan
             currentLevel = savedLevel;
         }
 
-        // PlayerMovement referansını al
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null) playerMovement = p.GetComponent<PlayerMovement>();
 
-        // İlk seviye arka planını aktif et, diğerlerini kapat
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
     }
@@ -101,24 +95,23 @@ public class LevelManager : MonoBehaviour
     {
         if (inGameLevelText != null)
         {
-            // Sadece LEVEL X yazar (PITS sayacı kaldırıldı)
             inGameLevelText.text = "LEVEL " + currentLevel;
         }
     }
 
     private void Update()
     {
-        // Eğer seviye hedefi tamamlandıysa ve kedi yere bastıysa zaferi göster
+        // If the goal is reached, show victory only when the cat is grounded
         if (pendingVictory && playerMovement != null && playerMovement.IsGrounded)
         {
-            pendingVictory = false; // Flag'i sıfırla
+            pendingVictory = false;
             ShowVictory();
         }
     }
 
     private void OnValidate()
     {
-        // Editör modunda Current Level'ı değiştirince hemen görsün
+        // Allow editor to preview backgrounds when changing currentLevel
         if (!Application.isPlaying)
         {
             UpdateBackgroundVisibility();
@@ -127,15 +120,13 @@ public class LevelManager : MonoBehaviour
 
     private void UpdateBackgroundVisibility()
     {
-        // Search backgrounds only
         if (levelBackgrounds == null || levelBackgrounds.Length == 0) return;
 
         for (int i = 0; i < levelBackgrounds.Length; i++)
         {
             if (levelBackgrounds[i] != null)
             {
-                // currentLevel 1-based, array index 0-based
-                // Sadece mevcut seviyenin arka planı aktif olsun
+                // Deactivate all but the current level's background
                 levelBackgrounds[i].SetActive(i == (currentLevel - 1));
             }
         }
@@ -148,9 +139,10 @@ public class LevelManager : MonoBehaviour
 
     public void MainMenu()
     {
-        ResetPersistentLevel(); // Seviyeyi sıfırla
+        ResetPersistentLevel();
         Time.timeScale = 1f;
-        GameSpeed.Multiplier = 1f; // Main Menu is always 1.0f
+        GameSpeed.Multiplier = 1f;
+        
         if (GameOverManager.Instance != null)
         {
             GameOverManager.Instance.LoadMainMenu();
@@ -161,14 +153,13 @@ public class LevelManager : MonoBehaviour
     {
         obstaclesPassed++;
         
-        // Konsolda Level 5 ilerlemesini göster
         if (currentLevel == 5)
         {
-            Debug.Log("Level 5 - Zemin/Cukur gecildi! Sayac: " + obstaclesPassed + "/10");
+            Debug.Log("Level 5 Progress: " + obstaclesPassed + "/10");
         }
 
         CheckLevelProgress();
-        UpdateInGameLevelText(); // Sayacı güncelle
+        UpdateInGameLevelText();
     }
 
     public void ResetProgress()
@@ -177,7 +168,7 @@ public class LevelManager : MonoBehaviour
         {
             obstaclesPassed = 0;
             UpdateInGameLevelText();
-            Debug.Log("Level 5 - Engel vuruldu! Sayac SIFIRLANDI.");
+            Debug.Log("Level 5: Obstacle hit! Progress RESET.");
         }
     }
 
@@ -185,7 +176,6 @@ public class LevelManager : MonoBehaviour
     {
         if (currentLevel > 5) return;
 
-        // Hedefe ulaşıldıysa ShowVictory yerine pendingVictory işaretle
         if (obstaclesPassed >= levelGoals[currentLevel])
         {
             pendingVictory = true; 
@@ -197,79 +187,64 @@ public class LevelManager : MonoBehaviour
         Time.timeScale = 0f;
         GameSpeed.Multiplier = 0f;
 
-        // Stop BGM while victory sound plays
         if (AudioManager.Instance != null) AudioManager.Instance.StopBackgroundMusic();
 
-        // Arka plan videosunu durdur
+        // Pause background video
         UnityEngine.Video.VideoPlayer bgv = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
         if (bgv != null) bgv.Pause();
 
-        // Level 5'te sayacı son kez güncelle
         UpdateInGameLevelText();
 
         if (victoryPanel != null)
         {
-            // Level bilgisini yazdır
             if (levelStatusText != null)
                 levelStatusText.text = "Level " + currentLevel + " Survived!";
 
             if (currentLevel < 5)
             {
-                // Level 1-4: Normal içerik gösterilsin
+                // Level 1-4 Flow
                 if (normalLevelContent != null) normalLevelContent.SetActive(true);
                 if (finalLevelContent != null) finalLevelContent.SetActive(false);
                 
-                // Play Level Win Sound
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayLevelWinSound();
-
-                // Show victory panel immediately for non-final levels
-                if (victoryPanel != null) victoryPanel.SetActive(true);
+                victoryPanel.SetActive(true);
             }
             else
             {
-                // Level 5: Önce Scoreboard sonra Leaderboard açılması isteniyor (Gemini Promptu gereği)
+                // Level 5 Flow: Sequence Scoreboard -> Leaderboard -> VictoryPanel
                 if (normalLevelContent != null) normalLevelContent.SetActive(false);
                 if (finalLevelContent != null) finalLevelContent.SetActive(true);
 
-                // Play Final Win Sound
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
 
                 if (LeaderboardManager.Instance != null)
                 {
-                    // Sıralama (Sequence): Scoreboard -> Leaderboard -> VictoryPanel
                     LeaderboardManager.Instance.nextPanelToOpen = victoryPanel; 
-
                     int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
                     LeaderboardManager.Instance.CheckForHighScore(currentXP);
-                    
-                    Debug.Log("LevelManager: Level 5 bitirildi. Scoreboard açılıyor...");
                 }
                 else
                 {
-                    // Fallback
-                    if (victoryPanel != null) victoryPanel.SetActive(true);
+                    victoryPanel.SetActive(true);
                 }
             }
         }
     }
-
 
     public void NextLevel()
     {
         if (currentLevel >= 5) return;
 
         currentLevel++;
-        savedLevel = currentLevel; // Kaydet
+        savedLevel = currentLevel;
         obstaclesPassed = 0;
         
-        // Panelleri kapat ve devam et
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (normalLevelContent != null) normalLevelContent.SetActive(false);
         if (finalLevelContent != null) finalLevelContent.SetActive(false);
         
         Time.timeScale = 1f;
         
-        // Update player speed for the new level
         if (playerMovement != null)
         {
             PlayerObstacleRules rules = playerMovement.GetComponent<PlayerObstacleRules>();
@@ -280,17 +255,15 @@ public class LevelManager : MonoBehaviour
             GameSpeed.Multiplier = GetCurrentBaseSpeed();
         }
 
-        // Restart BGM for the next level
         if (AudioManager.Instance != null) AudioManager.Instance.PlayBackgroundMusic();
 
-        // Arka plan videosunu devam ettir
         UnityEngine.Video.VideoPlayer bgv = Object.FindFirstObjectByType<UnityEngine.Video.VideoPlayer>();
         if (bgv != null) bgv.Play();
 
-        // Seviye arka planını ve yazısını güncelle
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
 
         Debug.Log("Starting Level " + currentLevel);
     }
 }
+

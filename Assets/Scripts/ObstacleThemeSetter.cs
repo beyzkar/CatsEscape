@@ -1,8 +1,12 @@
 using UnityEngine;
+using System.Collections.Generic;
 
+// Sets the sprite, scale, position, and collider shape of an obstacle based on the current level theme
 public class ObstacleThemeSetter : MonoBehaviour
 {
     public enum AssetType { Obstacle, Wall }
+    
+    [Header("Settings")]
     public AssetType assetType;
 
     private void Start()
@@ -17,58 +21,43 @@ public class ObstacleThemeSetter : MonoBehaviour
         LevelManager.ThemeAssets theme = LevelManager.Instance.GetCurrentTheme();
         if (theme == null) return;
 
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        if (sr == null) sr = GetComponentInChildren<SpriteRenderer>();
-
+        SpriteRenderer sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
         if (sr == null) return;
 
-        // Use Tag if possible, otherwise use the assetType field
-        if (gameObject.CompareTag("Obstacle") || assetType == AssetType.Obstacle)
-        {
-            if (theme.obstacleSprite != null)
-                sr.sprite = theme.obstacleSprite;
-            
-            // Apply scale from theme (User manages this in Unity Inspector)
-            transform.localScale = theme.obstacleScale;
-        }
-        else if (gameObject.CompareTag("Wall") || assetType == AssetType.Wall)
-        {
-            if (theme.wallSprite != null)
-                sr.sprite = theme.wallSprite;
-            
-            transform.localScale = theme.wallScale;
-        }
+        bool isObstacle = gameObject.CompareTag("Obstacle") || assetType == AssetType.Obstacle;
+        bool isWall = gameObject.CompareTag("Wall") || assetType == AssetType.Wall;
 
-        // Apply specific Y offset from theme
-        if (gameObject.CompareTag("Obstacle") || assetType == AssetType.Obstacle)
+        // Apply Visuals and Transform
+        if (isObstacle)
         {
+            if (theme.obstacleSprite != null) sr.sprite = theme.obstacleSprite;
+            transform.localScale = theme.obstacleScale;
             transform.position += new Vector3(0, theme.obstacleYOffset, 0);
         }
-        else if (gameObject.CompareTag("Wall") || assetType == AssetType.Wall)
+        else if (isWall)
         {
+            if (theme.wallSprite != null) sr.sprite = theme.wallSprite;
+            transform.localScale = theme.wallScale;
             transform.position += new Vector3(0, theme.wallYOffset, 0);
         }
 
-        // 1. BoxCollider2D varsa (Kutu şeklinde basit fit)
-        BoxCollider2D box = GetComponent<BoxCollider2D>();
-        if (box == null) box = GetComponentInChildren<BoxCollider2D>();
-        
-        if (box != null && sr.sprite != null)
+        if (sr.sprite == null) return;
+
+        // 1. BoxCollider2D Setup (Standard box fit)
+        BoxCollider2D box = GetComponent<BoxCollider2D>() ?? GetComponentInChildren<BoxCollider2D>();
+        if (box != null)
         {
             box.size = sr.sprite.bounds.size;
             box.offset = sr.sprite.bounds.center;
         }
 
-        // 2. PolygonCollider2D varsa (Görselin tam şeklini sarması için en iyisi)
-        PolygonCollider2D poly = GetComponent<PolygonCollider2D>();
-        if (poly == null) poly = GetComponentInChildren<PolygonCollider2D>();
-
-        if (poly != null && sr.sprite != null)
+        // 2. PolygonCollider2D Setup (Precise sprite fitting)
+        PolygonCollider2D poly = GetComponent<PolygonCollider2D>() ?? GetComponentInChildren<PolygonCollider2D>();
+        if (poly != null)
         {
             UpdatePolygonCollider(poly, sr.sprite);
             
-            // Eğer hem Box hem Polygon varsa, Polygon (hassas olan) önceliklidir.
-            // BoxCollider'ı devre dışı bırakıyoruz ki kedi uzaktan çarpmasın.
+            // If both exist, Polygon (precise) takes priority to prevent early collisions
             if (box != null) box.enabled = false;
         }
     }
@@ -78,7 +67,7 @@ public class ObstacleThemeSetter : MonoBehaviour
         int shapeCount = sprite.GetPhysicsShapeCount();
         poly.pathCount = shapeCount;
         
-        System.Collections.Generic.List<Vector2> path = new System.Collections.Generic.List<Vector2>();
+        List<Vector2> path = new List<Vector2>();
         for (int i = 0; i < shapeCount; i++)
         {
             sprite.GetPhysicsShape(i, path);

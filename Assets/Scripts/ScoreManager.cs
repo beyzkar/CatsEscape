@@ -25,47 +25,35 @@ public class ScoreManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void Start()
+    {
+        // Cache player for XP icon spawning
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null) playerTransform = player.transform;
+    }
+
     private void Update()
     {
-        if (GameSpeed.Multiplier > 0)
+        // Update distance based on actual player velocity
+        if (PlayerMovement.Instance != null && GameSpeed.Multiplier > 0)
         {
-            // Update distance based on the ground scroll speed
-            if (GroundScroll.Instance != null)
-            {
-                float currentSpeed = GroundScroll.Instance.speed * GameSpeed.Multiplier;
-                distance += currentSpeed * Time.deltaTime;
-                
-                CalculateXP();
-                UpdateUI();
-            }
+            float currentSpeed = PlayerMovement.Instance.CurrentVelocityX * GameSpeed.Multiplier;
+            distance += currentSpeed * Time.deltaTime;
+            
+            CalculateXP();
+            UpdateUI();
         }
     }
 
     private void CalculateXP()
     {
-        // 0-50 metre: her metre 0.2 xp 
-        // 50-100 metre: her metre 0.4 xp 
-        // 100-150 metre: her metre 0.6 xp
-        
+        // Tiered XP calculation based on distance milestones
         float tempXP = 0;
 
-        if (distance <= 50f)
-        {
-            tempXP = distance * 0.2f;
-        }
-        else if (distance <= 100f)
-        {
-            tempXP = (50f * 0.2f) + (distance - 50f) * 0.4f;
-        }
-        else if (distance <= 150f)
-        {
-            tempXP = (50f * 0.2f) + (50f * 0.4f) + (distance - 100f) * 0.6f;
-        }
-        else
-        {
-            // 150+ metre (varsayılan artış oranı olarak 1.0 xp/m kullanalım)
-            tempXP = (50f * 0.2f) + (50f * 0.4f) + (50f * 0.6f) + (distance - 150f) * 1.0f;
-        }
+        if (distance <= 50f) tempXP = distance * 0.2f;
+        else if (distance <= 100f) tempXP = 10f + (distance - 50f) * 0.4f; // 10 = 50 * 0.2
+        else if (distance <= 150f) tempXP = 30f + (distance - 100f) * 0.6f; // 30 = 10 + 20
+        else tempXP = 60f + (distance - 150f) * 1.0f; // 60 = 30 + 30
 
         totalXP = Mathf.FloorToInt(tempXP) + bonusXP;
     }
@@ -85,18 +73,7 @@ public class ScoreManager : MonoBehaviour
 
     private void SpawnXPIcon(int amount)
     {
-        // Auto-find player if not assigned
-        if (playerTransform == null)
-        {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null) playerTransform = player.transform;
-        }
-
-        if (playerTransform == null)
-        {
-            Debug.LogWarning("ScoreManager: Player Transform is null and couldn't be found by tag 'Player'!");
-            return;
-        }
+        if (playerTransform == null) return;
 
         GameObject prefab = null;
         if (amount == 20) prefab = xp20Prefab;
