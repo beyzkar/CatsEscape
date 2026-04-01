@@ -56,6 +56,10 @@ public class PlayerMovement : MonoBehaviour
     private float targetScaleX = 1f;
     private float originalAbsScaleX;
 
+    [Header("Visual Orientation")]
+    public float rotationRight = 120f;
+    public float rotationLeft = 300f; // 120 + 180 = 300 (or -60)
+    
     private PlayerObstacleRules rules;
     private Animator anim;
 
@@ -74,7 +78,11 @@ public class PlayerMovement : MonoBehaviour
     {
         Instance = this;
         rb = GetComponent<Rigidbody2D>();
-        if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        if (rb != null) 
+        {
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation; // CRITICAL: Stop physics-based rotation
+        }
         
         rules = GetComponent<PlayerObstacleRules>();
         // Initial search, but we will re-search in Update if this one becomes inactive
@@ -114,6 +122,12 @@ public class PlayerMovement : MonoBehaviour
         if (!introFinished)
         {
             DoIntroWalk();
+            
+            // Ensure cat faces right and is locked during intro
+            transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
+            transform.localRotation = Quaternion.identity;
+            if (anim != null) anim.transform.localRotation = Quaternion.Euler(0, rotationRight, 0);
+
             if (anim != null) 
             {
                 anim.SetBool("walking", true);
@@ -167,9 +181,28 @@ public class PlayerMovement : MonoBehaviour
             anim.SetBool("Idle", !isMovingInput);
         }
         
-        // --- NORMAL ROTATION (Instant Flip) ---
-        if (hInput > 0) { WorldDirection = 1; transform.localRotation = Quaternion.Euler(0, 0, 0); }
-        else if (hInput < 0) { WorldDirection = -1; transform.localRotation = Quaternion.Euler(0, 180f, 0); }
+        // --- DIRECTION FLIPPING (2D Scale-based) ---
+        if (hInput > 0) 
+        { 
+            WorldDirection = 1; 
+            targetScaleX = originalAbsScaleX; 
+        }
+        else if (hInput < 0) 
+        { 
+            WorldDirection = -1; 
+            targetScaleX = -originalAbsScaleX; 
+        }
+
+        // Apply scale (reset to original positive scale to avoid double-flipping with rotation)
+        transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
+        transform.localRotation = Quaternion.identity;
+
+        // FORCE child rotation to specific angles (120 vs 300)
+        if (anim != null)
+        {
+            float targetRY = (WorldDirection == 1) ? rotationRight : rotationLeft;
+            anim.transform.localRotation = Quaternion.Euler(0, targetRY, 0);
+        }
 
         // --- JUMP INPUT (Keyboard + Mobile Buttons) ---
         // MouseButtonDown(0) removed to prevent conflict with UI button clicks in simulator
