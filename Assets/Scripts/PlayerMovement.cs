@@ -37,7 +37,7 @@ public class PlayerMovement : MonoBehaviour
     public bool IsGrounded => isGrounded;
 
     [Header("Horizontal Movement")]
-    public float moveRightSpeed = 5f;
+    public float moveRightSpeed = 7.5f; // Increased from 5f to match 1.5x request
     public float moveLeftSpeed = 5f; 
     public float minX = -5.3f; // Initial left boundary
     public float maxX = 5f;    // Initial right boundary
@@ -48,9 +48,11 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
-    [Range(0.1f, 10f)] public float xScrollLimit = 5f; // Boundary multiplier
+    [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
-    public float viewportPaddingX = 3.5f; // Safety margin for character bounds
+    public float viewportPaddingX = 1.8f; // Reduced from 4.5f to allow closer approach to edges
+    private Vector3 bottomLeft;
+    private Vector3 topRight;
 
     [Header("Visual Orientation")]
     public float rotationRight = 120f;
@@ -192,55 +194,61 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        UpdateViewportBounds();
         if (!introFinished || (rules != null && rules.IsDead)) return;
 
         float finalVelocityX = targetVelocityX;
 
-        // Boundary safety check for physics velocity
+        // Strict Velocity Lock: No movement allowed if strictly stuck or in recovery
+        if (rules != null && rules.IsHorizontalBlocked)
+        {
+            // Always block Rightward movement (prevents sinking in)
+            if (finalVelocityX > 0) finalVelocityX = 0f;
+            
+            // If truly stuck (not just recovery timer), block ALL horizontal movement
+            if (rules.IsStuck) finalVelocityX = 0f;
+        }
+
         if (transform.position.x <= minX && finalVelocityX < 0) finalVelocityX = 0;
         if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0;
 
-        // Stop movement if stuck against an obstacle
-        if (rules != null && rules.IsStuck) finalVelocityX = 0f;
-
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
+
+        // Strict physical position clamp to prevent penetration through boundaries
+        // Only applied when NOT dead and NOT in intro walk
+        if (rb.position.x < minX)
+        {
+            rb.position = new Vector2(minX, rb.position.y);
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+        }
+        else if (rb.position.x > maxX)
+        {
+            rb.position = new Vector2(maxX, rb.position.y);
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+        }
     }
 
     void LateUpdate()
     {
-        if (!useViewportClamping)
-        {
-            // Simple clamping fallback
-            float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
-            if (clampedX != transform.position.x)
-            {
-                transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
-                rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            }
-            return;
-        }
-
-        Camera cam = Camera.main;
-        if (cam == null) return;
-
-        float zDist = Mathf.Abs(cam.transform.position.z);
-        Vector3 bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
-        Vector3 topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
-        Vector3 screenTopRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
-
-        // Update bounds for current frame
-        minX = bottomLeft.x + viewportPaddingX;
-        maxX = topRight.x;
-        ScreenMaxX = screenTopRight.x;
+        UpdateViewportBounds();
+        if (!useViewportClamping) return;
 
         // Enforce strict clamping
-        float cx = Mathf.Clamp(transform.position.x, minX, maxX);
-        float cy = Mathf.Clamp(transform.position.y, bottomLeft.y, topRight.y);
-
-        if (cx != transform.position.x || cy != transform.position.y)
+        float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
+        
+        // Level 5 has pits, so we allow falling below the floor!
+        float effectiveMinY = bottomLeft.y;
+        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
         {
-            transform.position = new Vector3(cx, cy, transform.position.z);
-            if (cx != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            effectiveMinY = -20f; // Allow falling far down
+        }
+        
+        float clampedY = Mathf.Clamp(transform.position.y, effectiveMinY, topRight.y);
+
+        if (clampedX != transform.position.x || clampedY != transform.position.y)
+        {
+            transform.position = new Vector3(clampedX, clampedY, transform.position.z);
+            if (clampedX != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         }
     }
 
@@ -299,5 +307,23 @@ public class PlayerMovement : MonoBehaviour
 
         if (canJump) TryJump();
         else if (AudioManager.Instance != null) AudioManager.Instance.PlayFalling();
+    }
+
+    private void UpdateViewportBounds()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) cam = Object.FindFirstObjectByType<Camera>();
+        if (cam == null) return;
+
+        float zDist = Mathf.Abs(cam.transform.position.z);
+        bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
+        topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
+        Vector3 screenTopRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+
+        // Enforce a minimum safe padding to stay away from the notch/edge
+        float effectivePadding = Mathf.Max(viewportPaddingX, 1.2f);
+        minX = bottomLeft.x + effectivePadding;
+        maxX = topRight.x - effectivePadding; 
+        ScreenMaxX = screenTopRight.x;
     }
 }

@@ -43,23 +43,67 @@ public class ObstacleThemeSetter : MonoBehaviour
 
         if (sr.sprite == null) return;
 
-        // 1. BoxCollider2D Setup (Standard box fit)
+        // 1. BoxCollider2D Setup (Smart/Manual fit)
         BoxCollider2D box = GetComponent<BoxCollider2D>() ?? GetComponentInChildren<BoxCollider2D>();
         if (box != null)
         {
-            box.size = sr.sprite.bounds.size;
-            box.offset = sr.sprite.bounds.center;
+            // Use manual overrides if provided in the theme for walls
+            if (isWall && theme.wallColliderSize != Vector2.zero)
+            {
+                box.size = theme.wallColliderSize;
+                box.offset = theme.wallColliderOffset;
+            }
+            else
+            {
+                // SMART AUTO-FIT: Calculate tight bounds based on sprite physics shape (not texture size)
+                Bounds tightBounds = CalculateTightBounds(sr.sprite);
+                box.size = tightBounds.size;
+                box.offset = tightBounds.center;
+            }
+
+            // Apply level-specific physics material (friction/ice/bouncing etc.)
+            if (isWall && theme.wallPhysicsMaterial != null)
+            {
+                box.sharedMaterial = theme.wallPhysicsMaterial;
+            }
         }
 
-        // 2. PolygonCollider2D Setup (Precise sprite fitting)
+        // 2. PolygonCollider2D Setup
         PolygonCollider2D poly = GetComponent<PolygonCollider2D>() ?? GetComponentInChildren<PolygonCollider2D>();
         if (poly != null)
         {
             UpdatePolygonCollider(poly, sr.sprite);
-            
-            // If both exist, Polygon (precise) takes priority to prevent early collisions
             if (box != null) box.enabled = false;
         }
+    }
+
+    private Bounds CalculateTightBounds(Sprite sprite)
+    {
+        if (sprite == null) return new Bounds(Vector3.zero, Vector3.zero);
+
+        int shapeCount = sprite.GetPhysicsShapeCount();
+        if (shapeCount == 0) return sprite.bounds; // Fallback
+
+        Vector2 min = new Vector2(float.MaxValue, float.MaxValue);
+        Vector2 max = new Vector2(float.MinValue, float.MinValue);
+        List<Vector2> path = new List<Vector2>();
+
+        for (int i = 0; i < shapeCount; i++)
+        {
+            sprite.GetPhysicsShape(i, path);
+            foreach (Vector2 p in path)
+            {
+                if (p.x < min.x) min.x = p.x;
+                if (p.y < min.y) min.y = p.y;
+                if (p.x > max.x) max.x = p.x;
+                if (p.y > max.y) max.y = p.y;
+            }
+        }
+
+        Vector2 size = max - min;
+        Vector2 center = min + (size / 2f);
+        return new Bounds(center, size);
+    }
     }
 
     private void UpdatePolygonCollider(PolygonCollider2D poly, Sprite sprite)

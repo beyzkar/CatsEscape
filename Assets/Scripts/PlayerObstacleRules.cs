@@ -1,5 +1,6 @@
-using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class PlayerObstacleRules : MonoBehaviour
 {
@@ -23,6 +24,18 @@ public class PlayerObstacleRules : MonoBehaviour
 
     public bool IsStuck => stuck;
     public bool IsDead => dead;
+    public bool IsHorizontalBlocked => stuck || (unstickJumpTimer > 0f && IsBelowLastHitWall());
+
+    private float unstickJumpTimer = 0f;
+
+    private bool IsBelowLastHitWall()
+    {
+        if (lastHitWall == null) return false;
+        Collider2D col = lastHitWall.GetComponent<Collider2D>();
+        if (col == null) return false;
+        // Block if our pivot (feet/center area) is still below the upper part of the wall
+        return transform.position.y < col.bounds.max.y - 0.2f;
+    }
 
     private Rigidbody2D rb;
     private PlayerMovement movementScript;
@@ -43,7 +56,6 @@ public class PlayerObstacleRules : MonoBehaviour
     public ParticleSystem sparkleEffect;
     [Header("Hit Recovery")]
     public float hitRecoveryDuration = 0.8f;
-    private float hitRecoveryTimer = 0f;
     private float damageCooldown = 0f;
     private const float DAMAGE_COOLDOWN_TIME = 0.5f;
 
@@ -92,36 +104,44 @@ public class PlayerObstacleRules : MonoBehaviour
         if (jumpGraceTimer > 0)
             jumpGraceTimer -= Time.deltaTime;
 
-        if (hitRecoveryTimer > 0)
-            hitRecoveryTimer -= Time.deltaTime;
-
         if (damageCooldown > 0)
             damageCooldown -= Time.deltaTime;
 
+        if (unstickJumpTimer > 0)
+            unstickJumpTimer -= Time.deltaTime;
+
         if (stuck)
         {
+            // Inputs for exiting the stuck state
             bool jumpInput = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow);
-            bool moveInput = Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow);
+            bool moveLeft = Input.GetKey(KeyCode.LeftArrow) || (movementScript != null && movementScript.IsMovingLeft);
+            bool moveRight = Input.GetKey(KeyCode.RightArrow) || (movementScript != null && movementScript.IsMovingRight);
 
-            if (jumpInput || moveInput)
+            // Logic: Jump or Left always allow recovery. 
+            // Right ONLY allows recovery if we weren't stuck by a specific obstacle (e.g. just at the screen edge).
+            bool canExit = jumpInput || moveLeft || (moveRight && lastHitWall == null);
+
+            if (canExit)
             {
                 stuck = false;
                 if (animator != null) animator.speed = 1f;
 
                 if (rb != null)
                 {
-                    rb.simulated = true; // Restore physics simulation
+                    rb.simulated = true; 
                     rb.bodyType = RigidbodyType2D.Dynamic;
                     rb.constraints = RigidbodyConstraints2D.FreezeRotation;
                 }
 
                 UpdateGameSpeed();
                 jumpGraceTimer = JUMP_GRACE_TIME;
+                
+                // If exiting via jump, lock horizontal movement until we clear the wall height
+                if (jumpInput) unstickJumpTimer = 0.45f;
 
                 if (movementScript != null)
                 {
                     movementScript.ResetJumps();
-                    // Only jump if the input was a jump key
                     if (jumpInput) movementScript.TryJump();
                 }
 
@@ -144,25 +164,61 @@ public class PlayerObstacleRules : MonoBehaviour
         if (dead) return;
         
         stuck = true;
+        lastHitWall = hitSource; // Track if it's a solid obstacle or just the screen edge
+
+        // Robust Nudge: Calculate exact boundary of the hit obstacle to prevent "clipping inside"
         if (hitSource != null) 
         {
-            lastHitWall = hitSource;
-            
-            // Nudge player slightly away from the obstacle to prevent clipping
-            // Assuming obstacles come from the right (positive X relative to player)
-            float nudgeX = -0.5f; 
-            transform.position = new Vector3(transform.position.x + nudgeX, transform.position.y, transform.position.z);
+            Collider2D catCol = GetComponent<Collider2D>();
+            Collider2D obsCol = hitSource.GetComponent<Collider2D>();
+
+            if (catCol != null && obsCol != null)
+            {
+                Bounds obsBounds = obsCol.bounds;
+                float catHalfWidth = catCol.bounds.size.x / 2f;
+                float targetX = transform.position.x;
+
+                // Determine if we hit from left or right side
+                float snapOffset = 0.05f;
+                // If it's a bag/box obstacle, allow some overlap so it looks like we're touching the visual
+                if (hitSource.CompareTag("Obstacle")) snapOffset = -0.2f;
+
+                if (transform.position.x < obsBounds.center.x)
+                {
+                    // Hit from LEFT -> Snap to left edge of obstacle
+                    targetX = obsBounds.min.x - catHalfWidth - snapOffset;
+                }
+                else
+                {
+                    // Hit from RIGHT -> Snap to right edge of obstacle
+                    targetX = obsBounds.max.x + catHalfWidth + snapOffset;
+                }
+
+                transform.position = new Vector3(targetX, transform.position.y, transform.position.z);
+            }
+            else
+            {
+                // Fallback for missing colliders (screen edge hit) -> Snap RIGHT to stay inside
+                float nudgeX = 0.5f; 
+                transform.position = new Vector3(transform.position.x + nudgeX, transform.position.y, transform.position.z);
+            }
         }
 
-        if (animator != null) animator.speed = 0f;
+        if (animator != null) 
+        {
+            animator.speed = 1f;
+            animator.SetBool("walking", false);
+            animator.SetBool("Idle", true);
+        }
         GameSpeed.Multiplier = 0f;
 
         if (movementScript != null) movementScript.ResetJumps();
 
         if (rb != null)
         {
+            // Zero out ALL movement instantly to prevent "sliding inside"
             rb.linearVelocity = Vector2.zero;
-            rb.simulated = false; // Truly freeze the player in place
+            rb.simulated = true; // Stay in simulation for gravity
         }
 
         if (bgVideo != null) bgVideo.Pause();
@@ -214,25 +270,18 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
                 Destroy(other);
+                if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
             }
-            if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
             return;
         }
 
         if (isInvincible && (isEnemy || isBush || isWall)) 
         {
-            if (isWall && isTrigger && other.CompareTag("LongWall")) 
-                if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
             return;
         }
 
-        if (jumpGraceTimer > 0 && other == lastHitWall)
-        {
-            if (isWall && jumpGraceTimer > (JUMP_GRACE_TIME - 0.25f)) return;
-            else if (!isWall) return;
-        }
 
-        if (damageCooldown <= 0)
+        if (damageCooldown <= 0 && !(jumpGraceTimer > 0 && other == lastHitWall))
         {
             bool isLethal = isEnemy || isBush || (!isWall && !isObstacle);
             
@@ -248,17 +297,13 @@ public class PlayerObstacleRules : MonoBehaviour
                     LoseHeart();
                     damageCooldown = DAMAGE_COOLDOWN_TIME;
                 }
-                
-                if (isBush) hitRecoveryTimer = hitRecoveryDuration;
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
             }
             else if (isWall || isObstacle) // Harmless wall/bag hits
             {
                 if (isPotionActive) ResetPotionEffect();
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
-                if (isWall && isTrigger) if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
             }
             
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
             lastHitWall = other;
             ObstacleMove move = other.GetComponent<ObstacleMove>();
             if (move != null) move.canRewardCleanJump = false;
@@ -380,7 +425,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
     public void UpdateGameSpeed()
     {
-        if (dead)
+        if (dead || stuck)
         {
             GameSpeed.Multiplier = 0f;
             return;
@@ -463,8 +508,23 @@ public class PlayerObstacleRules : MonoBehaviour
     private void HandleStay(GameObject other)
     {
         if (dead || stuck) return;
+
         bool isBlocking = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Enemy") || other.CompareTag("Bush");
-        if (isBlocking && other != lastHitWall) EnterStuckState(other);
+        if (!isBlocking) return;
+
+        // Check if we are on TOP of the object. 
+        // If we are on top (physics or trigger stay), we shouldn't get stuck!
+        Collider2D otherCol = other.GetComponent<Collider2D>();
+        if (otherCol != null)
+        {
+            // If cat's pivot is above the center plus some margin of the obstacle
+            if (transform.position.y > otherCol.bounds.center.y + 0.2f)
+            {
+                return; // Standing on top is fine!
+            }
+        }
+
+        EnterStuckState(other);
     }
 
     public void UpdateSortingOrder(int order)
@@ -494,7 +554,7 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         float elapsed = 0f;
         // Only get renderers that are CURRENTLY enabled to avoid white square glitches
-        var targetRenderers = new System.Collections.Generic.List<Renderer>();
+        var targetRenderers = new List<Renderer>();
         Renderer[] all = GetComponentsInChildren<Renderer>(true);
         if (all != null)
         {

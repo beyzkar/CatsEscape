@@ -34,14 +34,19 @@ public class ScoreManager : MonoBehaviour
 
     private void Update()
     {
-        // Update distance based on actual player velocity
+        // Update distance based on actual player velocity (RIGHTWARD progress only)
         if (PlayerMovement.Instance != null && GameSpeed.Multiplier > 0)
         {
             float currentSpeed = PlayerMovement.Instance.CurrentVelocityX * GameSpeed.Multiplier;
-            distance += currentSpeed * Time.deltaTime;
             
-            CalculateXP();
-            UpdateUI();
+            // Only add to distance if moving right (positive velocity)
+            // This ensures XP increase is tied to distance covered, not just time spent moving.
+            if (currentSpeed > 0)
+            {
+                distance += currentSpeed * Time.deltaTime;
+                CalculateXP();
+                UpdateUI();
+            }
         }
     }
 

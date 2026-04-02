@@ -18,6 +18,30 @@ public class ObstacleMove : MonoBehaviour
         {
             player = p.transform;
         }
+
+
+        if (CompareTag("Enemy"))
+        {
+            // Set walk speed based on level
+            if (LevelManager.Instance != null)
+            {
+                int level = LevelManager.Instance.currentLevel;
+                if (level >= 0 && level < LevelManager.Instance.enemySpeeds.Length)
+                {
+                    speed = LevelManager.Instance.enemySpeeds[level];
+                }
+            }
+
+            Animator anim = GetComponentInChildren<Animator>();
+            if (anim != null)
+            {
+                anim.transform.localRotation = Quaternion.Euler(0, 280f, 0);
+            }
+            else
+            {
+                transform.rotation = Quaternion.Euler(0, 280f, 0);
+            }
+        }
     }
 
     void Update()
@@ -31,14 +55,20 @@ public class ObstacleMove : MonoBehaviour
         transform.position += Vector3.left * totalScrollSpeed * Time.deltaTime;
 
         // Check if the obstacle has passed the player's X position to reward points
-        if (!passedPlayer && player != null && transform.position.x < player.position.x)
+        if (!passedPlayer && player != null && transform.position.x < player.position.x - 0.5f)
         {
             passedPlayer = true;
             
-            // Only reward if it's a valid obstacle and wasn't hit
+            // SKILL LOCK: Count this as a lethal pass even if it wasn't a "clean" jump (cat hit it but passed)
+            if (CompareTag("Enemy") || CompareTag("Bush"))
+            {
+                if (ObstacleSpawner.Instance != null) ObstacleSpawner.Instance.NotifyLethalPassed();
+            }
+
+            // Only reward if it's a valid obstacle and wasn't hit (for Level progression points)
             if (canRewardCleanJump && (CompareTag("Obstacle") || CompareTag("Wall") || CompareTag("LongWall") || CompareTag("Enemy") || CompareTag("Bush")))
             {
-                // Level 5 uses GroundPoint.cs for progression; Levels 1-4 use this check
+                // Level 1-4 use this check
                 if (LevelManager.Instance != null && LevelManager.Instance.currentLevel < 5)
                 {
                     LevelManager.Instance.ObstaclePassed();

@@ -2174,7 +2174,6 @@ MonoBehaviour:
   - layerParent: {fileID: 142966588}
     speed: 0.8
     width: 40
-  baseSpeed: 5
 --- !u!1 &442601052
 GameObject:
   m_ObjectHideFlags: 0
@@ -2691,13 +2690,11 @@ MonoBehaviour:
   moveLeftSpeed: 7
   minX: -100
   maxX: 100
-  returnSpeed: 2
+  acceleration: 20
+  deceleration: 25
   useViewportClamping: 1
   xScrollLimit: 0.5
   viewportPaddingX: 0.5
-  flipSpeed: 25
-  acceleration: 20
-  deceleration: 25
   rotationRight: 120
   rotationLeft: 300
   introSpeed: 30
@@ -2715,7 +2712,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerObstacleRules
   topNormalThreshold: 0.4
-  sideNormalThreshold: 0.6
   heartUI:
   - {fileID: 957187765}
   - {fileID: 81374140}
@@ -3265,11 +3261,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41b1143b40c344aefb99ccd2eeac656a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
-  target: {fileID: 489111418}
-  smoothSpeed: 0.125
-  offset: {x: 0, y: 0, z: 0}
-  followY: 0
-  fixedY: 0
 --- !u!1 &525559373
 GameObject:
   m_ObjectHideFlags: 0
@@ -3335,7 +3326,6 @@ MonoBehaviour:
   - layerParent: {fileID: 1740798897}
     speed: 0.8
     width: 40
-  baseSpeed: 5
 --- !u!1 &536664571
 GameObject:
   m_ObjectHideFlags: 0
@@ -3579,38 +3569,45 @@ MonoBehaviour:
   wallScaleY1: 1.5
   wallScaleY2: 2.5
   fishSpawnX: 12
-  minDelay: 1.5
-  maxDelay: 3
   level1:
+    minDistance: 20
+    maxDistance: 25
     bagChance: 0.8
-    fishChance: 0.2
+    fishChance: 0.15
     potionChance: 0.1
   level2:
+    minDistance: 17
+    maxDistance: 25
     bagChance: 0.4
-    enemyChance: 0.4
+    enemyChance: 0.35
     levelEnemyPrefab: {fileID: 4376784717255030445, guid: 00ade929d07a14ed0b7451b83d4f49bd, type: 3}
-    fishChance: 0.937
+    fishChance: 0.25
     potionChance: 0.1
   level3:
+    minDistance: 14
+    maxDistance: 20
     bagChance: 0.3
     enemyChance: 0.3
     levelEnemyPrefab: {fileID: 59313424177867417, guid: be446c5f0a15944b4b91e799793dd824, type: 3}
-    wallChance: 0.5
-    longWallChance: 0.575
-    fishChance: 0.582
-    potionChance: 0.1
+    wallChance: 0.2
+    longWallChance: 0.1
+    fishChance: 0.15
+    potionChance: 0.08
   level4:
+    minDistance: 11
+    maxDistance: 16
     bagChance: 0.25
     enemyChance: 0.25
     levelEnemyPrefab: {fileID: 6792327054025522797, guid: 64db8d48fab1ceb43a8ee5d52643029a, type: 3}
-    wallChance: 0.4
-    fishChance: 0.1
-    potionChance: 0.1
+    wallChance: 0.3
+    fishChance: 0.08
+    potionChance: 0.05
   level5:
-    bagChance: 0.7
-    fishChance: 0.2
-    potionChance: 0.1
-    pitChance: 0.284
+    minDistance: 20
+    maxDistance: 30
+    fishChance: 0.236
+    potionChance: 0.005
+    pitChance: 0.3
 --- !u!4 &554372922
 Transform:
   m_ObjectHideFlags: 0
@@ -9216,7 +9213,6 @@ MonoBehaviour:
   - layerParent: {fileID: 1961409157}
     speed: 0.8
     width: 40
-  baseSpeed: 5
 --- !u!1 &671068286
 GameObject:
   m_ObjectHideFlags: 0
@@ -10091,7 +10087,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 673f939f32cc1421cbe95a28bdbdde18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LoopTile
-  tileWidth: 40
   resetX: -40
   startX: 40
 --- !u!1 &808848276
@@ -13666,7 +13661,6 @@ MonoBehaviour:
   - layerParent: {fileID: 671068287}
     speed: 0.8
     width: 19.2
-  baseSpeed: 5
 --- !u!4 &1136188184
 Transform:
   m_ObjectHideFlags: 0
@@ -14048,8 +14042,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294503597
-  m_fontColor: {r: 0.6784314, g: 0.9254902, b: 0.972549, a: 1}
+    rgba: 4294958077
+  m_fontColor: {r: 0.99215686, g: 0.85882354, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -15242,7 +15236,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0.49411765, b: 0.5803922, a: 0.64705884}
+  m_Color: {r: 0.4, g: 0.7529412, b: 0.1882353, a: 0.64705884}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -16012,8 +16006,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294503597
-  m_fontColor: {r: 0.6784314, g: 0.9254902, b: 0.972549, a: 1}
+    rgba: 4287299509
+  m_fontColor: {r: 0.70980394, g: 1, b: 0.5411765, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -17200,10 +17194,7 @@ MonoBehaviour:
   groundWidth: 18
   groundY: -4.48
   initialAmount: 10
-  spawnTriggerX: -140
-  destroyLimitX: -145
   staticEnvironment: {fileID: 2129417633}
-  startSpawnerLevel: 3
   minSafeDistance: 3
 --- !u!4 &1775391346
 Transform:
@@ -18309,8 +18300,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4287813617
-  m_fontColor: {r: 0.9433962, g: 0.84295934, b: 0.5740477, a: 1}
+    rgba: 4279819774
+  m_fontColor: {r: 0.99607843, g: 0.8666667, b: 0.09411765, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -19245,13 +19236,18 @@ MonoBehaviour:
   - 1.4
   - 1.6
   - 1.6
+  enemySpeeds:
+  - 0
+  - 0
+  - 1.5
+  - 3
+  - 4.5
+  - 6
   victoryPanel: {fileID: 371110517}
   levelStatusText: {fileID: 2133008544}
   inGameLevelText: {fileID: 1770894206}
   normalLevelContent: {fileID: 341598593}
   finalLevelContent: {fileID: 1981490125}
-  continueButton: {fileID: 1657163643}
-  mainMenuButton: {fileID: 565275771}
   levelBackgrounds:
   - {fileID: 2025304964}
   - {fileID: 639124399}
@@ -19382,7 +19378,6 @@ MonoBehaviour:
   - layerParent: {fileID: 1878694889}
     speed: 0.8
     width: 40
-  baseSpeed: 5
 --- !u!4 &2025304966
 Transform:
   m_ObjectHideFlags: 0
@@ -19767,7 +19762,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0.49411765, b: 0.5803922, a: 0.64705884}
+  m_Color: {r: 0.9254902, g: 0.48235294, b: 0.9529412, a: 0.7058824}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -20248,18 +20243,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7d676e79bd13418e86efc75e2540aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIShineEffect
-  glowColor:
-    r: 1
-    g: 1
-    b: 1
-    a: 1
-  minIntensity: 0.2
-  maxIntensity: 1
-  pulseSpeed: 4
-  glowSize: 0.8
-  glowSoftness: 0.4
-  textComponent: {fileID: 0}
-  internalMaterial: {fileID: 0}
 --- !u!1 &2129417633
 GameObject:
   m_ObjectHideFlags: 0
@@ -20306,9 +20289,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12a4dd603c5214952a8161e6a2caa777, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundScroll
-  speed: 5
-  speedIncreasePerSecond: 0.05
-  maxSpeed: 12
 --- !u!1 &2133008541
 GameObject:
   m_ObjectHideFlags: 0

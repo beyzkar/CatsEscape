@@ -14,6 +14,18 @@ public class GameOverManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void Update()
+    {
+        // Check for Space key to retry
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (gameOverPanel != null && gameOverPanel.activeInHierarchy)
+            {
+                Replay();
+            }
+        }
+    }
+
     public void ShowGameOver()
     {
         // Set time and speed to 0 immediately

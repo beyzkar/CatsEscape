@@ -31,22 +31,34 @@ public class LeaderboardManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) 
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else 
-        {
-            Destroy(gameObject);
-            return;
-        }
+        Instance = this;
 
         savePath = Path.Combine(Application.dataPath, "leaderboard.json");
         LoadScores();
         
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
         if (scoreboard != null) scoreboard.SetActive(false);
+    }
+
+    private void Update()
+    {
+        // Check for Space key to retry
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            bool isScoreboardActive = (scoreboard != null && scoreboard.activeInHierarchy);
+            bool isLeaderboardActive = (leaderboardPanel != null && leaderboardPanel.activeInHierarchy);
+
+            if (isScoreboardActive || isLeaderboardActive)
+            {
+                // Only retry if we are not currently typing in the name input field
+                if (nameSpace != null && nameSpace.isFocused)
+                {
+                    return;
+                }
+
+                OnRetryButtonClick();
+            }
+        }
     }
 
     public void CheckForHighScore(int currentScore)
