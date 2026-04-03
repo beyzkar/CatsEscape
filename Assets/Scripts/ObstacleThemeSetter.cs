@@ -71,19 +71,32 @@ public class ObstacleThemeSetter : MonoBehaviour
             if (targetSize != Vector2.zero)
             {
                 box.size = targetSize;
+                // No more box.offset override here! 
+                // Let the prefab's native offset stay as it is.
             }
             else if (sr != null && sr.sprite != null)
             {
-                // SMART AUTO-FIT
+                // SMART AUTO-FIT total (only fallback)
                 Bounds tightBounds = CalculateTightBounds(sr.sprite);
                 box.size = tightBounds.size;
                 box.offset = tightBounds.center;
             }
 
-            // Apply level-specific physics material (friction/ice/bouncing etc.)
-            if (isWall && theme.wallPhysicsMaterial != null)
+            // 1.5. Apply level-specific physics material (Force 0 friction)
+            if (box != null)
             {
-                box.sharedMaterial = theme.wallPhysicsMaterial;
+                if (theme.wallPhysicsMaterial != null && isWall)
+                {
+                    box.sharedMaterial = theme.wallPhysicsMaterial;
+                }
+                else
+                {
+                    // Create private no-friction material if none provided to prevent sticking
+                    PhysicsMaterial2D noFric = new PhysicsMaterial2D("NoFriction");
+                    noFric.friction = 0f;
+                    noFric.bounciness = 0f;
+                    box.sharedMaterial = noFric;
+                }
             }
         }
 

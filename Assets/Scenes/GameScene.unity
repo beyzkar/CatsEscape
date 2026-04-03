@@ -1141,7 +1141,7 @@ MonoBehaviour:
   backgroundSource: {fileID: 0}
   sfxSource: {fileID: 0}
   backgroundMusic: {fileID: 8300000, guid: 98fe1f915ce544f54a69dae1c86c2c6b, type: 3}
-  backgroundMusicVolume: 0
+  backgroundMusicVolume: 0.49
   gameOverClip: {fileID: 8300000, guid: d179a49c48d164ea088b1786770e7f98, type: 3}
   gameOverVolume: 0.5
   levelWinClip: {fileID: 8300000, guid: 6e9bcb8cb674b485ca9524d63504edb3, type: 3}
@@ -2125,7 +2125,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &376032485
 Transform:
   m_ObjectHideFlags: 0
@@ -2697,6 +2697,7 @@ MonoBehaviour:
   viewportPaddingX: 0.5
   rotationRight: 120
   rotationLeft: 300
+  rotationSpeed: 720
   introSpeed: 30
   stopX: -4
 --- !u!114 &489111423
@@ -19230,7 +19231,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 4
+  currentLevel: 1
   obstaclesPassed: 0
   levelSpeeds:
   - 1
@@ -19245,6 +19246,7 @@ MonoBehaviour:
   - 3
   - 4.5
   - 6
+  speedSmoothRate: 4.5
   victoryPanel: {fileID: 371110517}
   levelStatusText: {fileID: 2133008544}
   inGameLevelText: {fileID: 1770894206}
@@ -19261,7 +19263,7 @@ MonoBehaviour:
     obstacleScale: {x: 0.18, y: 0.18, z: 0.18}
     wallSprite: {fileID: 8677674892870233858, guid: 37864d54f4aa542bba035ac16d090612, type: 3}
     wallScale: {x: 1, y: 1, z: 1}
-    obstacleYOffset: 0
+    obstacleYOffset: 0.45
     wallYOffset: 0
     obstacleColliderSize: {x: 15.88, y: 11.6}
     enemyColliderSize: {x: 0, y: 0}
@@ -19386,7 +19388,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0

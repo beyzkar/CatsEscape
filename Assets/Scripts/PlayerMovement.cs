@@ -41,8 +41,8 @@ public class PlayerMovement : MonoBehaviour
     public float moveLeftSpeed = 5f; 
     public float minX = -5.3f; // Initial left boundary
     public float maxX = 5f;    // Initial right boundary
-    public float acceleration = 20f;
-    public float deceleration = 25f;
+    public float acceleration = 5f;
+    public float deceleration = 10f;
     private float currentHorizontalVelocity = 0f;
     private float targetVelocityX = 0f;
 
@@ -57,6 +57,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Visual Orientation")]
     public float rotationRight = 120f;
     public float rotationLeft = 300f; 
+    public float rotationSpeed = 720f; // Speed of the turn-around pivot
     public int WorldDirection { get; private set; } = 1;
 
     [Header("Intro Settings")]
@@ -153,9 +154,16 @@ public class PlayerMovement : MonoBehaviour
         if (mobileLeft) hInput = -1f;
         if (mobileRight) hInput = 1f;
 
-        // Smoothed velocity calculation
+        // Smoothed velocity calculation with turn-brake logic
         float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
-        float accelRate = (Mathf.Abs(desiredVelocity) > 0.01f) ? acceleration : deceleration;
+        
+        // Detect if we are changing direction (Turning)
+        bool isTurning = (desiredVelocity > 0 && currentHorizontalVelocity < 0) || 
+                         (desiredVelocity < 0 && currentHorizontalVelocity > 0);
+        
+        // If turning, use deceleration to stop quickly first. Otherwise use acceleration/deceleration normally.
+        float accelRate = isTurning ? deceleration : (Mathf.Abs(desiredVelocity) > 0.01f ? acceleration : deceleration);
+        
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
         targetVelocityX = currentHorizontalVelocity;
 
@@ -163,17 +171,24 @@ public class PlayerMovement : MonoBehaviour
         if (anim == null || !anim.gameObject.activeInHierarchy)
             anim = GetComponentInChildren<Animator>();
 
-        // Animation state management
+        // Animation state management (Locked to Idle when stuck)
         if (anim != null)
         {
-            bool isMovingInput = (hInput != 0);
+            bool isStuck = (rules != null && rules.IsStuck);
+            bool isMovingInput = (hInput != 0) && !isStuck;
             anim.SetBool("walking", isMovingInput);
-            anim.SetBool("Idle", !isMovingInput);
+            anim.SetBool("Idle", !isMovingInput || isStuck);
         }
         
-        // Direction and Rotation management
-        if (hInput > 0) WorldDirection = 1;
-        else if (hInput < 0) WorldDirection = -1;
+        // Direction and Rotation management (Synchronized with velocity to prevent moonwalking)
+        if (hInput > 0 && currentHorizontalVelocity > -0.5f) 
+        {
+            WorldDirection = 1;
+        }
+        else if (hInput < 0 && currentHorizontalVelocity < 0.5f) 
+        {
+            WorldDirection = -1;
+        }
 
         // Explicit transform and child rotation enforcement
         transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
@@ -182,7 +197,14 @@ public class PlayerMovement : MonoBehaviour
         if (anim != null)
         {
             float targetRY = (WorldDirection == 1) ? rotationRight : rotationLeft;
-            anim.transform.localRotation = Quaternion.Euler(0, targetRY, 0);
+            Quaternion targetRot = Quaternion.Euler(0, targetRY, 0);
+            
+            // Smoothly rotate towards the target direction
+            anim.transform.localRotation = Quaternion.RotateTowards(
+                anim.transform.localRotation, 
+                targetRot, 
+                rotationSpeed * Time.deltaTime
+            );
         }
 
         // Jump input handling
@@ -202,11 +224,12 @@ public class PlayerMovement : MonoBehaviour
         // Strict Velocity Lock: No movement allowed if strictly stuck or in recovery
         if (rules != null && rules.IsHorizontalBlocked)
         {
-            // Always block Rightward movement (prevents sinking in)
+            // Block Rightward movement to prevent sinking in
+            // But ALLOW Leftward movement (negative velocity) to escape instantly
             if (finalVelocityX > 0) finalVelocityX = 0f;
             
-            // If truly stuck (not just recovery timer), block ALL horizontal movement
-            if (rules.IsStuck) finalVelocityX = 0f;
+            // If truly stuck (not in recovery timer), strictly ensure we don't move right
+            if (rules.IsStuck && finalVelocityX > 0) finalVelocityX = 0f;
         }
 
         if (transform.position.x <= minX && finalVelocityX < 0) finalVelocityX = 0;
@@ -325,5 +348,12 @@ public class PlayerMovement : MonoBehaviour
         minX = bottomLeft.x + effectivePadding;
         maxX = topRight.x - effectivePadding; 
         ScreenMaxX = screenTopRight.x;
+    }
+
+    public void ResetHorizontalVelocity()
+    {
+        currentHorizontalVelocity = 0f;
+        targetVelocityX = 0f;
+        if (rb != null) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
     }
 }

@@ -118,7 +118,8 @@ public class PlayerObstacleRules : MonoBehaviour
             bool moveRight = Input.GetKey(KeyCode.RightArrow) || (movementScript != null && movementScript.IsMovingRight);
 
             // Logic: Jump or Left always allow recovery. 
-            // Right ONLY allows recovery if we weren't stuck by a specific obstacle (e.g. just at the screen edge).
+            // Right is ALLOWED only if we are at the screen edge (lastHitWall == null).
+            // This prevents the cat from being trapped at the left side of the screen.
             bool canExit = jumpInput || moveLeft || (moveRight && lastHitWall == null);
 
             if (canExit)
@@ -215,7 +216,11 @@ public class PlayerObstacleRules : MonoBehaviour
         }
         GameSpeed.Multiplier = 0f;
 
-        if (movementScript != null) movementScript.ResetJumps();
+        if (movementScript != null) 
+        {
+            movementScript.ResetJumps();
+            movementScript.ResetHorizontalVelocity(); // Stop momentum instantly
+        }
 
         if (rb != null)
         {
@@ -262,6 +267,21 @@ public class PlayerObstacleRules : MonoBehaviour
         HandleInteraction(col.gameObject, normal, false);
     }
 
+    private void OnCollisionStay2D(Collision2D col)
+    {
+        if (dead || stuck) 
+        {
+            if (stuck) UpdateGameSpeed(); // Reinforce freeze
+            return;
+        }
+
+        // Do not re-lock if the player is actively moving away from the obstacle
+        if (movementScript != null && movementScript.IsMovingLeft) return;
+
+        Vector2 normal = col.contactCount > 0 ? col.GetContact(0).normal : Vector2.left;
+        HandleInteraction(col.gameObject, normal, false);
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (dead) return;
@@ -283,6 +303,25 @@ public class PlayerObstacleRules : MonoBehaviour
         HandleInteraction(other.gameObject, Vector2.left, true);
     }
 
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        if (dead || stuck)
+        {
+            if (stuck) UpdateGameSpeed(); // Reinforce freeze
+            return;
+        }
+
+        // Do not re-lock if the player is actively moving away from the obstacle
+        if (movementScript != null && movementScript.IsMovingLeft) return;
+        
+        // Only re-handle if it's a hazard
+        bool isEnemyHit = IsEnemy(other.gameObject);
+        if (other.CompareTag("Obstacle") || other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bush") || isEnemyHit)
+        {
+            HandleInteraction(other.gameObject, Vector2.left, true);
+        }
+    }
+
     private void HandleInteraction(GameObject other, Vector2 normal, bool isTrigger)
     {
         bool isEnemy = IsEnemy(other);
@@ -291,6 +330,25 @@ public class PlayerObstacleRules : MonoBehaviour
         bool isObstacle = other.CompareTag("Obstacle");
 
         if (!isEnemy && !isBush && !isWall && !isObstacle) return;
+
+        // NEW: Priority Enemy Damage Rule
+        // Any contact with an enemy (top, side, trigger, or physics) results in damage.
+        if (isEnemy && damageCooldown <= 0 && !isInvincible)
+        {
+            if (isPotionActive)
+            {
+                ResetPotionEffect();
+                damageCooldown = 0.2f;
+            }
+            else
+            {
+                LoseHeart();
+                damageCooldown = DAMAGE_COOLDOWN_TIME;
+            }
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+            lastHitWall = other;
+            return; // Damage taken, stop processing other logic (like stuck/crush)
+        }
 
         bool hitTop = isTrigger ? (transform.position.y > other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (normal.y > topNormalThreshold);
 
@@ -343,7 +401,12 @@ public class PlayerObstacleRules : MonoBehaviour
         // Side hit freeze
         if (!hitTop)
         {
-            bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.4f);
+            // Do not enter stuck state if the player is actively moving away (Left)
+            if (movementScript != null && movementScript.IsMovingLeft) return;
+
+            // Side hit (hitting the wall)
+            // Loosened from 0.4f to 0.3f to catch diagonal/corner hits that should still stop the player
+            bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.3f);
             if (shouldFreeze) EnterStuckState(other);
         }
     }
@@ -459,6 +522,7 @@ public class PlayerObstacleRules : MonoBehaviour
         if (dead || stuck)
         {
             GameSpeed.Multiplier = 0f;
+            if (LevelManager.Instance != null) LevelManager.Instance.SetTargetSpeed(0f);
             return;
         }
 
@@ -478,7 +542,14 @@ public class PlayerObstacleRules : MonoBehaviour
             multiplier = 1.2f;
         }
 
-        GameSpeed.Multiplier = baseSpeed * multiplier;
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.SetTargetSpeed(baseSpeed * multiplier);
+        }
+        else
+        {
+            GameSpeed.Multiplier = baseSpeed * multiplier;
+        }
     }
 
     private IEnumerator PowerUpSequence()
@@ -530,32 +601,6 @@ public class PlayerObstacleRules : MonoBehaviour
             rb.AddForce(new Vector2(deathKickX, deathKickY), ForceMode2D.Impulse);
         }
         if (GameOverManager.Instance != null) GameOverManager.Instance.ShowGameOver();
-    }
-
-
-    private void OnTriggerStay2D(Collider2D other) => HandleStay(other.gameObject);
-    private void OnCollisionStay2D(Collision2D col) => HandleStay(col.gameObject);
-
-    private void HandleStay(GameObject other)
-    {
-        if (dead || stuck) return;
-
-        bool isBlocking = other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Enemy") || other.CompareTag("Bush");
-        if (!isBlocking) return;
-
-        // Check if we are on TOP of the object. 
-        // If we are on top (physics or trigger stay), we shouldn't get stuck!
-        Collider2D otherCol = other.GetComponent<Collider2D>();
-        if (otherCol != null)
-        {
-            // If cat's pivot is above the center plus some margin of the obstacle
-            if (transform.position.y > otherCol.bounds.center.y + 0.2f)
-            {
-                return; // Standing on top is fine!
-            }
-        }
-
-        EnterStuckState(other);
     }
 
     public void UpdateSortingOrder(int order)

@@ -16,9 +16,12 @@ public class LevelManager : MonoBehaviour
     
     private int[] levelGoals = { 0, 10, 10, 10, 10, 10 };
 
-    [Header("Speed Settings")]
     public float[] levelSpeeds = { 1.5f, 2.02f, 2.55f, 3.15f, 3.75f }; // Each level speed increased 1.5x
     public float[] enemySpeeds = { 0f, 0f, 1.5f, 3.0f, 4.5f, 6.0f }; // Level-specific walking speeds for enemies
+    
+    [Header("Speed Smoothing")]
+    public float speedSmoothRate = 1.5f; // Ultra-smooth acceleration for global speed
+    private float targetGameMultiplier = 1f;
 
     [Header("UI Panels")]
     public GameObject victoryPanel;
@@ -41,6 +44,9 @@ public class LevelManager : MonoBehaviour
         [FormerlySerializedAs("yOffset")]
         public float obstacleYOffset = 0f; // Y-offset for ObstacleBag
         public float wallYOffset = 0f;     // Y-offset for Walls
+        public float longWallYOffset = 0f; // Y-offset for LongWalls
+        public float enemyYOffset = 0f;    // Y-offset for Enemies
+        public float bushYOffset = 0f;     // Y-offset for Bushes
 
         public Vector2 obstacleColliderSize = Vector2.zero; 
         
@@ -113,12 +119,23 @@ public class LevelManager : MonoBehaviour
 
     private void Update()
     {
+        // Smoothly transition the actual GameSpeed.Multiplier towards the target
+        if (targetGameMultiplier != GameSpeed.Multiplier)
+        {
+            GameSpeed.Multiplier = Mathf.MoveTowards(GameSpeed.Multiplier, targetGameMultiplier, speedSmoothRate * Time.deltaTime);
+        }
+
         // If the goal is reached, show victory only when the cat is grounded
         if (pendingVictory && playerMovement != null && playerMovement.IsGrounded)
         {
             pendingVictory = false;
             ShowVictory();
         }
+    }
+
+    public void SetTargetSpeed(float target)
+    {
+        targetGameMultiplier = target;
     }
 
     private void OnValidate()
@@ -153,6 +170,7 @@ public class LevelManager : MonoBehaviour
     {
         ResetPersistentLevel();
         Time.timeScale = 1f;
+        targetGameMultiplier = 1f;
         GameSpeed.Multiplier = 1f;
         
         if (GameOverManager.Instance != null)
@@ -197,6 +215,7 @@ public class LevelManager : MonoBehaviour
     private void ShowVictory()
     {
         Time.timeScale = 0f;
+        targetGameMultiplier = 0f;
         GameSpeed.Multiplier = 0f;
 
         if (AudioManager.Instance != null) AudioManager.Instance.StopBackgroundMusic();
@@ -247,6 +266,8 @@ public class LevelManager : MonoBehaviour
     {
         if (currentLevel >= 5) return;
 
+        ClearCurrentObstacles();
+
         currentLevel++;
         savedLevel = currentLevel;
         obstaclesPassed = 0;
@@ -276,6 +297,16 @@ public class LevelManager : MonoBehaviour
         UpdateInGameLevelText();
 
         Debug.Log("Starting Level " + currentLevel);
+    }
+
+    private void ClearCurrentObstacles()
+    {
+        // Find and destroy everything that moves like an obstacle/hazard
+        ObstacleMove[] activeObstacles = Object.FindObjectsByType<ObstacleMove>(FindObjectsSortMode.None);
+        foreach (var obs in activeObstacles)
+        {
+            if (obs != null) Destroy(obs.gameObject);
+        }
     }
 }
 

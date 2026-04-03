@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: -7004553793909354610}
   - component: {fileID: -3666056472018133353}
   - component: {fileID: 600000001}
-  - component: {fileID: 600000002}
   m_Layer: 0
   m_Name: Bush
   m_TagString: Bush
@@ -169,16 +168,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleThemeSetter
   assetType: 4
---- !u!114 &600000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1831206720371873340}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db497e08ad363442db2d0d207b4fc22b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ObstacleHit
-  instantDeath: 1

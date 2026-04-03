@@ -1284,7 +1284,6 @@ GameObject:
   - component: {fileID: 281700445225418413}
   - component: {fileID: 7097134839095588083}
   - component: {fileID: -8293789587895355612}
-  - component: {fileID: -3747185502869215771}
   - component: {fileID: 1332754295366678694}
   - component: {fileID: 777777777}
   m_Layer: 0
@@ -1378,19 +1377,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
---- !u!114 &-3747185502869215771
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6792327054025522797}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db497e08ad363442db2d0d207b4fc22b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ObstacleHit
-  instantDeath: 0
 --- !u!61 &1332754295366678694
 BoxCollider2D:
   m_ObjectHideFlags: 0
