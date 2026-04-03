@@ -19,6 +19,7 @@ public class ObstacleSpawner : MonoBehaviour
     public GameObject longWallPrefab;   // LongWall
     public GameObject fishPrefab;       // Fish
     public GameObject potionPrefab;     // Potion
+    public GameObject bushPrefab;         // Bush
 
     [Header("Spawn Positions")]
     public float bagSpawnX = 12f;
@@ -80,6 +81,7 @@ public class ObstacleSpawner : MonoBehaviour
         [Range(0f, 1f)] public float enemyChance = 0.25f;
         public GameObject levelEnemyPrefab;
         [Range(0f, 1f)] public float wallChance = 0.3f;
+        [Range(0f, 1f)] public float bushChance = 0.2f;
         [Range(0f, 1f)] public float fishChance = 0.08f;
         [Range(0f, 1f)] public float potionChance = 0.05f;
     }
@@ -157,7 +159,7 @@ public class ObstacleSpawner : MonoBehaviour
             lethalPassedCount = 0;
         }
 
-        float bag = 0, enemy = 0, wall = 0, longWall = 0, fish = 0, potion = 0;
+        float bag = 0, enemy = 0, wall = 0, longWall = 0, bush = 0, fish = 0, potion = 0;
         
         switch (currentLevel)
         {
@@ -184,6 +186,7 @@ public class ObstacleSpawner : MonoBehaviour
                 bag = level4.bagChance;
                 enemy = level4.enemyChance;
                 wall = level4.wallChance;
+                bush = level4.bushChance;
                 fish = level4.fishChance;
                 potion = level4.potionChance;
                 break;
@@ -215,7 +218,7 @@ public class ObstacleSpawner : MonoBehaviour
             return;
         }
 
-        float totalChance = bag + enemy + wall + longWall + fish + potion;
+        float totalChance = bag + enemy + wall + longWall + bush + fish + potion;
         if (totalChance <= 0) return; 
         
         float rnd = Random.Range(0f, totalChance);
@@ -263,6 +266,15 @@ public class ObstacleSpawner : MonoBehaviour
         {
             if (longWallPrefab != null)
                 Instantiate(longWallPrefab, new Vector3(longWallSpawnX, longWallSpawnY, 0f), Quaternion.identity);
+            return;
+        }
+
+        // Spawn Bush
+        currentLimit += bush;
+        if (rnd < currentLimit)
+        {
+            if (bushPrefab != null)
+                Instantiate(bushPrefab, new Vector3(wallSpawnX, -3.3f, 0f), Quaternion.identity);
             return;
         }
 

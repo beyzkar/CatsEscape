@@ -175,13 +175,16 @@ public class PlayerObstacleRules : MonoBehaviour
             if (catCol != null && obsCol != null)
             {
                 Bounds obsBounds = obsCol.bounds;
-                float catHalfWidth = catCol.bounds.size.x / 2f;
+                float catHalfWidth = CalculateTightCatHalfWidth();
                 float targetX = transform.position.x;
 
                 // Determine if we hit from left or right side
                 float snapOffset = 0.05f;
-                // If it's a bag/box obstacle, allow some overlap so it looks like we're touching the visual
-                if (hitSource.CompareTag("Obstacle")) snapOffset = -0.2f;
+                // Broaden negative offset to all physical obstacles for a natural look
+                if (hitSource.CompareTag("Obstacle") || hitSource.CompareTag("Wall") || hitSource.CompareTag("LongWall") || hitSource.CompareTag("Enemy"))
+                {
+                    snapOffset = -0.1f; // Reduced from -0.4f because catHalfWidth is now tight!
+                }
 
                 if (transform.position.x < obsBounds.center.x)
                 {
@@ -222,6 +225,34 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         if (bgVideo != null) bgVideo.Pause();
+    }
+
+    private float CalculateTightCatHalfWidth()
+    {
+        // Get the active sprite renderer (child objects might have the skin)
+        SpriteRenderer sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
+        if (sr == null || sr.sprite == null) return GetComponent<Collider2D>().bounds.size.x / 2f;
+
+        Sprite sprite = sr.sprite;
+        int shapeCount = sprite.GetPhysicsShapeCount();
+        if (shapeCount == 0) return sprite.bounds.size.x / 2f;
+
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        List<Vector2> path = new List<Vector2>();
+
+        for (int i = 0; i < shapeCount; i++)
+        {
+            sprite.GetPhysicsShape(i, path);
+            foreach (Vector2 p in path)
+            {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+            }
+        }
+
+        float visualWidth = (maxX - minX) * transform.localScale.x;
+        return visualWidth / 2f;
     }
 
     private void OnCollisionEnter2D(Collision2D col)

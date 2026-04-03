@@ -14,7 +14,7 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 10, 20, 30, 40, 20 };
+    private int[] levelGoals = { 0, 10, 10, 10, 10, 10 };
 
     [Header("Speed Settings")]
     public float[] levelSpeeds = { 1.5f, 2.02f, 2.55f, 3.15f, 3.75f }; // Each level speed increased 1.5x
@@ -42,10 +42,17 @@ public class LevelManager : MonoBehaviour
         public float obstacleYOffset = 0f; // Y-offset for ObstacleBag
         public float wallYOffset = 0f;     // Y-offset for Walls
 
-        [Header("Physics Overrides (BoxCollider2D)")]
-        public Vector2 wallColliderSize = Vector2.zero;   // Set to zero to use auto-bounds
-        public Vector2 wallColliderOffset = Vector2.zero; // Manual offset override
-        public PhysicsMaterial2D wallPhysicsMaterial;     // Level-specific friction/bounciness
+        public Vector2 obstacleColliderSize = Vector2.zero; 
+        
+        public Vector2 enemyColliderSize = Vector2.zero;
+
+        public Vector2 wallColliderSize = Vector2.zero;
+        public Vector2 wallColliderOffset = Vector2.zero;
+        public Vector2 longWallColliderSize = Vector2.zero;
+
+        public Vector2 bushColliderSize = Vector2.zero;
+
+        public PhysicsMaterial2D wallPhysicsMaterial; 
     }
 
     [Header("Theme Assets")]

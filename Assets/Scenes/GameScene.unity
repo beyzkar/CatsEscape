@@ -2125,7 +2125,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &376032485
 Transform:
   m_ObjectHideFlags: 0
@@ -3558,6 +3558,7 @@ MonoBehaviour:
   longWallPrefab: {fileID: 1558480094471278770, guid: 600b15f83aeb94607bbc3ee090b1c2f1, type: 3}
   fishPrefab: {fileID: 4646909014813445964, guid: cfcb2a87471cb40739c838beaad794c9, type: 3}
   potionPrefab: {fileID: 5576752569631102745, guid: 5f33347dfbee4443f8e129f0608729ee, type: 3}
+  bushPrefab: {fileID: 1831206720371873340, guid: fe1d36f7f4d044e6a8ccd82838251200, type: 3}
   bagSpawnX: 12
   bagSpawnY: -3.3
   enemySpawnX: 12
@@ -3600,6 +3601,7 @@ MonoBehaviour:
     enemyChance: 0.25
     levelEnemyPrefab: {fileID: 6792327054025522797, guid: 64db8d48fab1ceb43a8ee5d52643029a, type: 3}
     wallChance: 0.3
+    bushChance: 0.2
     fishChance: 0.08
     potionChance: 0.05
   level5:
@@ -19228,7 +19230,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 1
+  currentLevel: 4
   obstaclesPassed: 0
   levelSpeeds:
   - 1
@@ -19261,30 +19263,65 @@ MonoBehaviour:
     wallScale: {x: 1, y: 1, z: 1}
     obstacleYOffset: 0
     wallYOffset: 0
+    obstacleColliderSize: {x: 15.88, y: 11.6}
+    enemyColliderSize: {x: 0, y: 0}
+    wallColliderSize: {x: 0, y: 0}
+    wallColliderOffset: {x: 0, y: 0}
+    longWallColliderSize: {x: 0, y: 0}
+    bushColliderSize: {x: 0, y: 0}
+    wallPhysicsMaterial: {fileID: 0}
   - obstacleSprite: {fileID: -2227859323833246891, guid: e8396a3df845a4dfc9690bfd4585cace, type: 3}
     obstacleScale: {x: 0.18, y: 0.18, z: 0.18}
     wallSprite: {fileID: -7259721464142561641, guid: 8f657e6c331f74a139e6d908a3055d5b, type: 3}
     wallScale: {x: 1, y: 1, z: 1}
     obstacleYOffset: 0
     wallYOffset: 0
+    obstacleColliderSize: {x: 16.109, y: 10.75}
+    enemyColliderSize: {x: 1.98, y: 1.8}
+    wallColliderSize: {x: 0, y: 0}
+    wallColliderOffset: {x: 0, y: 0}
+    longWallColliderSize: {x: 0, y: 0}
+    bushColliderSize: {x: 0, y: 0}
+    wallPhysicsMaterial: {fileID: 0}
   - obstacleSprite: {fileID: 449758515141497644, guid: 1b50a84a86bbc47fe92c21d96e3911c3, type: 3}
     obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
     wallSprite: {fileID: 21300000, guid: 41c5a50e31df3e34c854b4116574dd0b, type: 3}
     wallScale: {x: 1.3, y: 1.3, z: 1.3}
     obstacleYOffset: 0.3
     wallYOffset: -1
+    obstacleColliderSize: {x: 20.81, y: 14.7}
+    enemyColliderSize: {x: 1.8, y: 1.8}
+    wallColliderSize: {x: 0.91, y: 1.81}
+    wallColliderOffset: {x: -0.02, y: 0.13}
+    longWallColliderSize: {x: 0.65, y: 1.65}
+    bushColliderSize: {x: 0, y: 0}
+    wallPhysicsMaterial: {fileID: 0}
   - obstacleSprite: {fileID: -6289627745090679216, guid: f169dde41d89a450d94e657fde331905, type: 3}
     obstacleScale: {x: 0.15, y: 0.15, z: 0.15}
     wallSprite: {fileID: -5354789079275869415, guid: d446283dc8ed4426ba72af43e7b77d31, type: 3}
     wallScale: {x: 0.2, y: 0.2, z: 0.2}
     obstacleYOffset: 0.3
     wallYOffset: -0.7
+    obstacleColliderSize: {x: 19.23, y: 13.22}
+    enemyColliderSize: {x: 0, y: 0}
+    wallColliderSize: {x: 23.25, y: 12.15}
+    wallColliderOffset: {x: 0, y: 0}
+    longWallColliderSize: {x: 0, y: 0}
+    bushColliderSize: {x: 15.88, y: 4.47}
+    wallPhysicsMaterial: {fileID: 0}
   - obstacleSprite: {fileID: -7587613512364005081, guid: cbe12a3d29ac04e3c87863a9cc9e47e8, type: 3}
     obstacleScale: {x: 0.2, y: 0.2, z: 0.2}
     wallSprite: {fileID: 8677674892870233858, guid: 37864d54f4aa542bba035ac16d090612, type: 3}
     wallScale: {x: 1, y: 1, z: 1}
     obstacleYOffset: 0
     wallYOffset: 0
+    obstacleColliderSize: {x: 0, y: 0}
+    enemyColliderSize: {x: 0, y: 0}
+    wallColliderSize: {x: 0, y: 0}
+    wallColliderOffset: {x: 0, y: 0}
+    longWallColliderSize: {x: 0, y: 0}
+    bushColliderSize: {x: 0, y: 0}
+    wallPhysicsMaterial: {fileID: 0}
 --- !u!4 &2004907417
 Transform:
   m_ObjectHideFlags: 0
@@ -19349,7 +19386,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0

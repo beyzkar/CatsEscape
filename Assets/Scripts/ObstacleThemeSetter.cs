@@ -4,7 +4,7 @@ using System.Collections.Generic;
 // Sets the sprite, scale, position, and collider shape of an obstacle based on the current level theme
 public class ObstacleThemeSetter : MonoBehaviour
 {
-    public enum AssetType { Obstacle, Wall }
+    public enum AssetType { Obstacle, Wall, Enemy, LongWall, Bush }
     
     [Header("Settings")]
     public AssetType assetType;
@@ -22,40 +22,59 @@ public class ObstacleThemeSetter : MonoBehaviour
         if (theme == null) return;
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
-        if (sr == null) return;
 
-        bool isObstacle = gameObject.CompareTag("Obstacle") || assetType == AssetType.Obstacle;
-        bool isWall = gameObject.CompareTag("Wall") || assetType == AssetType.Wall;
+        bool isObstacle = assetType == AssetType.Obstacle || gameObject.CompareTag("Obstacle");
+        bool isWall = assetType == AssetType.Wall || gameObject.CompareTag("Wall");
+        bool isEnemy = assetType == AssetType.Enemy || gameObject.CompareTag("Enemy");
+        bool isLongWall = assetType == AssetType.LongWall || gameObject.CompareTag("LongWall");
+        bool isBush = assetType == AssetType.Bush || gameObject.CompareTag("Bush");
 
-        // Apply Visuals and Transform
-        if (isObstacle)
+        // Apply Visuals and Transform (Mainly for Obstacle/Wall)
+        if (sr != null)
         {
-            if (theme.obstacleSprite != null) sr.sprite = theme.obstacleSprite;
-            transform.localScale = theme.obstacleScale;
-            transform.position += new Vector3(0, theme.obstacleYOffset, 0);
-        }
-        else if (isWall)
-        {
-            if (theme.wallSprite != null) sr.sprite = theme.wallSprite;
-            transform.localScale = theme.wallScale;
-            transform.position += new Vector3(0, theme.wallYOffset, 0);
+            if (isObstacle)
+            {
+                if (theme.obstacleSprite != null) sr.sprite = theme.obstacleSprite;
+                transform.localScale = theme.obstacleScale;
+                transform.position += new Vector3(0, theme.obstacleYOffset, 0);
+            }
+            else if (isWall)
+            {
+                if (theme.wallSprite != null) sr.sprite = theme.wallSprite;
+                transform.localScale = theme.wallScale;
+                transform.position += new Vector3(0, theme.wallYOffset, 0);
+            }
         }
 
-        if (sr.sprite == null) return;
-
-        // 1. BoxCollider2D Setup (Smart/Manual fit)
+        // BoxCollider2D Setup (Smart/Manual fit)
         BoxCollider2D box = GetComponent<BoxCollider2D>() ?? GetComponentInChildren<BoxCollider2D>();
         if (box != null)
         {
-            // Use manual overrides if provided in the theme for walls
-            if (isWall && theme.wallColliderSize != Vector2.zero)
-            {
-                box.size = theme.wallColliderSize;
-                box.offset = theme.wallColliderOffset;
+            Vector2 targetSize = Vector2.zero;
+
+            if (isWall && theme.wallColliderSize != Vector2.zero) {
+                targetSize = theme.wallColliderSize;
             }
-            else
+            else if (isObstacle && theme.obstacleColliderSize != Vector2.zero) {
+                targetSize = theme.obstacleColliderSize;
+            }
+            else if (isEnemy && theme.enemyColliderSize != Vector2.zero) {
+                targetSize = theme.enemyColliderSize;
+            }
+            else if (isLongWall && theme.longWallColliderSize != Vector2.zero) {
+                targetSize = theme.longWallColliderSize;
+            }
+            else if (isBush && theme.bushColliderSize != Vector2.zero) {
+                targetSize = theme.bushColliderSize;
+            }
+
+            if (targetSize != Vector2.zero)
             {
-                // SMART AUTO-FIT: Calculate tight bounds based on sprite physics shape (not texture size)
+                box.size = targetSize;
+            }
+            else if (sr != null && sr.sprite != null)
+            {
+                // SMART AUTO-FIT
                 Bounds tightBounds = CalculateTightBounds(sr.sprite);
                 box.size = tightBounds.size;
                 box.offset = tightBounds.center;
@@ -73,7 +92,10 @@ public class ObstacleThemeSetter : MonoBehaviour
         if (poly != null)
         {
             UpdatePolygonCollider(poly, sr.sprite);
-            if (box != null) box.enabled = false;
+            
+            // For Walls, BoxCollider is more reliable for stopping the player
+            if (box != null && isWall) box.enabled = true;
+            else if (box != null) box.enabled = false;
         }
     }
 
@@ -103,7 +125,6 @@ public class ObstacleThemeSetter : MonoBehaviour
         Vector2 size = max - min;
         Vector2 center = min + (size / 2f);
         return new Bounds(center, size);
-    }
     }
 
     private void UpdatePolygonCollider(PolygonCollider2D poly, Sprite sprite)
