@@ -202,9 +202,8 @@ public class PlayerObstacleRules : MonoBehaviour
             }
             else
             {
-                // Fallback for missing colliders (screen edge hit) -> Snap RIGHT to stay inside
-                float nudgeX = 0.5f; 
-                transform.position = new Vector3(transform.position.x + nudgeX, transform.position.y, transform.position.z);
+                // Fallback for missing colliders (screen edge hit). 
+                // Removed nudgeX displacement to prevent physics jittering.
             }
         }
 

@@ -37,32 +37,38 @@ public class ThemeAssetsDrawer : PropertyDrawer
                 }
             }
 
-            // Always show base theme fields
-            DrawField("obstacleSprite");
-            DrawField("obstacleScale");
-            
-            if (index >= 2)
+            if (index != 4)
             {
-                DrawField("wallSprite");
-                DrawField("wallScale");
+                // Always show base theme fields
+                DrawField("obstacleSprite");
+                DrawField("obstacleScale");
+                
+                if (index >= 2)
+                {
+                    DrawField("wallSprite");
+                    DrawField("wallScale");
+                }
             }
 
-            DrawField("obstacleYOffset");
-
-            if (index >= 2)
+            if (index != 4)
             {
-                DrawField("wallYOffset");
-                DrawField("longWallYOffset");
-            }
+                DrawField("obstacleYOffset");
 
-            if (index >= 1)
-            {
-                DrawField("enemyYOffset");
-            }
+                if (index >= 2)
+                {
+                    DrawField("wallYOffset");
+                    DrawField("longWallYOffset");
+                }
 
-            if (index >= 3)
-            {
-                DrawField("bushYOffset");
+                if (index >= 1)
+                {
+                    DrawField("enemyYOffset");
+                }
+
+                if (index >= 3)
+                {
+                    DrawField("bushYOffset");
+                }
             }
 
             if (index != 4)
@@ -72,18 +78,22 @@ public class ThemeAssetsDrawer : PropertyDrawer
 
                 // Always show Obstacle Bag (Level 1+)
                 DrawField("obstacleColliderSize");
+                DrawField("obstacleColliderOffset");
 
                 // Element index 1 is Level 2
                 if (index >= 1)
                 {
                     DrawField("enemyColliderSize");
+                    DrawField("enemyColliderOffset");
                 }
 
                 // Element index 2 is Level 3
                 if (index == 2 || index >= 5)
                 {
                     DrawField("wallColliderSize");
+                    DrawField("wallColliderOffset");
                     DrawField("longWallColliderSize");
+                    DrawField("longWallColliderOffset");
                 }
 
                 // Element index 3 is Level 4
@@ -92,11 +102,14 @@ public class ThemeAssetsDrawer : PropertyDrawer
                     if (index == 3)
                     {
                         DrawField("wallColliderSize");
+                        DrawField("wallColliderOffset");
                         DrawField("bushColliderSize");
+                        DrawField("bushColliderOffset");
                     }
                     else if (index >= 5)
                     {
                         DrawField("bushColliderSize");
+                        DrawField("bushColliderOffset");
                     }
                 }
 
@@ -128,31 +141,37 @@ public class ThemeAssetsDrawer : PropertyDrawer
         
         float FieldHeight(string fieldName) => property.FindPropertyRelative(fieldName) != null ? EditorGUI.GetPropertyHeight(property.FindPropertyRelative(fieldName)) + 2 : 0;
 
-        h += FieldHeight("obstacleSprite");
-        h += FieldHeight("obstacleScale");
-        
-        if (index >= 2)
+        if (index != 4)
         {
-            h += FieldHeight("wallSprite");
-            h += FieldHeight("wallScale");
+            h += FieldHeight("obstacleSprite");
+            h += FieldHeight("obstacleScale");
+            
+            if (index >= 2)
+            {
+                h += FieldHeight("wallSprite");
+                h += FieldHeight("wallScale");
+            }
         }
 
-        h += FieldHeight("obstacleYOffset");
-
-        if (index >= 2)
+        if (index != 4)
         {
-            h += FieldHeight("wallYOffset");
-            h += FieldHeight("longWallYOffset");
-        }
+            h += FieldHeight("obstacleYOffset");
 
-        if (index >= 1)
-        {
-            h += FieldHeight("enemyYOffset");
-        }
+            if (index >= 2)
+            {
+                h += FieldHeight("wallYOffset");
+                h += FieldHeight("longWallYOffset");
+            }
 
-        if (index >= 3)
-        {
-            h += FieldHeight("bushYOffset");
+            if (index >= 1)
+            {
+                h += FieldHeight("enemyYOffset");
+            }
+
+            if (index >= 3)
+            {
+                h += FieldHeight("bushYOffset");
+            }
         }
 
         if (index != 4)
@@ -160,16 +179,20 @@ public class ThemeAssetsDrawer : PropertyDrawer
             h += EditorGUIUtility.singleLineHeight + 2; // Physics Header
 
             h += FieldHeight("obstacleColliderSize");
+            h += FieldHeight("obstacleColliderOffset");
 
             if (index >= 1)
             {
                 h += FieldHeight("enemyColliderSize");
+                h += FieldHeight("enemyColliderOffset");
             }
             
             if (index == 2 || index >= 5)
             {
                 h += FieldHeight("wallColliderSize");
+                h += FieldHeight("wallColliderOffset");
                 h += FieldHeight("longWallColliderSize");
+                h += FieldHeight("longWallColliderOffset");
             }
             
             if (index >= 3)
@@ -177,11 +200,14 @@ public class ThemeAssetsDrawer : PropertyDrawer
                 if (index == 3)
                 {
                     h += FieldHeight("wallColliderSize");
+                    h += FieldHeight("wallColliderOffset");
                     h += FieldHeight("bushColliderSize");
+                    h += FieldHeight("bushColliderOffset");
                 }
                 else if (index >= 5)
                 {
                     h += FieldHeight("bushColliderSize");
+                    h += FieldHeight("bushColliderOffset");
                 }
             }
 

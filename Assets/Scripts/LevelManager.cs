@@ -49,14 +49,18 @@ public class LevelManager : MonoBehaviour
         public float bushYOffset = 0f;     // Y-offset for Bushes
 
         public Vector2 obstacleColliderSize = Vector2.zero; 
+        public Vector2 obstacleColliderOffset = Vector2.zero;
         
         public Vector2 enemyColliderSize = Vector2.zero;
+        public Vector2 enemyColliderOffset = Vector2.zero;
 
         public Vector2 wallColliderSize = Vector2.zero;
         public Vector2 wallColliderOffset = Vector2.zero;
         public Vector2 longWallColliderSize = Vector2.zero;
+        public Vector2 longWallColliderOffset = Vector2.zero;
 
         public Vector2 bushColliderSize = Vector2.zero;
+        public Vector2 bushColliderOffset = Vector2.zero;
 
         public PhysicsMaterial2D wallPhysicsMaterial; 
     }

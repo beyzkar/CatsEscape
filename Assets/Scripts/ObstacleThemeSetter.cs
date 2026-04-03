@@ -29,7 +29,7 @@ public class ObstacleThemeSetter : MonoBehaviour
         bool isLongWall = assetType == AssetType.LongWall || gameObject.CompareTag("LongWall");
         bool isBush = assetType == AssetType.Bush || gameObject.CompareTag("Bush");
 
-        // Apply Visuals and Transform (Mainly for Obstacle/Wall)
+        // Apply Visuals and Transform (Applying Y-offsets from LevelManager)
         if (sr != null)
         {
             if (isObstacle)
@@ -44,35 +44,64 @@ public class ObstacleThemeSetter : MonoBehaviour
                 transform.localScale = theme.wallScale;
                 transform.position += new Vector3(0, theme.wallYOffset, 0);
             }
+            else if (isEnemy)
+            {
+                transform.position += new Vector3(0, theme.enemyYOffset, 0);
+            }
+            else if (isLongWall)
+            {
+                transform.position += new Vector3(0, theme.longWallYOffset, 0);
+            }
+            else if (isBush)
+            {
+                transform.position += new Vector3(0, theme.bushYOffset, 0);
+            }
         }
 
-        // BoxCollider2D Setup (Smart/Manual fit)
+        // BoxCollider2D Setup (Strictly following LevelManager overrides)
         BoxCollider2D box = GetComponent<BoxCollider2D>() ?? GetComponentInChildren<BoxCollider2D>();
         if (box != null)
         {
             Vector2 targetSize = Vector2.zero;
+            Vector2 targetOffset = Vector2.zero;
+            bool hasFieldOverride = false;
 
             if (isWall && theme.wallColliderSize != Vector2.zero) {
                 targetSize = theme.wallColliderSize;
+                targetOffset = theme.wallColliderOffset;
+                hasFieldOverride = true;
             }
             else if (isObstacle && theme.obstacleColliderSize != Vector2.zero) {
                 targetSize = theme.obstacleColliderSize;
+                targetOffset = theme.obstacleColliderOffset;
+                hasFieldOverride = true;
             }
             else if (isEnemy && theme.enemyColliderSize != Vector2.zero) {
                 targetSize = theme.enemyColliderSize;
+                targetOffset = theme.enemyColliderOffset;
+                hasFieldOverride = true;
             }
             else if (isLongWall && theme.longWallColliderSize != Vector2.zero) {
                 targetSize = theme.longWallColliderSize;
+                targetOffset = theme.longWallColliderOffset;
+                hasFieldOverride = true;
             }
             else if (isBush && theme.bushColliderSize != Vector2.zero) {
                 targetSize = theme.bushColliderSize;
+                targetOffset = theme.bushColliderOffset;
+                hasFieldOverride = true;
             }
 
-            if (targetSize != Vector2.zero)
+            if (hasFieldOverride)
             {
                 box.size = targetSize;
-                // No more box.offset override here! 
-                // Let the prefab's native offset stay as it is.
+                
+                // Only overwrite the offset if a non-zero value is specified in LevelManager.
+                // This prevents the collider from centering on the pivot if the user only wanted to change size.
+                if (targetOffset != Vector2.zero)
+                {
+                    box.offset = targetOffset;
+                }
             }
             else if (sr != null && sr.sprite != null)
             {
