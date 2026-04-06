@@ -48,6 +48,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
+    public float retreatLimitX = -10f; // Limit for how far left the player can retreat
     [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
     public float viewportPaddingX = 1.8f; // Reduced from 4.5f to allow closer approach to edges
@@ -60,6 +61,8 @@ public class PlayerMovement : MonoBehaviour
     public float rotationSpeed = 720f; // Speed of the turn-around pivot
     public int WorldDirection { get; private set; } = 1;
     private BoxCollider2D boxCol;
+    public float CurrentScreenWidth => (topRight.x - bottomLeft.x);
+    public float FullScreenWidth { get; private set; } // True edge-to-edge screen width
 
     [Header("Intro Settings")]
     public float introSpeed = 3f;
@@ -73,6 +76,9 @@ public class PlayerMovement : MonoBehaviour
     private Animator anim;
     private float originalAbsScaleX;
     private float originalVisualLocalY;
+    public float totalDistance { get; private set; } = 0f; // Cumulative distance traveled
+    public float peakDistance { get; private set; } = 0f;  // Furthest distance reached
+    public float DistanceGap => peakDistance - totalDistance;
     private bool mobileLeft = false;
     private bool mobileRight = false;
 
@@ -100,6 +106,8 @@ public class PlayerMovement : MonoBehaviour
         
         // Capture original visual height to apply offsets additively
         if (anim != null) originalVisualLocalY = anim.transform.localPosition.y;
+        totalDistance = 0f;
+        peakDistance = 0f;
         
         // Ensure parent rotation is locked at identity
         transform.localRotation = Quaternion.identity; 
@@ -225,6 +233,13 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate()
     {
         UpdateViewportBounds();
+        
+        // Progress Tracking: Accumulate distance based on movement and game multiplier
+        // This works perfectly in both fixed worlds and scrolling worlds!
+        float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
+        totalDistance += distanceStep;
+        if (totalDistance > peakDistance) peakDistance = totalDistance;
+
         if (!introFinished || (rules != null && rules.IsDead)) return;
 
         float finalVelocityX = targetVelocityX;
@@ -232,27 +247,22 @@ public class PlayerMovement : MonoBehaviour
         // Strict Velocity Lock: No movement allowed if strictly stuck or in recovery
         if (rules != null && rules.IsHorizontalBlocked)
         {
-            // Block Rightward movement to prevent sinking in
-            // But ALLOW Leftward movement (negative velocity) to escape instantly
             if (finalVelocityX > 0) finalVelocityX = 0f;
-            
-            // If truly stuck (not in recovery timer), strictly ensure we don't move right
             if (rules.IsStuck && finalVelocityX > 0) finalVelocityX = 0f;
         }
 
-        if (transform.position.x <= minX && finalVelocityX < 0) finalVelocityX = 0;
+        // Distance-Based Retreat Limit: Exactly 1 FULL screen width behind furthest progress
+        if (DistanceGap >= FullScreenWidth && finalVelocityX < 0) finalVelocityX = 0;
+        
+        // Viewport clamping (for visual boundaries)
         if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0;
 
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
 
-        // Strict physical position clamp to prevent penetration through boundaries
-        // Only applied when NOT dead and NOT in intro walk
-        if (rb.position.x < minX)
-        {
-            rb.position = new Vector2(minX, rb.position.y);
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-        }
-        else if (rb.position.x > maxX)
+        // Position enforcement for hard screen boundaries (X and Y)
+        // Note: Distance clamping only limits VELOCITY to prevent backtracking.
+        // Screen position clamping handles the visuals.
+        if (transform.position.x > maxX)
         {
             rb.position = new Vector2(maxX, rb.position.y);
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
@@ -262,16 +272,19 @@ public class PlayerMovement : MonoBehaviour
     void LateUpdate()
     {
         UpdateViewportBounds();
+        
         if (!useViewportClamping) return;
 
-        // Enforce strict clamping
+        // Enforce strict clamping for visuals (minX and maxX are screen boundaries)
+        float currentMinY = bottomLeft.y;
         float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
         
-        // Level 5 has pits, so we allow falling below the floor!
+        // Standard floor for Levels 1-4 is -3.7. Level 5 has pits!
         float effectiveMinY = bottomLeft.y;
-        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
+        if (LevelManager.Instance != null)
         {
-            effectiveMinY = -20f; // Allow falling far down
+            if (LevelManager.Instance.currentLevel == 5) effectiveMinY = -20f;
+            else effectiveMinY = -3.7f;
         }
         
         float clampedY = Mathf.Clamp(transform.position.y, effectiveMinY, topRight.y);
@@ -381,13 +394,16 @@ public class PlayerMovement : MonoBehaviour
         float zDist = Mathf.Abs(cam.transform.position.z);
         bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
         topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
-        Vector3 screenTopRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+        Vector3 trueRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+
+        FullScreenWidth = trueRight.x - bottomLeft.x;
 
         // Enforce a minimum safe padding to stay away from the notch/edge
+        // Set to 1.2f to provide a comfortable margin on the left
         float effectivePadding = Mathf.Max(viewportPaddingX, 1.2f);
         minX = bottomLeft.x + effectivePadding;
         maxX = topRight.x - effectivePadding; 
-        ScreenMaxX = screenTopRight.x;
+        ScreenMaxX = trueRight.x;
     }
 
     public void ResetHorizontalVelocity()

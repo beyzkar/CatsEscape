@@ -142,7 +142,20 @@ public class PlayerObstacleRules : MonoBehaviour
                     rb.constraints = RigidbodyConstraints2D.FreezeRotation;
                 }
 
-                UpdateGameSpeed();
+                // INSTANT RESUME (If frozen by screen edge): 
+                // Ensure no delay when moving away from the retreat limit
+                if (lastHitWall == null && LevelManager.Instance != null)
+                {
+                    float baseSpeed = LevelManager.Instance.GetCurrentBaseSpeed();
+                    float multiplier = isInvincible ? 1.4f : (isPotionActive ? 1.2f : 1f);
+                    GameSpeed.Multiplier = baseSpeed * multiplier;
+                    LevelManager.Instance.SetTargetSpeed(baseSpeed * multiplier);
+                }
+                else
+                {
+                    UpdateGameSpeed();
+                }
+                
                 jumpGraceTimer = JUMP_GRACE_TIME;
                 
                 // If exiting via jump, lock horizontal movement until we clear the wall height
@@ -160,10 +173,11 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (!dead && !stuck && movementScript != null)
         {
-            // If we are at the left boundary and trying to move left (using new IsMovingLeft property)
-            if (transform.position.x <= movementScript.minX + 0.05f && movementScript.IsMovingLeft)
+            // RELATIONAL RETREAT FREEZE (1 Screen Width Rule):
+            // If the player falls 1 screen width or more behind their cumulative peak progress, freeze the world!
+            if (movementScript.DistanceGap >= movementScript.FullScreenWidth && movementScript.IsMovingLeft)
             {
-                EnterStuckState(null); // No specific obstacle
+                EnterStuckState(null); // No specific obstacle, but freeze the world!
             }
         } 
     }
@@ -186,6 +200,7 @@ public class PlayerObstacleRules : MonoBehaviour
             animator.SetBool("Idle", true);
         }
         GameSpeed.Multiplier = 0f;
+        UpdateGameSpeed(); // Reinforce target speed stop in LevelManager
 
         if (movementScript != null) 
         {
@@ -373,7 +388,9 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (damageCooldown <= 0 && !(jumpGraceTimer > 0 && other == lastHitWall))
         {
-            bool isLethal = isEnemy || isBush || (!isWall && !isObstacle);
+            // NEW SAFETY: Don't take damage if moving left (retreating) unless it's a very specific intentional hazard.
+            bool isRetreating = movementScript != null && movementScript.IsMovingLeft;
+            bool isLethal = (isEnemy || isBush) && !isRetreating;
             
             if (isLethal)
             {
@@ -391,6 +408,7 @@ public class PlayerObstacleRules : MonoBehaviour
             else if (isWall || isObstacle) // Harmless wall/bag hits
             {
                 if (isPotionActive) ResetPotionEffect();
+                damageCooldown = 0.5f; // Debounce timer to prevent sound/logic spam
             }
             
             if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
