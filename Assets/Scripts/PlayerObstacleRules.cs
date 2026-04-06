@@ -13,6 +13,7 @@ public class PlayerObstacleRules : MonoBehaviour
     private int maxHearts;
     private const int MAX_ALLOWED_HEARTS = 5;
     private GameObject lastHitWall;
+    private float lastHitNormalX = 0f; // Stores the horizontal side of the hit
 
     [Header("Death kick")]
     public float deathKickX = -8f;
@@ -80,6 +81,8 @@ public class PlayerObstacleRules : MonoBehaviour
         
         if (sparkleEffect != null) sparkleEffect.gameObject.SetActive(false);
         
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayBackgroundMusic();
+        
         UpdateGameSpeed();
 
         if (heartUI != null && heartUI.Length > 0)
@@ -117,10 +120,15 @@ public class PlayerObstacleRules : MonoBehaviour
             bool moveLeft = Input.GetKey(KeyCode.LeftArrow) || (movementScript != null && movementScript.IsMovingLeft);
             bool moveRight = Input.GetKey(KeyCode.RightArrow) || (movementScript != null && movementScript.IsMovingRight);
 
-            // Logic: Jump or Left always allow recovery. 
+            // Direction-Aware Escape Logic:
+            // If they hit the LEFT side of the wall (lastHitNormalX < 0), only moving LEFT escapes.
+            // If they hit the RIGHT side of the wall (lastHitNormalX > 0), only moving RIGHT escapes.
+            bool isEscaping = (lastHitNormalX < -0.3f && moveLeft) || (lastHitNormalX > 0.3f && moveRight);
+            
+            // Logic: Jump always allow recovery. 
+            // Moving away (isEscaping) also allows recovery.
             // Right is ALLOWED only if we are at the screen edge (lastHitWall == null).
-            // This prevents the cat from being trapped at the left side of the screen.
-            bool canExit = jumpInput || moveLeft || (moveRight && lastHitWall == null);
+            bool canExit = jumpInput || isEscaping || (moveRight && lastHitWall == null);
 
             if (canExit)
             {
@@ -167,45 +175,9 @@ public class PlayerObstacleRules : MonoBehaviour
         stuck = true;
         lastHitWall = hitSource; // Track if it's a solid obstacle or just the screen edge
 
-        // Robust Nudge: Calculate exact boundary of the hit obstacle to prevent "clipping inside"
-        if (hitSource != null) 
-        {
-            Collider2D catCol = GetComponent<Collider2D>();
-            Collider2D obsCol = hitSource.GetComponent<Collider2D>();
-
-            if (catCol != null && obsCol != null)
-            {
-                Bounds obsBounds = obsCol.bounds;
-                float catHalfWidth = CalculateTightCatHalfWidth();
-                float targetX = transform.position.x;
-
-                // Determine if we hit from left or right side
-                float snapOffset = 0.05f;
-                // Broaden negative offset to all physical obstacles for a natural look
-                if (hitSource.CompareTag("Obstacle") || hitSource.CompareTag("Wall") || hitSource.CompareTag("LongWall") || hitSource.CompareTag("Enemy"))
-                {
-                    snapOffset = -0.1f; // Reduced from -0.4f because catHalfWidth is now tight!
-                }
-
-                if (transform.position.x < obsBounds.center.x)
-                {
-                    // Hit from LEFT -> Snap to left edge of obstacle
-                    targetX = obsBounds.min.x - catHalfWidth - snapOffset;
-                }
-                else
-                {
-                    // Hit from RIGHT -> Snap to right edge of obstacle
-                    targetX = obsBounds.max.x + catHalfWidth + snapOffset;
-                }
-
-                transform.position = new Vector3(targetX, transform.position.y, transform.position.z);
-            }
-            else
-            {
-                // Fallback for missing colliders (screen edge hit). 
-                // Removed nudgeX displacement to prevent physics jittering.
-            }
-        }
+        // POSITION SNAPPING REMOVED (User Request):
+        // No longer forcing the player to snap to a specific X coordinate upon impact.
+        // The character will now stop exactly where the physics engine caught the collision.
 
         if (animator != null) 
         {
@@ -229,6 +201,42 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         if (bgVideo != null) bgVideo.Pause();
+    }
+
+    private void ApplyTightPlayerCollider()
+    {
+        BoxCollider2D boxCol = GetComponent<BoxCollider2D>();
+        SpriteRenderer sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
+
+        if (boxCol != null && sr != null && sr.sprite != null)
+        {
+            Sprite sprite = sr.sprite;
+            int shapeCount = sprite.GetPhysicsShapeCount();
+            if (shapeCount == 0) return;
+
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minY = float.MaxValue, maxY = float.MinValue;
+            List<Vector2> path = new List<Vector2>();
+
+            for (int i = 0; i < shapeCount; i++)
+            {
+                sprite.GetPhysicsShape(i, path);
+                foreach (Vector2 p in path)
+                {
+                    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+                    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+                }
+            }
+
+            Vector2 size = new Vector2(maxX - minX, maxY - minY);
+            Vector2 center = new Vector2(minX + size.x / 2f, minY + size.y / 2f);
+
+            // Apply ONLY the offset to keep the collider centered on visuals.
+            // Preservation Rule: Keep the manually set size from the prefab/LevelManager.
+            boxCol.offset = center;
+            
+            Debug.Log("Player: Auto-Centered Offset Applied (Size Preserved).");
+        }
     }
 
     private float CalculateTightCatHalfWidth()
@@ -274,9 +282,6 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
-        // Do not re-lock if the player is actively moving away from the obstacle
-        if (movementScript != null && movementScript.IsMovingLeft) return;
-
         Vector2 normal = col.contactCount > 0 ? col.GetContact(0).normal : Vector2.left;
         HandleInteraction(col.gameObject, normal, false);
     }
@@ -309,9 +314,6 @@ public class PlayerObstacleRules : MonoBehaviour
             if (stuck) UpdateGameSpeed(); // Reinforce freeze
             return;
         }
-
-        // Do not re-lock if the player is actively moving away from the obstacle
-        if (movementScript != null && movementScript.IsMovingLeft) return;
         
         // Only re-handle if it's a hazard
         bool isEnemyHit = IsEnemy(other.gameObject);
@@ -400,13 +402,22 @@ public class PlayerObstacleRules : MonoBehaviour
         // Side hit freeze
         if (!hitTop)
         {
-            // Do not enter stuck state if the player is actively moving away (Left)
-            if (movementScript != null && movementScript.IsMovingLeft) return;
+            // NEW: Direction-Aware Escape Detection
+            // If the player is moving AWAY from the hit side, skip entering stuck state.
+            bool moveLeft = movementScript != null && movementScript.IsMovingLeft;
+            bool moveRight = movementScript != null && movementScript.IsMovingRight;
+            bool isMovingAway = (normal.x < -0.3f && moveLeft) || (normal.x > 0.3f && moveRight);
+
+            if (isMovingAway) return;
 
             // Side hit (hitting the wall)
             // Loosened from 0.4f to 0.3f to catch diagonal/corner hits that should still stop the player
             bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.3f);
-            if (shouldFreeze) EnterStuckState(other);
+            if (shouldFreeze) 
+            {
+                lastHitNormalX = normal.x;
+                EnterStuckState(other);
+            }
         }
     }
 

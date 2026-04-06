@@ -96,16 +96,21 @@ public class ObstacleThemeSetter : MonoBehaviour
             {
                 box.size = targetSize;
                 
-                // Only overwrite the offset if a non-zero value is specified in LevelManager.
-                // This prevents the collider from centering on the pivot if the user only wanted to change size.
+                // If a manual offset is provided, use it.
+                // Otherwise, automatically center the custom size on the sprite's physics bounds.
                 if (targetOffset != Vector2.zero)
                 {
                     box.offset = targetOffset;
                 }
+                else if (sr != null && sr.sprite != null)
+                {
+                    Bounds tightBounds = CalculateTightBounds(sr.sprite);
+                    box.offset = tightBounds.center;
+                }
             }
             else if (sr != null && sr.sprite != null)
             {
-                // SMART AUTO-FIT total (only fallback)
+                // SMART AUTO-FIT total fallback (size + offset)
                 Bounds tightBounds = CalculateTightBounds(sr.sprite);
                 box.size = tightBounds.size;
                 box.offset = tightBounds.center;

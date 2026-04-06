@@ -57,7 +57,10 @@ public class ThemeAssetsDrawer : PropertyDrawer
                 if (index >= 2)
                 {
                     DrawField("wallYOffset");
-                    DrawField("longWallYOffset");
+                    if (index == 2 || index >= 5)
+                    {
+                        DrawField("longWallYOffset");
+                    }
                 }
 
                 if (index >= 1)
@@ -69,6 +72,10 @@ public class ThemeAssetsDrawer : PropertyDrawer
                 {
                     DrawField("bushYOffset");
                 }
+            }
+            else // Only for Level 5 (Element 4)
+            {
+                DrawField("playerYOffset");
             }
 
             if (index != 4)
@@ -87,13 +94,17 @@ public class ThemeAssetsDrawer : PropertyDrawer
                     DrawField("enemyColliderOffset");
                 }
 
-                // Element index 2 is Level 3
-                if (index == 2 || index >= 5)
+                // Physics overrides for Walls
+                if (index == 2 || index == 3 || index >= 5)
                 {
                     DrawField("wallColliderSize");
                     DrawField("wallColliderOffset");
-                    DrawField("longWallColliderSize");
-                    DrawField("longWallColliderOffset");
+                    
+                    if (index == 2 || index >= 5)
+                    {
+                        DrawField("longWallColliderSize");
+                        DrawField("longWallColliderOffset");
+                    }
                 }
 
                 // Element index 3 is Level 4
@@ -160,7 +171,10 @@ public class ThemeAssetsDrawer : PropertyDrawer
             if (index >= 2)
             {
                 h += FieldHeight("wallYOffset");
-                h += FieldHeight("longWallYOffset");
+                if (index == 2 || index >= 5)
+                {
+                    h += FieldHeight("longWallYOffset");
+                }
             }
 
             if (index >= 1)
@@ -172,6 +186,10 @@ public class ThemeAssetsDrawer : PropertyDrawer
             {
                 h += FieldHeight("bushYOffset");
             }
+        }
+        else // Only for Level 5 (Element 4)
+        {
+            h += FieldHeight("playerYOffset");
         }
 
         if (index != 4)
@@ -187,12 +205,16 @@ public class ThemeAssetsDrawer : PropertyDrawer
                 h += FieldHeight("enemyColliderOffset");
             }
             
-            if (index == 2 || index >= 5)
+            if (index == 2 || index == 3 || index >= 5)
             {
                 h += FieldHeight("wallColliderSize");
                 h += FieldHeight("wallColliderOffset");
-                h += FieldHeight("longWallColliderSize");
-                h += FieldHeight("longWallColliderOffset");
+                
+                if (index == 2 || index >= 5)
+                {
+                    h += FieldHeight("longWallColliderSize");
+                    h += FieldHeight("longWallColliderOffset");
+                }
             }
             
             if (index >= 3)

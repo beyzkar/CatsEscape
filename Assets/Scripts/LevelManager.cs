@@ -14,7 +14,7 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 10, 10, 10, 10, 10 };
+    private int[] levelGoals = { 0, 5, 10, 10, 10, 10 };
 
     public float[] levelSpeeds = { 1.5f, 2.02f, 2.55f, 3.15f, 3.75f }; // Each level speed increased 1.5x
     public float[] enemySpeeds = { 0f, 0f, 1.5f, 3.0f, 4.5f, 6.0f }; // Level-specific walking speeds for enemies
@@ -47,6 +47,7 @@ public class LevelManager : MonoBehaviour
         public float longWallYOffset = 0f; // Y-offset for LongWalls
         public float enemyYOffset = 0f;    // Y-offset for Enemies
         public float bushYOffset = 0f;     // Y-offset for Bushes
+        public float playerYOffset = 0f;   // Specific Y start for Player (used mainly in Level 5)
 
         public Vector2 obstacleColliderSize = Vector2.zero; 
         public Vector2 obstacleColliderOffset = Vector2.zero;
@@ -111,6 +112,20 @@ public class LevelManager : MonoBehaviour
 
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
+        ApplyPlayerOffset();
+    }
+
+    private void ApplyPlayerOffset()
+    {
+        ThemeAssets theme = GetCurrentTheme();
+        if (playerMovement != null)
+        {
+            float targetY = (theme != null) ? theme.playerYOffset : 0f;
+            playerMovement.externalVisualYOffset = targetY;
+            
+            if (targetY != 0)
+                Debug.Log("Level " + currentLevel + ": Assigned Persistent Player Y Offset -> " + targetY);
+        }
     }
 
     private void UpdateInGameLevelText()
@@ -148,6 +163,11 @@ public class LevelManager : MonoBehaviour
         if (!Application.isPlaying)
         {
             UpdateBackgroundVisibility();
+        }
+        else
+        {
+            // Real-time tuning during playmode
+            ApplyPlayerOffset();
         }
     }
 
@@ -299,6 +319,7 @@ public class LevelManager : MonoBehaviour
 
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
+        ApplyPlayerOffset();
 
         Debug.Log("Starting Level " + currentLevel);
     }

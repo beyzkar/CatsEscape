@@ -59,17 +59,20 @@ public class PlayerMovement : MonoBehaviour
     public float rotationLeft = 300f; 
     public float rotationSpeed = 720f; // Speed of the turn-around pivot
     public int WorldDirection { get; private set; } = 1;
+    private BoxCollider2D boxCol;
 
     [Header("Intro Settings")]
     public float introSpeed = 3f;
     public float stopX = -4f;
     private bool introFinished = false;
     private bool dead = false;
+    public float externalVisualYOffset { get; set; } = 0f; // Persistent visual offset managed by LevelManager
     
     // Internal references and state
     private PlayerObstacleRules rules;
     private Animator anim;
     private float originalAbsScaleX;
+    private float originalVisualLocalY;
     private bool mobileLeft = false;
     private bool mobileRight = false;
 
@@ -83,8 +86,10 @@ public class PlayerMovement : MonoBehaviour
             rb.constraints = RigidbodyConstraints2D.FreezeRotation; // Lock physics rotation
         }
         
+        
         rules = GetComponent<PlayerObstacleRules>();
         anim = GetComponentInChildren<Animator>(); 
+        boxCol = GetComponent<BoxCollider2D>();
     }
 
     void Start()
@@ -92,6 +97,9 @@ public class PlayerMovement : MonoBehaviour
         currentJumpForce = jumpForce;
         jumpsLeft = maxJumps;
         originalAbsScaleX = Mathf.Abs(transform.localScale.x);
+        
+        // Capture original visual height to apply offsets additively
+        if (anim != null) originalVisualLocalY = anim.transform.localPosition.y;
         
         // Ensure parent rotation is locked at identity
         transform.localRotation = Quaternion.identity; 
@@ -272,6 +280,38 @@ public class PlayerMovement : MonoBehaviour
         {
             transform.position = new Vector3(clampedX, clampedY, transform.position.z);
             if (clampedX != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+        }
+
+        // Forced Base Height for Levels 1-4
+        // This ensures the cat stays at exactly -3.7 regardless of gravity or ground placement.
+        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
+        {
+            if (transform.position.y < -3.7f)
+            {
+                transform.position = new Vector3(transform.position.x, -3.7f, transform.position.z);
+                if (rb.linearVelocity.y < 0) rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0);
+            }
+        }
+
+        // Animation Overwrite Prevention:
+        // Set the animator's local Y position AFTER the animator itself has calculated its frame position.
+        // This ensures the visual cat offset works regardless of which animation is playing.
+        if (anim != null)
+        {
+            Vector3 visualPos = anim.transform.localPosition;
+            visualPos.y = originalVisualLocalY + externalVisualYOffset;
+            anim.transform.localPosition = visualPos;
+        }
+
+        // Strict Collider Enforcement for Levels 1-4 (User Request)
+        if (boxCol != null && LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
+        {
+            // Use the exact values provided by the user in Turn 218
+            boxCol.size = new Vector2(1.050137f, 1.623463f);
+            
+            // Mirror the horizontal offset based on facing direction
+            float dynamicOffsetX = 0.1874768f * WorldDirection;
+            boxCol.offset = new Vector2(dynamicOffsetX, 0.6628802f);
         }
     }
 
