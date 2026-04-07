@@ -71,7 +71,6 @@ Collision sounds and effects are protected by a debounce timer, preventing audio
 2. **Open in Unity:** Launch Unity Hub, click **Add**, and select the project folder.
 3. **Open the Scene:** In the Project window, navigate to `Assets/Scenes/` and double-click **`GameScene.unity`**.
 4. **Play:** Press the **Play** button at the top of the Unity Editor to start your escape!
-
 ---
 
 ## 🐾 Developer's Note
