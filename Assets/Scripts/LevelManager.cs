@@ -16,8 +16,8 @@ public class LevelManager : MonoBehaviour
     
     private int[] levelGoals = { 0, 5, 10, 10, 10, 10 };
 
-    public float[] levelSpeeds = { 1.5f, 2.02f, 2.55f, 3.15f, 3.75f }; // Each level speed increased 1.5x
-    public float[] enemySpeeds = { 0f, 0f, 1.5f, 3.0f, 4.5f, 6.0f }; // Level-specific walking speeds for enemies
+    public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f }; // Relaxed Geometric Scaling
+    public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f }; // Harmonized slower enemies
     
     [Header("Speed Smoothing")]
     public float speedSmoothRate = 1.5f; // Ultra-smooth acceleration for global speed

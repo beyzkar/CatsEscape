@@ -43,12 +43,14 @@ public class PlayerMovement : MonoBehaviour
     public float maxX = 5f;    // Initial right boundary
     public float acceleration = 5f;
     public float deceleration = 10f;
+    [Range(0f, 2f)] public float harmonicAgilityScale = 0.35f; // How much player speed grows with level speed
     private float currentHorizontalVelocity = 0f;
     private float targetVelocityX = 0f;
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
     public float retreatLimitX = -10f; // Limit for how far left the player can retreat
+    [Range(0f, 1f)] public float airControlMultiplier = 0.6f; // Reduced horizontal speed while in air
     [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
     public float viewportPaddingX = 1.8f; // Reduced from 4.5f to allow closer approach to edges
@@ -170,15 +172,23 @@ public class PlayerMovement : MonoBehaviour
         if (mobileLeft) hInput = -1f;
         if (mobileRight) hInput = 1f;
 
+        // PROFESSIONAL: Harmonic Agility Scaling
+        // Increase player responsiveness as the world speeds up!
+        float levelBaseSpeed = (LevelManager.Instance != null) ? LevelManager.Instance.GetCurrentBaseSpeed() : 1.2f;
+        float actualRightSpeed = moveRightSpeed + (levelBaseSpeed * harmonicAgilityScale);
+        float actualLeftSpeed = moveLeftSpeed + (levelBaseSpeed * (harmonicAgilityScale * 0.5f));
+        float actualAccel = acceleration + (levelBaseSpeed * (harmonicAgilityScale * 2f));
+        float actualDecel = deceleration + (levelBaseSpeed * (harmonicAgilityScale * 3f));
+
         // Smoothed velocity calculation with turn-brake logic
-        float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
+        float desiredVelocity = hInput * (hInput > 0 ? actualRightSpeed : actualLeftSpeed);
         
         // Detect if we are changing direction (Turning)
         bool isTurning = (desiredVelocity > 0 && currentHorizontalVelocity < 0) || 
                          (desiredVelocity < 0 && currentHorizontalVelocity > 0);
         
         // If turning, use deceleration to stop quickly first. Otherwise use acceleration/deceleration normally.
-        float accelRate = isTurning ? deceleration : (Mathf.Abs(desiredVelocity) > 0.01f ? acceleration : deceleration);
+        float accelRate = isTurning ? actualDecel : (Mathf.Abs(desiredVelocity) > 0.01f ? actualAccel : actualDecel);
         
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
         targetVelocityX = currentHorizontalVelocity;
@@ -243,6 +253,12 @@ public class PlayerMovement : MonoBehaviour
         if (!introFinished || (rules != null && rules.IsDead)) return;
 
         float finalVelocityX = targetVelocityX;
+
+        // Apply Air Control: Reduce horizontal speed if in the air to prevent "flying"
+        if (!isGrounded)
+        {
+            finalVelocityX *= airControlMultiplier;
+        }
 
         // Strict Velocity Lock: No movement allowed if strictly stuck or in recovery
         if (rules != null && rules.IsHorizontalBlocked)
@@ -312,6 +328,7 @@ public class PlayerMovement : MonoBehaviour
         if (anim != null)
         {
             Vector3 visualPos = anim.transform.localPosition;
+            visualPos.x = 0f; // Force visual to stay centered on the collider/pivot
             visualPos.y = originalVisualLocalY + externalVisualYOffset;
             anim.transform.localPosition = visualPos;
         }

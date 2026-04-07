@@ -45,16 +45,16 @@ public class ObstacleSpawner : MonoBehaviour
 
     [System.Serializable]
     public class Level1Settings {
-        public float minDistance = 20f;
-        public float maxDistance = 30f;
+        public float minDistance = 28f; // Even more relaxed
+        public float maxDistance = 38f;
         [Range(0f, 1f)] public float bagChance = 0.5f;
         [Range(0f, 1f)] public float fishChance = 0.4f;
         [Range(0f, 1f)] public float potionChance = 0.15f;
     }
     [System.Serializable]
     public class Level2Settings {
-        public float minDistance = 17f;
-        public float maxDistance = 25f;
+        public float minDistance = 24f;
+        public float maxDistance = 32f;
         [Range(0f, 1f)] public float bagChance = 0.4f;
         [Range(0f, 1f)] public float enemyChance = 0.35f;
         public GameObject levelEnemyPrefab;
@@ -63,8 +63,8 @@ public class ObstacleSpawner : MonoBehaviour
     }
     [System.Serializable]
     public class Level3Settings {
-        public float minDistance = 14f;
-        public float maxDistance = 20f;
+        public float minDistance = 20f;
+        public float maxDistance = 26f;
         [Range(0f, 1f)] public float bagChance = 0.3f;
         [Range(0f, 1f)] public float enemyChance = 0.3f;
         public GameObject levelEnemyPrefab;
@@ -75,8 +75,8 @@ public class ObstacleSpawner : MonoBehaviour
     }
     [System.Serializable]
     public class Level4Settings {
-        public float minDistance = 11f;
-        public float maxDistance = 16f;
+        public float minDistance = 15f;
+        public float maxDistance = 22f;
         [Range(0f, 1f)] public float bagChance = 0.25f;
         [Range(0f, 1f)] public float enemyChance = 0.25f;
         public GameObject levelEnemyPrefab;
@@ -87,8 +87,8 @@ public class ObstacleSpawner : MonoBehaviour
     }
     [System.Serializable]
     public class Level5Settings {
-        public float minDistance = 9f;
-        public float maxDistance = 13f;
+        public float minDistance = 12f;
+        public float maxDistance = 16f;
         [Range(0f, 1f)] public float fishChance = 0.05f;
         [Range(0f, 1f)] public float potionChance = 0.03f;
         [Range(0f, 1f)] public float pitChance = 0.3f; 

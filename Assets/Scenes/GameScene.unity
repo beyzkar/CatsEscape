@@ -2686,13 +2686,16 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  moveRightSpeed: 5
-  moveLeftSpeed: 7
+  moveRightSpeed: 9
+  moveLeftSpeed: 6
   minX: -100
   maxX: 100
   acceleration: 20
   deceleration: 25
+  harmonicAgilityScale: 0.35
   useViewportClamping: 1
+  retreatLimitX: -10
+  airControlMultiplier: 0.6
   xScrollLimit: 0.5
   viewportPaddingX: 0.5
   rotationRight: 120
@@ -3278,7 +3281,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &525559374
 Transform:
   m_ObjectHideFlags: 0
@@ -19231,21 +19234,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 1
+  currentLevel: 3
   obstaclesPassed: 0
   levelSpeeds:
-  - 1
-  - 1.2
-  - 1.4
+  - 0.8
+  - 1.1
+  - 1.3
   - 1.6
-  - 1.6
+  - 1.8
   enemySpeeds:
   - 0
   - 0
+  - 0.8
   - 1.5
-  - 3
-  - 4.5
-  - 6
+  - 2.2
   speedSmoothRate: 4.5
   victoryPanel: {fileID: 371110517}
   levelStatusText: {fileID: 2133008544}
@@ -19428,7 +19430,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0
