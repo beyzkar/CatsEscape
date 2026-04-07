@@ -1,70 +1,63 @@
-# CatsEscape 🐾
+# 🐱 CatsEscape: A Professional 2D Runner Experience
 
-CatsEscape is a dynamic 2D infinite runner developed in Unity. Take control of a nimble cat navigating through increasingly difficult urban environments, dodging obstacles, and collecting rewards to safely find its way home.
-
----
-
-## 🌟 Key Features
-
-### 🐈 Character Selection
-Choose your feline hero from the main menu before starting your journey. The game supports multiple cat characters with unique visual styles.
-
-### 🎮 Dynamic Level & Speed System
-Experience a tiered difficulty system across **5 distinct levels**, each with unique environmental themes, obstacle sets, and **progressive speed scaling**:
-- **Level 1 (Mountain):** Calm start with basic hazards like Obstacle Bags.
-- **Level 2 (Desert):** Increased complexity. Rewards are **locked** until 3 lethal obstacles are passed.
-- **Level 3 (Graveyard):** Eerie challenges featuring the Wall obstacle and 1.7x speed.
-- **Level 4 (Snow):** High-speed trek with Barbed Wire and blistering 2.1x speed.
-- **Level 5 (Forest):** The ultimate challenge featuring **dynamic pits** and bridge mechanics. Rewards are rare (80-unit cooldown).
-
-### 🧪 Potion Power-up
-Find the rare **Potion Bottle** to transform your cat!
-- **Growth:** Become 1.5x larger and gain a speed surge.
-- **Super Jump:** Massive air-time for clearing large obstacles.
-- **Heart Protection:** Active potions absorb one hit from enemies/bushes, saving your life but ending the effect.
-
-### 🧠 Advanced Gameplay Logic
-- **Skill-Lock System:** In intermediate levels, rewards (Fish/Potion) only spawn after proving mastery by jumping over **3 lethal obstacles**.
-- **Lethal Recognition:** Only Enemies and Bushes count towards unlocking rewards; simple bags do not trigger the skill count.
-- **Collision Polish:** Optimized interaction logic that eliminates visual gaps between the cat and obstacles for a more natural feel.
-
-### 🛠️ Smart Physics & Environment
-- **Smart Auto-Fit Colliders:** A unique algorithm calculates "Tight Bounds" for every sprite, automatically excluding transparent pixels for pixel-perfect collisions.
-- **Manual Physics Overrides:** Support for per-level custom collider dimensions and **PhysicsMaterial2D** (friction/bounciness) via the Inspector.
-- **Intelligent Parallax:** Multi-layered backgrounds with cinematic depth and precise alignment for seamless looping.
-- **Dynamic Terrain (Level 5):** Procedural ground system that generates pits where the cat can fall (boundary clamping disabled).
+**CatsEscape** is a high-octane, side-scrolling 2D runner built with Unity. It features a sophisticated difficulty scaling system, thematic level transitions, and precision-engineered player mechanics. Escape the obstacles, brave the enemies, and lead your cat to safety across 5 challenging levels.
 
 ---
 
-## 🕹️ Controls
+## 🎮 Key Gameplay Features
 
-| Action | Control |
-| :--- | :--- |
-| **Jump** | `Space Bar`, `Up Arrow`, or `Left Mouse Click` |
-| **Double Jump** | Press while in mid-air |
-| **Movement** | `A/D` or `Arrow Keys` (Viewport padding floor: 1.2) |
+### 🏁 5 Thematic Levels
+Experience 5 unique environments, each with its own visual style, background music, and obstacle set. From tutorial-style intro levels to high-intensity final runs.
+
+### 📈 Professional Difficulty Scaling
+- **Geometric Speed Ramping:** Game speed doesn't just increase—it scales geometrically (from 0.8x to 2.6x), ensuring a rewarding learning curve.
+- **Harmonic Agility:** As the world speeds up, the cat’s responsiveness (Acceleration/Turn speed) automatically scales, keeping the gameplay tight and reactive at any speed.
+- **Dynamic Obstacle Density:** Obstacle spawn distances tighten as you progress, demanding quicker reflexes and better timing.
+
+### 🐈 Advanced Player Mechanics
+- **Precision Movement:** Crisp horizontal controls with physics-based acceleration and deceleration.
+- **Multi-Jump System:** Single and Double jump capabilities with "Mobile-First" design in mind.
+- **Horizontal Air Control:** Fine-tuned mid-air movement allows for precise landings, with horizontal speed reduced while airborne for added control.
+- **Viewport Clamping:** Smart camera-clamping logic ensures the player stays within the visual frame at all times.
 
 ---
 
-## 🛠️ Technical Architecture
+## 🛠 Technical Highlights
 
-- **Engine:** Unity 2D (C#)
-- **Weighted Spawner:** Procedural generation using level-aware probability distributions and skill-based filters.
-- **JSON Persistence:** High-score data management using `JsonUtility`.
-- **Theme Manager:** Centralized `LevelManager` handling sprites, scales, and audio per level theme.
+### 🕹️ Intelligent Spawning System (`ObstacleSpawner`)
+A procedural distance-based spawning engine that manages:
+- **Obstacle Variety:** Bags, Walls, Long Walls, and Bushes.
+- **Enemy AI:** Level-specific enemies that walk and interact based on the game's current speed.
+- **Reward Engine:** Balanced spawning of Fish (Score) and Potions (Health).
+
+### 📐 Dynamic Theme System (`ObstacleThemeSetter`)
+A robust data-driven system that updates sprites, scales, and colliders on-the-fly to match the current level's theme, ensuring visual and physical consistency.
+
+### ❄️ Strategic "World Freeze" Mechanic
+The cat can backtrack only up to **one full screen width**. If the player retreats too far, the world "freezes" (Stuck state), forcing the player to move forward to resume progress.
+
+### 🔊 Audio Debouncing & Optimization
+Collision sounds and effects are protected by a debounce timer, preventing audio stuttering and redundant logic triggers during wall interactions.
 
 ---
 
-## 🚀 Getting Started
+## ⌨️ Controls
 
-### Prerequisites
-- **Unity Editor** (Recommended: 2021.3 LTS or newer)
-- **TextMeshPro** package
+| Action | Keyboard | Mobile |
+| :--- | :--- | :--- |
+| **Move Left** | `A` or `Left Arrow` | Left Side Hold |
+| **Move Right**| `D` or `Right Arrow` | Right Side Hold |
+| **Jump**      | `Space` or `Up Arrow`| Tap Center |
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/beyzkar/CatsEscape.git
-   ```
-2. Open the project in Unity.
-3. Use the `Main Menu` scene to start your adventure.
+---
+
+## 🚀 Technical Architecture
+- **Language:** C#
+- **Engine:** Unity 2022+
+- **Rendering:** 2D Sprite-based with layering
+- **Physics:** Rigidbody2D with custom kinematic-style interpolation
+
+---
+
+## 🐾 Developer's Note
+*This project was meticulously refined to ensure every jump feels heavy, every collision feels fair, and every level feels like a new challenge. Enjoy the escape!*
