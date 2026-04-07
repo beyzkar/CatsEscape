@@ -59,5 +59,20 @@ Collision sounds and effects are protected by a debounce timer, preventing audio
 
 ---
 
+## 🚀 Getting Started
+
+### Prerequisites
+- **Unity Hub** installed.
+- **Unity 2022.3+** (Long Term Support version recommended).
+- **Git** (optional, for cloning).
+
+### Installation & Running
+1. **Clone or Download:** Clone this repository using `git clone https://github.com/beyzkar/CatsEscape.git` or download the ZIP file and extract it.
+2. **Open in Unity:** Launch Unity Hub, click **Add**, and select the project folder.
+3. **Open the Scene:** In the Project window, navigate to `Assets/Scenes/` and double-click **`GameScene.unity`**.
+4. **Play:** Press the **Play** button at the top of the Unity Editor to start your escape!
+s
+---
+
 ## 🐾 Developer's Note
 *This project was meticulously refined to ensure every jump feels heavy, every collision feels fair, and every level feels like a new challenge. Enjoy the escape!*
