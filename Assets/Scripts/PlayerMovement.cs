@@ -7,9 +7,9 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Jump Settings")]
     public float jumpForce = 12f;
-    public float fallMultiplier = 2.5f; // Düşerken uygulanacak yerçekimi çarpanı
-    public float lowJumpMultiplier = 2f; // Tuşa kısa basınca uygulanacak çarpan
-    private float currentJumpForce;
+    public float fallMultiplier = 2.5f; 
+    public float lowJumpMultiplier = 2f; // Bunu geri ekliyorum, FixedUpdate içinde kullanılıyor
+    private float currentJumpMultiplier = 1f;
     public int maxJumps = 2; 
     private int jumpsLeft;
 
@@ -104,7 +104,6 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
-        currentJumpForce = jumpForce;
         jumpsLeft = maxJumps;
         originalAbsScaleX = Mathf.Abs(transform.localScale.x);
         
@@ -226,11 +225,26 @@ public class PlayerMovement : MonoBehaviour
         if (anim == null || !anim.gameObject.activeInHierarchy)
             anim = GetComponentInChildren<Animator>();
 
-        // Animation state management (Locked to Idle when stuck)
+        // Retro (Geriye Gidiş) Sınır Kontrolü ve Oyun Dondurma
+        bool isAtRetreatLimit = (DistanceGap >= FullScreenWidth && hInput < 0);
+        
+        if (isAtRetreatLimit)
+        {
+            GameSpeed.Multiplier = 0f; // Dünyayı dondur
+            currentHorizontalVelocity = 0f;
+            targetVelocityX = 0f;
+        }
+        else
+        {
+            GameSpeed.Multiplier = 1f; // Dünyayı çöz
+        }
+
+        // Animation state management
         if (anim != null)
         {
-            bool isStuck = (rules != null && rules.IsStuck);
+            bool isStuck = (rules != null && rules.IsStuck) || isAtRetreatLimit;
             bool isMovingInput = (hInput != 0) && !isStuck;
+            
             anim.SetBool("walking", isMovingInput);
             anim.SetBool("Idle", !isMovingInput || isStuck);
         }
@@ -272,21 +286,32 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate()
     {
         UpdateViewportBounds();
+
+        // 1. KİLİT MEKANİZMASI: Mesafe hesaplanmadan önce hızları sıfırlıyoruz (Mikro kaymayı önler)
+        if (rules != null && rules.IsHorizontalBlocked && targetVelocityX > 0)
+        {
+            targetVelocityX = 0f;
+            currentHorizontalVelocity = 0f;
+        }
         
-        // UNIFIED Movement logic: Calculate desired step
+        if (DistanceGap >= FullScreenWidth && targetVelocityX < 0)
+        {
+            targetVelocityX = 0f;
+            currentHorizontalVelocity = 0f;
+        }
+
+        if (!introFinished || (rules != null && rules.IsDead)) return;
+
+        // 2. HAREKET HESABI (Sıfırlanmış değerler üzerinden)
         float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
         
-        // Prevent distance tracking from going negative BEYOND what's visually possible at the screen edge
-        // This ensures the "Stuck" state only triggers if the world flow truly pushes them back.
         if (transform.position.x <= bottomLeft.x + viewportPaddingX + 0.1f && distanceStep < 0)
         {
-            distanceStep = 0; // Don't accumulate "backtrack" if already at the visual edge
+            distanceStep = 0; 
         }
 
         totalDistance += distanceStep;
         if (totalDistance > peakDistance) peakDistance = totalDistance;
-
-        if (!introFinished || (rules != null && rules.IsDead)) return;
 
         float finalVelocityX = targetVelocityX;
 
@@ -296,19 +321,9 @@ public class PlayerMovement : MonoBehaviour
             finalVelocityX *= airControlMultiplier;
         }
 
-        // Strict Velocity Lock: No movement allowed if strictly stuck or in recovery
-        if (rules != null && rules.IsHorizontalBlocked)
-        {
-            if (finalVelocityX > 0) finalVelocityX = 0f;
-            if (rules.IsStuck && finalVelocityX > 0) finalVelocityX = 0f;
-        }
-
-        // Distance-Based Retreat Limit: Exactly 1 FULL screen width behind furthest progress
-        if (DistanceGap >= FullScreenWidth && finalVelocityX < 0) finalVelocityX = 0;
+        // 3. FİNAL HIZ KISITLAMALARI (Viewport ve Limitler)
+        if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0f;
         
-        // Viewport clamping (for visual boundaries)
-        if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0;
-
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
 
         // BETTER JUMP Mekaniği: Havada asılı kalmayı önler ve düşüşü hızlandırır
@@ -337,22 +352,14 @@ public class PlayerMovement : MonoBehaviour
         UpdateViewportBounds();
         
         if (!useViewportClamping) return;
-        float currentMinY = bottomLeft.y;
+        
+        // Sadece X ekseninde (Sağ-Sol) kısıtlama uyguluyoruz
         float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
         
-        float effectiveMinY = bottomLeft.y;
-        if (LevelManager.Instance != null)
+        if (clampedX != transform.position.x)
         {
-            if (LevelManager.Instance.currentLevel == 5) effectiveMinY = -20f;
-            else effectiveMinY = -3.7f;
-        }
-        
-        float clampedY = Mathf.Clamp(transform.position.y, effectiveMinY, topRight.y);
-
-        if (clampedX != transform.position.x || clampedY != transform.position.y)
-        {
-            transform.position = new Vector3(clampedX, clampedY, transform.position.z);
-            if (clampedX != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         }
 
          if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
@@ -404,7 +411,8 @@ public class PlayerMovement : MonoBehaviour
         if (jumpsLeft <= 0) return;  
 
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
-        rb.AddForce(Vector2.up * currentJumpForce, ForceMode2D.Impulse);
+        // Doğrudan güncel jumpForce değerini kullanıyoruz
+        rb.AddForce(Vector2.up * (jumpForce * currentJumpMultiplier), ForceMode2D.Impulse);
 
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlayJump();
@@ -412,8 +420,8 @@ public class PlayerMovement : MonoBehaviour
         jumpsLeft--;
     }
 
-    public void SetJumpMultiplier(float multiplier) => currentJumpForce = jumpForce * multiplier;
-    public void ResetJumpMultiplier() => currentJumpForce = jumpForce;
+    public void SetJumpMultiplier(float multiplier) => currentJumpMultiplier = multiplier;
+    public void ResetJumpMultiplier() => currentJumpMultiplier = 1f;
 
     // Mobile input flags management
     public void SetMoveLeft(bool isMoving) { mobileLeft = isMoving; }
@@ -422,7 +430,7 @@ public class PlayerMovement : MonoBehaviour
     public bool IsMovingLeft => Input.GetKey(KeyCode.LeftArrow) || mobileLeft;
     public bool IsMovingRight => Input.GetKey(KeyCode.RightArrow) || mobileRight;
     
-    public float CurrentVelocityX => currentHorizontalVelocity;
+    public float CurrentVelocityX => (rules != null && (rules.IsHorizontalBlocked || GameSpeed.Multiplier <= 0.01f) && currentHorizontalVelocity > 0) ? 0f : currentHorizontalVelocity;
     
     public void MobileJumpDown()
     {
@@ -450,7 +458,8 @@ public class PlayerMovement : MonoBehaviour
         // Dinamik olarak ekran kenarlarını dünya koordinatlarına çeviriyoruz
         Vector3 trueLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
         bottomLeft = trueLeft; // LateUpdate içinde Y ekseni kısıtlaması için gerekli
-        Vector3 trueRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+        topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist)); // Genişlik hesaplamaları için güncelliyoruz
+        Vector3 trueRight = topRight;
         Vector3 trueCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0, zDist)); // Ekranın tam ortası
 
         FullScreenWidth = trueRight.x - trueLeft.x;
@@ -462,10 +471,11 @@ public class PlayerMovement : MonoBehaviour
         
         float effectivePadding = Mathf.Max(viewportPaddingX, 0.7f);
         
-        minX = trueLeft.x + effectivePadding;
-        maxX = trueCenter.x; // Tam orta nokta
+        // Final Sınırlar: Sol sabit -9, Sağ ekranın tam ortası
+        minX = -9f; 
+        maxX = trueCenter.x; 
 
-        // Güvenlik: minX, maxX'ten büyük olamaz
+        // Güvenlik: minX, maxX'ten büyük olamaz (Eğer ekran çok küçükse)
         if (minX > maxX - 0.5f) minX = maxX - 0.5f;
     }
 

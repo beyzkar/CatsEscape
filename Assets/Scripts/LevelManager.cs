@@ -156,7 +156,15 @@ public class LevelManager : MonoBehaviour
         // Smoothly transition the actual GameSpeed.Multiplier towards the target
         if (targetGameMultiplier != GameSpeed.Multiplier)
         {
-            GameSpeed.Multiplier = Mathf.MoveTowards(GameSpeed.Multiplier, targetGameMultiplier, speedSmoothRate * Time.deltaTime);
+            // MEGA DÜZELTME: Eğer hedef 0 ise (engel çarpması), bekletmeden anında durdur
+            if (targetGameMultiplier == 0f) 
+            {
+                GameSpeed.Multiplier = 0f;
+            }
+            else
+            {
+                GameSpeed.Multiplier = Mathf.MoveTowards(GameSpeed.Multiplier, targetGameMultiplier, speedSmoothRate * Time.deltaTime);
+            }
         }
 
         // If the goal is reached, show victory only when the cat is grounded

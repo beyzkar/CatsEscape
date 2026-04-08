@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PlayerObstacleRules : MonoBehaviour
 {
-    public float topNormalThreshold = 0.4f;
+    public float topNormalThreshold = 0.7f; // Daha yüksek değer = daha hassas yan vuruş algılama
 
     [Header("Hearts (Wall hits)")]
     public GameObject[] heartUI;
@@ -428,9 +428,8 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (isMovingAway) return;
 
-            // Side hit (hitting the wall)
-            // Loosened from 0.4f to 0.3f to catch diagonal/corner hits that should still stop the player
-            bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.3f);
+            // Yan vuruş (duvara çarpma): Hassasiyeti artırdık (0.3 -> 0.1)
+            bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.1f);
             if (shouldFreeze) 
             {
                 lastHitNormalX = normal.x;
