@@ -43,19 +43,19 @@ public class PlayerMovement : MonoBehaviour
     public float maxX = 5f;    // Initial right boundary
     public float acceleration = 5f;
     public float deceleration = 10f;
-    [Range(0f, 2f)] public float harmonicAgilityScale = 0.35f; // How much player speed grows with level speed
     private float currentHorizontalVelocity = 0f;
     private float targetVelocityX = 0f;
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
-    public float retreatLimitX = -10f; // Limit for how far left the player can retreat
     [Range(0f, 1f)] public float airControlMultiplier = 0.6f; // Reduced horizontal speed while in air
     [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
-    public float viewportPaddingX = 1.8f; // Reduced from 4.5f to allow closer approach to edges
+    public float viewportPaddingX = 0.9f; // Balanced buffer to prevent hiding under the notch
     private Vector3 bottomLeft;
     private Vector3 topRight;
+    private float levelAnchorX; // Universal anchor for the level start
+    private float peakCameraX = -1000f; // Furthest right the camera edge has reached
 
     [Header("Visual Orientation")]
     public float rotationRight = 120f;
@@ -106,6 +106,21 @@ public class PlayerMovement : MonoBehaviour
         jumpsLeft = maxJumps;
         originalAbsScaleX = Mathf.Abs(transform.localScale.x);
         
+        // UNIVERSAL PARITY: Force camera to standard Level 1 settings
+        if (Camera.main != null)
+        {
+            Camera.main.orthographicSize = 5f; // Standardize zoom level
+        }
+
+        // PROFESSIONAL: Initialize screen dimensions for backtracking logic
+        UpdateViewportBounds();
+        FullScreenWidth = topRight.x - bottomLeft.x;
+        
+        // Reset progress tracking to current camera position at level start
+        peakCameraX = bottomLeft.x;
+        
+        ResetRetreatLimit(); // Set the fixed boundary for this level
+
         // Capture original visual height to apply offsets additively
         if (anim != null) originalVisualLocalY = anim.transform.localPosition.y;
         totalDistance = 0f;
@@ -113,6 +128,20 @@ public class PlayerMovement : MonoBehaviour
         
         // Ensure parent rotation is locked at identity
         transform.localRotation = Quaternion.identity; 
+    }
+
+    public void ResetRetreatLimit()
+    {
+        // UNIVERSAL: Set the fixed world-space anchor for the current level
+        levelAnchorX = transform.position.x;
+        
+        // Force bounds update to get fresh bottomLeft coordinates
+        UpdateViewportBounds(); 
+        peakCameraX = bottomLeft.x; // Initialize to current edge
+        
+        // Reset progress tracking to ensure consistency across all level transitions
+        totalDistance = 0f;
+        peakDistance = 0f;
     }
 
     public void SetDead(bool isDead)
@@ -172,13 +201,11 @@ public class PlayerMovement : MonoBehaviour
         if (mobileLeft) hInput = -1f;
         if (mobileRight) hInput = 1f;
 
-        // PROFESSIONAL: Harmonic Agility Scaling
-        // Increase player responsiveness as the world speeds up!
-        float levelBaseSpeed = (LevelManager.Instance != null) ? LevelManager.Instance.GetCurrentBaseSpeed() : 1.2f;
-        float actualRightSpeed = moveRightSpeed + (levelBaseSpeed * harmonicAgilityScale);
-        float actualLeftSpeed = moveLeftSpeed + (levelBaseSpeed * (harmonicAgilityScale * 0.5f));
-        float actualAccel = acceleration + (levelBaseSpeed * (harmonicAgilityScale * 2f));
-        float actualDecel = deceleration + (levelBaseSpeed * (harmonicAgilityScale * 3f));
+        // FIXED MOVEMENT: Removed Harmonic Agility Scaling for simpler, predictable controls
+        float actualRightSpeed = moveRightSpeed;
+        float actualLeftSpeed = moveLeftSpeed;
+        float actualAccel = acceleration;
+        float actualDecel = deceleration;
 
         // Smoothed velocity calculation with turn-brake logic
         float desiredVelocity = hInput * (hInput > 0 ? actualRightSpeed : actualLeftSpeed);
@@ -244,9 +271,16 @@ public class PlayerMovement : MonoBehaviour
     {
         UpdateViewportBounds();
         
-        // Progress Tracking: Accumulate distance based on movement and game multiplier
-        // This works perfectly in both fixed worlds and scrolling worlds!
+        // UNIFIED Movement logic: Calculate desired step
         float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
+        
+        // Prevent distance tracking from going negative BEYOND what's visually possible at the screen edge
+        // This ensures the "Stuck" state only triggers if the world flow truly pushes them back.
+        if (transform.position.x <= bottomLeft.x + viewportPaddingX + 0.1f && distanceStep < 0)
+        {
+            distanceStep = 0; // Don't accumulate "backtrack" if already at the visual edge
+        }
+
         totalDistance += distanceStep;
         if (totalDistance > peakDistance) peakDistance = totalDistance;
 
@@ -290,12 +324,9 @@ public class PlayerMovement : MonoBehaviour
         UpdateViewportBounds();
         
         if (!useViewportClamping) return;
-
-        // Enforce strict clamping for visuals (minX and maxX are screen boundaries)
         float currentMinY = bottomLeft.y;
         float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
         
-        // Standard floor for Levels 1-4 is -3.7. Level 5 has pits!
         float effectiveMinY = bottomLeft.y;
         if (LevelManager.Instance != null)
         {
@@ -311,9 +342,7 @@ public class PlayerMovement : MonoBehaviour
             if (clampedX != transform.position.x) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         }
 
-        // Forced Base Height for Levels 1-4
-        // This ensures the cat stays at exactly -3.7 regardless of gravity or ground placement.
-        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
+         if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
         {
             if (transform.position.y < -3.7f)
             {
@@ -322,10 +351,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // Animation Overwrite Prevention:
-        // Set the animator's local Y position AFTER the animator itself has calculated its frame position.
-        // This ensures the visual cat offset works regardless of which animation is playing.
-        if (anim != null)
+         if (anim != null)
         {
             Vector3 visualPos = anim.transform.localPosition;
             visualPos.x = 0f; // Force visual to stay centered on the collider/pivot
@@ -333,11 +359,9 @@ public class PlayerMovement : MonoBehaviour
             anim.transform.localPosition = visualPos;
         }
 
-        // Strict Collider Enforcement for Levels 1-4 (User Request)
         if (boxCol != null && LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
         {
-            // Use the exact values provided by the user in Turn 218
-            boxCol.size = new Vector2(1.050137f, 1.623463f);
+           boxCol.size = new Vector2(1.050137f, 1.623463f);
             
             // Mirror the horizontal offset based on facing direction
             float dynamicOffsetX = 0.1874768f * WorldDirection;
@@ -410,17 +434,34 @@ public class PlayerMovement : MonoBehaviour
 
         float zDist = Mathf.Abs(cam.transform.position.z);
         bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
-        topRight = cam.ViewportToWorldPoint(new Vector3(xScrollLimit, 1, zDist));
+        
+        // TRUE SCREEN EDGES: We need the full width for clamping
+        Vector3 trueLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
         Vector3 trueRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
 
-        FullScreenWidth = trueRight.x - bottomLeft.x;
-
-        // Enforce a minimum safe padding to stay away from the notch/edge
-        // Set to 1.2f to provide a comfortable margin on the left
-        float effectivePadding = Mathf.Max(viewportPaddingX, 1.2f);
-        minX = bottomLeft.x + effectivePadding;
-        maxX = topRight.x - effectivePadding; 
+        FullScreenWidth = trueRight.x - trueLeft.x;
         ScreenMaxX = trueRight.x;
+
+        // ONE-WAY MIRROR SYSTEM: Update the furthest screen edge reached 
+        if (trueLeft.x > peakCameraX) peakCameraX = trueLeft.x;
+        
+        // 1-SCREEN RETREAT LIMIT: Calculate the absolute world-space wall
+        float hardRetreatWall = peakDistance - FullScreenWidth;
+
+        // SAFE PADDING: Use standardized padding for comfort
+        float effectivePadding = Mathf.Max(viewportPaddingX, 0.7f);
+        
+        // Final minX Calculation:
+        // Must be at least the screen edge + padding, OR the retreat wall.
+        minX = Mathf.Max(trueLeft.x + effectivePadding, hardRetreatWall);
+        
+        // Final maxX Calculation:
+        // Purely limited by the RIGHT screen edge! 
+        maxX = trueRight.x - effectivePadding; 
+
+        // SAFETY: If for some reason minX exceeds maxX (e.g. during rapid camera shifts), 
+        // force them to be at least valid relative to each other.
+        if (minX > maxX - 0.5f) minX = maxX - 0.5f;
     }
 
     public void ResetHorizontalVelocity()

@@ -92,20 +92,35 @@ public class LevelManager : MonoBehaviour
     private bool pendingVictory = false;
     private PlayerMovement playerMovement;
 
+    private void Start()
+    {
+        // PROFESSIONAL: Self-Healing Camera Init
+        // This forces the screen to clear every frame, fixing the "ghosting" effect
+        if (Camera.main != null)
+        {
+            Camera.main.clearFlags = CameraClearFlags.SolidColor;
+            Camera.main.backgroundColor = new Color(0.12f, 0.12f, 0.16f); // Deep professional blue
+        }
+    }
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
-        // Ensure level persistence
-        if (savedLevel == -1)
+        // --- HIGHLANDER PATTERN: FORCE SINGLE PLAYER ---
+        // Find ALL objects that might be a player and destroy any extras!
+        PlayerMovement[] allPlayers = Object.FindObjectsByType<PlayerMovement>(FindObjectsSortMode.None);
+        if (allPlayers.Length > 1)
         {
-            savedLevel = currentLevel;
+            Debug.LogWarning("LEVEL MANAGER: Duplicate players found! Cleaning up the scene...");
+            for (int i = 1; i < allPlayers.Length; i++) 
+            {
+                // Bir tanesini (genellikle ilk bulunmayanı) yok ediyoruz
+                Destroy(allPlayers[i].gameObject);
+            }
         }
-        else
-        {
-            currentLevel = savedLevel;
-        }
+        // -----------------------------------------------
 
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null) playerMovement = p.GetComponent<PlayerMovement>();
