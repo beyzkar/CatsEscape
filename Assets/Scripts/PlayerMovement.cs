@@ -7,6 +7,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Jump Settings")]
     public float jumpForce = 12f;
+    public float fallMultiplier = 2.5f; // Düşerken uygulanacak yerçekimi çarpanı
+    public float lowJumpMultiplier = 2f; // Tuşa kısa basınca uygulanacak çarpan
     private float currentJumpForce;
     public int maxJumps = 2; 
     private int jumpsLeft;
@@ -309,6 +311,17 @@ public class PlayerMovement : MonoBehaviour
 
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
 
+        // BETTER JUMP Mekaniği: Havada asılı kalmayı önler ve düşüşü hızlandırır
+        if (rb.linearVelocity.y < 0) // Kedi aşağı düşüyorsa
+        {
+            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
+        }
+        else if (rb.linearVelocity.y > 0 && !(Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.UpArrow) || mobileRight || mobileLeft)) 
+        {
+            // Kedi yukarı çıkıyor ama zıplama tuşu bırakıldıysa (Kısa zıplama)
+            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
+        }
+
         // Position enforcement for hard screen boundaries (X and Y)
         // Note: Distance clamping only limits VELOCITY to prevent backtracking.
         // Screen position clamping handles the visuals.
@@ -433,34 +446,26 @@ public class PlayerMovement : MonoBehaviour
         if (cam == null) return;
 
         float zDist = Mathf.Abs(cam.transform.position.z);
-        bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
         
-        // TRUE SCREEN EDGES: We need the full width for clamping
+        // Dinamik olarak ekran kenarlarını dünya koordinatlarına çeviriyoruz
         Vector3 trueLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
+        bottomLeft = trueLeft; // LateUpdate içinde Y ekseni kısıtlaması için gerekli
         Vector3 trueRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+        Vector3 trueCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0, zDist)); // Ekranın tam ortası
 
         FullScreenWidth = trueRight.x - trueLeft.x;
         ScreenMaxX = trueRight.x;
 
-        // ONE-WAY MIRROR SYSTEM: Update the furthest screen edge reached 
-        if (trueLeft.x > peakCameraX) peakCameraX = trueLeft.x;
+        // MARIO TARZI SINIRLAR:
+        // minX: Sol ekran kenarı + padding
+        // maxX: Ekranın tam ortası (0.5 Viewport)
         
-        // 1-SCREEN RETREAT LIMIT: Calculate the absolute world-space wall
-        float hardRetreatWall = peakDistance - FullScreenWidth;
-
-        // SAFE PADDING: Use standardized padding for comfort
         float effectivePadding = Mathf.Max(viewportPaddingX, 0.7f);
         
-        // Final minX Calculation:
-        // Must be at least the screen edge + padding, OR the retreat wall.
-        minX = Mathf.Max(trueLeft.x + effectivePadding, hardRetreatWall);
-        
-        // Final maxX Calculation:
-        // Purely limited by the RIGHT screen edge! 
-        maxX = trueRight.x - effectivePadding; 
+        minX = trueLeft.x + effectivePadding;
+        maxX = trueCenter.x; // Tam orta nokta
 
-        // SAFETY: If for some reason minX exceeds maxX (e.g. during rapid camera shifts), 
-        // force them to be at least valid relative to each other.
+        // Güvenlik: minX, maxX'ten büyük olamaz
         if (minX > maxX - 0.5f) minX = maxX - 0.5f;
     }
 

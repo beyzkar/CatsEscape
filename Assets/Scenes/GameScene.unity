@@ -2853,7 +2853,6 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420033}
   - component: {fileID: 519420034}
-  - component: {fileID: 519420035}
   m_Layer: 7
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2995,21 +2994,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
---- !u!114 &519420035
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41b1143b40c344aefb99ccd2eeac656a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
-  target: {fileID: 558111045}
-  smoothSpeed: 0.125
-  offset: {x: 0, y: 0, z: -10}
 --- !u!1 &525559373
 GameObject:
   m_ObjectHideFlags: 0
@@ -3542,6 +3526,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   jumpForce: 15
+  fallMultiplier: 3
+  lowJumpMultiplier: 2
   maxJumps: 2
   deathThresholdY: -4.2
   groundCheck: {fileID: 1262483934}
@@ -3555,7 +3541,6 @@ MonoBehaviour:
   maxX: 100
   acceleration: 20
   deceleration: 25
-  harmonicAgilityScale: 0.35
   useViewportClamping: 1
   airControlMultiplier: 0.6
   xScrollLimit: 0.35
@@ -3580,7 +3565,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 3
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
