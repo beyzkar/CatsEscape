@@ -1,77 +1,59 @@
-# 🐱 CatsEscape: A Professional 2D Runner Experience
+# CatsEscape
 
-**CatsEscape** is a high-octane, side-scrolling 2D runner built with Unity. It features a sophisticated difficulty scaling system, thematic level transitions, and precision-engineered player mechanics. Escape the obstacles, brave the enemies, and lead your cat to safety across 5 challenging levels.
+**CatsEscape** is a stylized, fast-paced 2D side-scrolling runner built with Unity. Take control of a nimble cat navigating through various environments, avoiding obstacles, jumping over pitfalls, and collecting power-ups across 5 unique levels.
 
----
+## 🐾 How to Play
 
-## 🎮 Key Gameplay Features
+### Controls
+*   **Move Left/Right:** `A / D` or `Left / Right Arrow`
+*   **Jump / Double Jump:** `Space` or `Up Arrow`
+*   **Mobile Support:** On-screen buttons for movement and jumping.
 
-### 🏁 5 Thematic Levels
-Experience 5 unique environments, each with its own visual style, background music, and obstacle set. From tutorial-style intro levels to high-intensity final runs.
-
-### 📈 Professional Difficulty Scaling
-- **Geometric Speed Ramping:** Game speed doesn't just increase—it scales geometrically (from 0.8x to 2.6x), ensuring a rewarding learning curve.
-- **Harmonic Agility:** As the world speeds up, the cat’s responsiveness (Acceleration/Turn speed) automatically scales, keeping the gameplay tight and reactive at any speed.
-- **Dynamic Obstacle Density:** Obstacle spawn distances tighten as you progress, demanding quicker reflexes and better timing.
-
-### 🐈 Advanced Player Mechanics
-- **Precision Movement:** Crisp horizontal controls with physics-based acceleration and deceleration.
-- **Multi-Jump System:** Single and Double jump capabilities with "Mobile-First" design in mind.
-- **Horizontal Air Control:** Fine-tuned mid-air movement allows for precise landings, with horizontal speed reduced while airborne for added control.
-- **Viewport Clamping:** Smart camera-clamping logic ensures the player stays within the visual frame at all times.
+### Objective
+Navigate through the levels by dodging hurdles, obstacles, and enemies. Your progress is measured by your cumulative distance and "Obstacles Passed." Reach the goal for each level to unlock the next environment!
 
 ---
 
-## 🛠 Technical Highlights
+## ✨ Features
 
-### 🕹️ Intelligent Spawning System (`ObstacleSpawner`)
-A procedural distance-based spawning engine that manages:
-- **Obstacle Variety:** Bags, Walls, Long Walls, and Bushes.
-- **Enemy AI:** Level-specific enemies that walk and interact based on the game's current speed.
-- **Reward Engine:** Balanced spawning of Fish (Score) and Potions (Health).
-
-### 📐 Dynamic Theme System (`ObstacleThemeSetter`)
-A robust data-driven system that updates sprites, scales, and colliders on-the-fly to match the current level's theme, ensuring visual and physical consistency.
-
-### ❄️ Strategic "World Freeze" Mechanic
-The cat can backtrack only up to **one full screen width**. If the player retreats too far, the world "freezes" (Stuck state), forcing the player to move forward to resume progress.
-
-### 🔊 Audio Debouncing & Optimization
-Collision sounds and effects are protected by a debounce timer, preventing audio stuttering and redundant logic triggers during wall interactions.
+-   **5 Thematic Levels:** Each level features unique background art, varying speeds, and specialized obstacles.
+-   **Character Selection:** Multiple cat skins with beautiful animations (Idle, Walk, Jump).
+-   **Advanced Physics:** Custom "Better Jump" mechanics for responsive, snappy control. 
+-   **Power-Ups:**
+    -   **Fish:** Collect to restore hearts and gain XP.
+    -   **Potions:** Temporarily turns the cat "Big," granting speed boosts and higher jumps.
+-   **Dynamic World:** Parallax scrolling backgrounds and a procedural obstacle spawning system.
+-   **Global Speed System:** The game speed scales with level progression and power-up states.
+-   **Leaderboard:** Track your High Scores and XP across sessions.
 
 ---
 
-## ⌨️ Controls
+## 🛠 Tech Stack
 
-| Action | Keyboard | Mobile |
-| :--- | :--- | :--- |
-| **Move Left** | `A` or `Left Arrow` | Left Side Hold |
-| **Move Right**| `D` or `Right Arrow` | Right Side Hold |
-| **Jump**      | `Space` or `Up Arrow`| Tap Center |
-
----
-
-## 🚀 Technical Architecture
-- **Language:** C#
-- **Engine:** Unity 2022+
-- **Rendering:** 2D Sprite-based with layering
-- **Physics:** Rigidbody2D with custom kinematic-style interpolation
+*   **Engine:** Unity 2022.x+
+*   **Language:** C#
+*   **Physics:** Rigidbody2D (Continuous collision detection)
+*   **Rendering:** URP / Sprite-based 2D visuals
+*   **Animation:** Animator with blending states (Walking, Idle, Airborne)
+*   **Audio:** Custom AudioManager for synchronized SFX and Background Music.
+*   **UI:** TextMeshPro for optimized, beautiful on-screen text and leaderboards.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup & Installation
 
-### Prerequisites
-- **Unity Hub** installed.
-- **Unity 2022.3+** (Long Term Support version recommended).
-- **Git** (optional, for cloning).
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/beyzkar/CatsEscape.git
+    ```
+2.  **Open in Unity:**
+    *   Open Unity Hub.
+    *   Add the `CatsEscape` folder.
+    *   Ensure you have the required Sprite and Audio assets in the `Assets/` directory.
+3.  **Build Settings:**
+    *   Target Platform: PC/Mac Standalone or WebGL.
+    *   Include `Main Menu`, `Character Selection`, and `Game` scenes in the build.
 
-### Installation & Running
-1. **Clone or Download:** Clone this repository using `git clone https://github.com/beyzkar/CatsEscape.git` or download the ZIP file and extract it.
-2. **Open in Unity:** Launch Unity Hub, click **Add**, and select the project folder.
-3. **Open the Scene:** In the Project window, navigate to `Assets/Scenes/` and double-click **`GameScene.unity`**.
-4. **Play:** Press the **Play** button at the top of the Unity Editor to start your escape!
 ---
 
-## 🐾 Developer's Note
-*This project was meticulously refined to ensure every jump feels heavy, every collision feels fair, and every level feels like a new challenge. Enjoy the escape!*
+
