@@ -171,15 +171,8 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
-        if (!dead && !stuck && movementScript != null)
-        {
-            // RELATIONAL RETREAT FREEZE (1 Screen Width Rule):
-            // If the player falls 1 screen width or more behind their cumulative peak progress, freeze the world!
-            if (movementScript.DistanceGap >= movementScript.FullScreenWidth && movementScript.IsMovingLeft)
-            {
-                EnterStuckState(null); // No specific obstacle, but freeze the world!
-            }
-        } 
+        // Left boundary lock is handled in PlayerMovement via velocity clamp.
+        // Do not enter stuck state at screen boundary; that can delay jump reactivation.
     }
 
     private void EnterStuckState(GameObject hitSource)

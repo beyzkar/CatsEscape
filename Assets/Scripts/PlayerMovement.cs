@@ -3,6 +3,8 @@ using UnityEngine;
 // Core player movement controller: handles horizontal movement, jumping, and rotation/flipping
 public class PlayerMovement : MonoBehaviour
 {
+    private const float FixedLeftBoundaryX = -9f;
+
     public static PlayerMovement Instance { get; private set; }
 
     [Header("Jump Settings")]
@@ -41,7 +43,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Horizontal Movement")]
     public float moveRightSpeed = 7.5f; // Increased from 5f to match 1.5x request
     public float moveLeftSpeed = 5f; 
-    public float minX = -5.3f; // Initial left boundary
+    public float minX = FixedLeftBoundaryX; // Fixed world left boundary
     public float maxX = 5f;    // Initial right boundary
     public float acceleration = 5f;
     public float deceleration = 10f;
@@ -50,7 +52,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
-    [Range(0f, 1f)] public float airControlMultiplier = 0.6f; // Reduced horizontal speed while in air
+[Range(0f, 1f)] public float airControlMultiplier = 0.5f; // Scales horizontal speed while airborne
+[Range(0f, 1f)] public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly when jump starts
     [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
     public float viewportPaddingX = 0.9f; // Balanced buffer to prevent hiding under the notch
@@ -225,18 +228,15 @@ public class PlayerMovement : MonoBehaviour
         if (anim == null || !anim.gameObject.activeInHierarchy)
             anim = GetComponentInChildren<Animator>();
 
-        // Retro (Geriye Gidiş) Sınır Kontrolü ve Oyun Dondurma
-        bool isAtRetreatLimit = (DistanceGap >= FullScreenWidth && hInput < 0);
+        // Retro (Geriye Gidiş) sınırı: fixed world limit (minX) kullanılmalı.
+        bool isAtRetreatLimit = (transform.position.x <= FixedLeftBoundaryX && hInput < 0);
         
         if (isAtRetreatLimit)
         {
-            GameSpeed.Multiplier = 0f; // Dünyayı dondur
+            // At left boundary, only block further left movement.
+            // Do not freeze game speed/state, so jump/right movement remain responsive.
             currentHorizontalVelocity = 0f;
             targetVelocityX = 0f;
-        }
-        else
-        {
-            GameSpeed.Multiplier = 1f; // Dünyayı çöz
         }
 
         // Animation state management
@@ -294,7 +294,7 @@ public class PlayerMovement : MonoBehaviour
             currentHorizontalVelocity = 0f;
         }
         
-        if (DistanceGap >= FullScreenWidth && targetVelocityX < 0)
+        if (transform.position.x <= FixedLeftBoundaryX && targetVelocityX < 0)
         {
             targetVelocityX = 0f;
             currentHorizontalVelocity = 0f;
@@ -305,7 +305,8 @@ public class PlayerMovement : MonoBehaviour
         // 2. HAREKET HESABI (Sıfırlanmış değerler üzerinden)
         float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
         
-        if (transform.position.x <= bottomLeft.x + viewportPaddingX + 0.1f && distanceStep < 0)
+        // Use the fixed world left boundary (minX) so retreat limit matches design exactly.
+        if (transform.position.x <= FixedLeftBoundaryX && distanceStep < 0)
         {
             distanceStep = 0; 
         }
@@ -315,8 +316,9 @@ public class PlayerMovement : MonoBehaviour
 
         float finalVelocityX = targetVelocityX;
 
-        // Apply Air Control: Reduce horizontal speed if in the air to prevent "flying"
-        if (!isGrounded)
+        // Apply air control while genuinely airborne (including takeoff/landing frames).
+        bool isAirborneForControl = !isGrounded || Mathf.Abs(rb.linearVelocity.y) > 0.05f;
+        if (isAirborneForControl)
         {
             finalVelocityX *= airControlMultiplier;
         }
@@ -410,7 +412,8 @@ public class PlayerMovement : MonoBehaviour
     {
         if (jumpsLeft <= 0) return;  
 
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
+        // Keep jump height unchanged, but reduce horizontal carry-over at takeoff.
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x * jumpTakeoffHorizontalMultiplier, 0f);
         // Doğrudan güncel jumpForce değerini kullanıyoruz
         rb.AddForce(Vector2.up * (jumpForce * currentJumpMultiplier), ForceMode2D.Impulse);
 
@@ -465,18 +468,14 @@ public class PlayerMovement : MonoBehaviour
         FullScreenWidth = trueRight.x - trueLeft.x;
         ScreenMaxX = trueRight.x;
 
-        // MARIO TARZI SINIRLAR:
-        // minX: Sol ekran kenarı + padding
-        // maxX: Ekranın tam ortası (0.5 Viewport)
-        
         float effectivePadding = Mathf.Max(viewportPaddingX, 0.7f);
         
-        // Final Sınırlar: Sol sabit -9, Sağ ekranın tam ortası
-        minX = -9f; 
+        // Final Sınırlar: Sol sabit tuned value, Sağ ekranın tam ortası
+        minX = FixedLeftBoundaryX; 
         maxX = trueCenter.x; 
 
-        // Güvenlik: minX, maxX'ten büyük olamaz (Eğer ekran çok küçükse)
-        if (minX > maxX - 0.5f) minX = maxX - 0.5f;
+        // Keep left world boundary fixed; only push right boundary if needed.
+        if (maxX < minX + 0.5f) maxX = minX + 0.5f;
     }
 
     public void ResetHorizontalVelocity()
