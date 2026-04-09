@@ -10,6 +10,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Jump Settings")]
     public float jumpForce = 12f;
     public float fallMultiplier = 2.5f; 
+    public float lowJumpMultiplier = 2f; 
     private float currentJumpMultiplier = 1f;
     public int maxJumps = 2; 
     private int jumpsLeft;
