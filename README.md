@@ -2,7 +2,7 @@
 
 **CatsEscape** is a stylized, fast-paced 2D side-scrolling runner built with Unity. Take control of a nimble cat navigating through various environments, avoiding obstacles, jumping over pitfalls, and collecting power-ups across 5 unique levels.
 
-## 🐾 How to Play
+##  How to Play
 
 ### Controls
 *   **Move Left/Right:** `A / D` or `Left / Right Arrow`
@@ -14,7 +14,7 @@ Navigate through the levels by dodging hurdles, obstacles, and enemies. Your pro
 
 ---
 
-## ✨ Features
+##  Features
 
 -   **5 Thematic Levels:** Each level features unique background art, varying speeds, and specialized obstacles.
 -   **Character Selection:** Multiple cat skins with beautiful animations (Idle, Walk, Jump).
@@ -28,7 +28,7 @@ Navigate through the levels by dodging hurdles, obstacles, and enemies. Your pro
 
 ---
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 *   **Engine:** Unity 2022.x+
 *   **Language:** C#
@@ -40,7 +40,7 @@ Navigate through the levels by dodging hurdles, obstacles, and enemies. Your pro
 
 ---
 
-## 🚀 Setup & Installation
+##  Setup & Installation
 
 1.  **Clone the Repository:**
     ```bash
