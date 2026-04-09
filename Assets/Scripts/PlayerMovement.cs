@@ -10,7 +10,6 @@ public class PlayerMovement : MonoBehaviour
     [Header("Jump Settings")]
     public float jumpForce = 12f;
     public float fallMultiplier = 2.5f; 
-    public float lowJumpMultiplier = 2f; // Bunu geri ekliyorum, FixedUpdate içinde kullanılıyor
     private float currentJumpMultiplier = 1f;
     public int maxJumps = 2; 
     private int jumpsLeft;
@@ -54,13 +53,10 @@ public class PlayerMovement : MonoBehaviour
     public bool useViewportClamping = true;
 [Range(0f, 1f)] public float airControlMultiplier = 0.5f; // Scales horizontal speed while airborne
 [Range(0f, 1f)] public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly when jump starts
-    [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
     public float viewportPaddingX = 0.9f; // Balanced buffer to prevent hiding under the notch
     private Vector3 bottomLeft;
     private Vector3 topRight;
-    private float levelAnchorX; // Universal anchor for the level start
-    private float peakCameraX = -1000f; // Furthest right the camera edge has reached
 
     [Header("Visual Orientation")]
     public float rotationRight = 120f;
@@ -68,8 +64,6 @@ public class PlayerMovement : MonoBehaviour
     public float rotationSpeed = 720f; // Speed of the turn-around pivot
     public int WorldDirection { get; private set; } = 1;
     private BoxCollider2D boxCol;
-    public float CurrentScreenWidth => (topRight.x - bottomLeft.x);
-    public float FullScreenWidth { get; private set; } // True edge-to-edge screen width
 
     [Header("Intro Settings")]
     public float introSpeed = 3f;
@@ -83,9 +77,6 @@ public class PlayerMovement : MonoBehaviour
     private Animator anim;
     private float originalAbsScaleX;
     private float originalVisualLocalY;
-    public float totalDistance { get; private set; } = 0f; // Cumulative distance traveled
-    public float peakDistance { get; private set; } = 0f;  // Furthest distance reached
-    public float DistanceGap => peakDistance - totalDistance;
     private bool mobileLeft = false;
     private bool mobileRight = false;
 
@@ -116,37 +107,15 @@ public class PlayerMovement : MonoBehaviour
             Camera.main.orthographicSize = 5f; // Standardize zoom level
         }
 
-        // PROFESSIONAL: Initialize screen dimensions for backtracking logic
         UpdateViewportBounds();
-        FullScreenWidth = topRight.x - bottomLeft.x;
         
-        // Reset progress tracking to current camera position at level start
-        peakCameraX = bottomLeft.x;
-        
-        ResetRetreatLimit(); // Set the fixed boundary for this level
-
         // Capture original visual height to apply offsets additively
         if (anim != null) originalVisualLocalY = anim.transform.localPosition.y;
-        totalDistance = 0f;
-        peakDistance = 0f;
         
         // Ensure parent rotation is locked at identity
         transform.localRotation = Quaternion.identity; 
     }
 
-    public void ResetRetreatLimit()
-    {
-        // UNIVERSAL: Set the fixed world-space anchor for the current level
-        levelAnchorX = transform.position.x;
-        
-        // Force bounds update to get fresh bottomLeft coordinates
-        UpdateViewportBounds(); 
-        peakCameraX = bottomLeft.x; // Initialize to current edge
-        
-        // Reset progress tracking to ensure consistency across all level transitions
-        totalDistance = 0f;
-        peakDistance = 0f;
-    }
 
     public void SetDead(bool isDead)
     {
@@ -228,7 +197,7 @@ public class PlayerMovement : MonoBehaviour
         if (anim == null || !anim.gameObject.activeInHierarchy)
             anim = GetComponentInChildren<Animator>();
 
-        // Retro (Geriye Gidiş) sınırı: fixed world limit (minX) kullanılmalı.
+        // Left boundary retreat limit: enforce fixed world limit
         bool isAtRetreatLimit = (transform.position.x <= FixedLeftBoundaryX && hInput < 0);
         
         if (isAtRetreatLimit)
@@ -287,7 +256,7 @@ public class PlayerMovement : MonoBehaviour
     {
         UpdateViewportBounds();
 
-        // 1. KİLİT MEKANİZMASI: Mesafe hesaplanmadan önce hızları sıfırlıyoruz (Mikro kaymayı önler)
+        // 1. LOCK MECHANISM: Zero out velocities before distance calculation to prevent micro-slides
         if (rules != null && rules.IsHorizontalBlocked && targetVelocityX > 0)
         {
             targetVelocityX = 0f;
@@ -302,18 +271,6 @@ public class PlayerMovement : MonoBehaviour
 
         if (!introFinished || (rules != null && rules.IsDead)) return;
 
-        // 2. HAREKET HESABI (Sıfırlanmış değerler üzerinden)
-        float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
-        
-        // Use the fixed world left boundary (minX) so retreat limit matches design exactly.
-        if (transform.position.x <= FixedLeftBoundaryX && distanceStep < 0)
-        {
-            distanceStep = 0; 
-        }
-
-        totalDistance += distanceStep;
-        if (totalDistance > peakDistance) peakDistance = totalDistance;
-
         float finalVelocityX = targetVelocityX;
 
         // Apply air control while genuinely airborne (including takeoff/landing frames).
@@ -323,19 +280,19 @@ public class PlayerMovement : MonoBehaviour
             finalVelocityX *= airControlMultiplier;
         }
 
-        // 3. FİNAL HIZ KISITLAMALARI (Viewport ve Limitler)
+        // 3. FINAL VELOCITY CONSTRAINTS (Viewport and Boundaries)
         if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0f;
         
         rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
 
-        // BETTER JUMP Mekaniği: Havada asılı kalmayı önler ve düşüşü hızlandırır
-        if (rb.linearVelocity.y < 0) // Kedi aşağı düşüyorsa
+        // BETTER JUMP logic: Prevents hover and speeds up falling
+        if (rb.linearVelocity.y < 0) // Falling
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
         }
         else if (rb.linearVelocity.y > 0 && !(Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.UpArrow) || mobileRight || mobileLeft)) 
         {
-            // Kedi yukarı çıkıyor ama zıplama tuşu bırakıldıysa (Kısa zıplama)
+            // Reduced jump height if button released early (Short jump)
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
         }
 
@@ -355,7 +312,7 @@ public class PlayerMovement : MonoBehaviour
         
         if (!useViewportClamping) return;
         
-        // Sadece X ekseninde (Sağ-Sol) kısıtlama uyguluyoruz
+        // Clamp position within X-axis boundaries
         float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
         
         if (clampedX != transform.position.x)
@@ -376,7 +333,6 @@ public class PlayerMovement : MonoBehaviour
          if (anim != null)
         {
             Vector3 visualPos = anim.transform.localPosition;
-            visualPos.x = 0f; // Force visual to stay centered on the collider/pivot
             visualPos.y = originalVisualLocalY + externalVisualYOffset;
             anim.transform.localPosition = visualPos;
         }
@@ -412,9 +368,9 @@ public class PlayerMovement : MonoBehaviour
     {
         if (jumpsLeft <= 0) return;  
 
-        // Keep jump height unchanged, but reduce horizontal carry-over at takeoff.
+        // Damp horizontal carry-over at takeoff.
         rb.linearVelocity = new Vector2(rb.linearVelocity.x * jumpTakeoffHorizontalMultiplier, 0f);
-        // Doğrudan güncel jumpForce değerini kullanıyoruz
+        // Apply jump force using dynamic jump multiplier.
         rb.AddForce(Vector2.up * (jumpForce * currentJumpMultiplier), ForceMode2D.Impulse);
 
         if (AudioManager.Instance != null)
@@ -458,19 +414,18 @@ public class PlayerMovement : MonoBehaviour
 
         float zDist = Mathf.Abs(cam.transform.position.z);
         
-        // Dinamik olarak ekran kenarlarını dünya koordinatlarına çeviriyoruz
+        // Convert screen edges to world space
         Vector3 trueLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
-        bottomLeft = trueLeft; // LateUpdate içinde Y ekseni kısıtlaması için gerekli
-        topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist)); // Genişlik hesaplamaları için güncelliyoruz
+        bottomLeft = trueLeft; 
+        topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist)); 
         Vector3 trueRight = topRight;
-        Vector3 trueCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0, zDist)); // Ekranın tam ortası
+        Vector3 trueCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0, zDist)); // Center of the screen
 
-        FullScreenWidth = trueRight.x - trueLeft.x;
         ScreenMaxX = trueRight.x;
 
         float effectivePadding = Mathf.Max(viewportPaddingX, 0.7f);
         
-        // Final Sınırlar: Sol sabit tuned value, Sağ ekranın tam ortası
+        // Final boundaries: Fixed world limit on the left, center of screen on the right.
         minX = FixedLeftBoundaryX; 
         maxX = trueCenter.x; 
 
