@@ -56,7 +56,7 @@ public class PlayerObstacleRules : MonoBehaviour
     [Header("Effects")]
     public ParticleSystem sparkleEffect;
     [Header("Hit Recovery")]
-    public float hitRecoveryDuration = 0.8f;
+    public float hitRecoveryDuration = 5f;
     private float damageCooldown = 0f;
     private const float DAMAGE_COOLDOWN_TIME = 0.5f;
 
