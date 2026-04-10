@@ -3010,7 +3010,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &525559374
 Transform:
   m_ObjectHideFlags: 0
@@ -3261,17 +3261,17 @@ MonoBehaviour:
   fishPrefab: {fileID: 4646909014813445964, guid: cfcb2a87471cb40739c838beaad794c9, type: 3}
   potionPrefab: {fileID: 5576752569631102745, guid: 5f33347dfbee4443f8e129f0608729ee, type: 3}
   bushPrefab: {fileID: 1831206720371873340, guid: fe1d36f7f4d044e6a8ccd82838251200, type: 3}
-  bagSpawnX: 12
+  bagSpawnX: 16
   bagSpawnY: -3.3
-  enemySpawnX: 12
+  enemySpawnX: 16
   enemySpawnY: -4
-  wallSpawnX: 12
+  wallSpawnX: 16
   wallSpawnY: -2.2
-  longWallSpawnX: 12
+  longWallSpawnX: 16
   longWallSpawnY: -1.8
   wallScaleY1: 1.5
   wallScaleY2: 2.5
-  fishSpawnX: 12
+  fishSpawnX: 16
   level1:
     minDistance: 20
     maxDistance: 25
@@ -3541,6 +3541,7 @@ MonoBehaviour:
   maxX: 100
   acceleration: 5
   deceleration: 10
+  stoppingDeceleration: 60
   groundedSpeedMultiplier: 0.75
   airAccelerationMultiplier: 0.55
   landingVelocityBlendTime: 0.12
@@ -3554,6 +3555,9 @@ MonoBehaviour:
   rotationSpeed: 720
   introSpeed: 30
   stopX: -4
+  levelStartPoint: {fileID: 0}
+  levelStartProbeHeight: 3
+  levelStartProbeDistance: 15
 --- !u!50 &558111049
 Rigidbody2D:
   serializedVersion: 5
@@ -19218,7 +19222,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 3
+  currentLevel: 1
   obstaclesPassed: 0
   levelSpeeds:
   - 0.8
@@ -19426,7 +19430,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0

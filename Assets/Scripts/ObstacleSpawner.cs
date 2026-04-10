@@ -32,7 +32,11 @@ public class ObstacleSpawner : MonoBehaviour
     public float longWallSpawnY = -2.0f;
     public float wallScaleY1 = 1.5f;
     public float wallScaleY2 = 2.5f;
+    public float bushSpawnY = -3.3f;
     public float fishSpawnX = 12f;
+    public float fishSpawnY = -1.5f;
+    public float potionSpawnMinY = -2f;
+    public float potionSpawnMaxY = 1.5f;
 
     [Header("Distance Tracking")]
     private float accumulatedDistance = 0f;
@@ -274,7 +278,7 @@ public class ObstacleSpawner : MonoBehaviour
         if (rnd < currentLimit)
         {
             if (bushPrefab != null)
-                Instantiate(bushPrefab, new Vector3(wallSpawnX, -3.3f, 0f), Quaternion.identity);
+                Instantiate(bushPrefab, new Vector3(wallSpawnX, bushSpawnY, 0f), Quaternion.identity);
             return;
         }
 
@@ -284,7 +288,7 @@ public class ObstacleSpawner : MonoBehaviour
         {
             if (fishPrefab != null)
             {
-                Instantiate(fishPrefab, new Vector3(fishSpawnX, fishPrefab.transform.position.y, 0f), Quaternion.identity);
+                Instantiate(fishPrefab, new Vector3(fishSpawnX, fishSpawnY, 0f), Quaternion.identity);
                 lastRewardDistance = accumulatedDistance; // Reset cooldown
             }
             return;
@@ -296,7 +300,7 @@ public class ObstacleSpawner : MonoBehaviour
         {
             if (potionPrefab != null)
             {
-                float randomY = Random.Range(-2f, 1.5f);
+                float randomY = Random.Range(potionSpawnMinY, potionSpawnMaxY);
                 Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
                 lastRewardDistance = accumulatedDistance; // Reset cooldown
             }

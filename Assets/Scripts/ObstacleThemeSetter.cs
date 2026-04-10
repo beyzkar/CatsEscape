@@ -144,11 +144,36 @@ public class ObstacleThemeSetter : MonoBehaviour
         PolygonCollider2D poly = GetComponent<PolygonCollider2D>() ?? GetComponentInChildren<PolygonCollider2D>();
         if (poly != null)
         {
-            UpdatePolygonCollider(poly, sr.sprite);
-            
-            // For Walls, BoxCollider is more reliable for stopping the player
-            if (box != null && isWall) box.enabled = true;
-            else if (box != null) box.enabled = false;
+            if (isWall)
+            {
+                // Keep wall collision simple and stable: one solid box collider only.
+                poly.enabled = false;
+                if (box != null)
+                {
+                    box.enabled = true;
+                    box.isTrigger = false;
+
+                    // Level 4: round box corners a little to reduce corner snagging.
+                    if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 4)
+                    {
+                        float minAxis = Mathf.Min(box.size.x, box.size.y);
+                        box.edgeRadius = Mathf.Clamp(minAxis * 0.02f, 0f, 0.08f);
+                    }
+                    else
+                    {
+                        box.edgeRadius = 0f;
+                    }
+                }
+            }
+            else
+            {
+                if (sr != null && sr.sprite != null)
+                {
+                    UpdatePolygonCollider(poly, sr.sprite);
+                }
+                poly.enabled = true;
+                if (box != null) box.enabled = false;
+            }
         }
     }
 
