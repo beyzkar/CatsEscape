@@ -106,7 +106,25 @@ public class LevelManager : MonoBehaviour
     private void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        // --- RESUME MECHANIC ---
+        // If a level was previously reached and saved (static), load it.
+        if (savedLevel > 0)
+        {
+            currentLevel = savedLevel;
+            Debug.Log("LEVEL MANAGER: Resuming from Saved Level " + currentLevel);
+        }
+        else
+        {
+            // First run: sync savedLevel to current editor-set level
+            savedLevel = currentLevel;
+        }
+        // -----------------------
 
         // --- HIGHLANDER PATTERN: FORCE SINGLE PLAYER ---
         // Find ALL objects that might be a player and destroy any extras!

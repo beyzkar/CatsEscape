@@ -48,8 +48,12 @@ public class PlayerMovement : MonoBehaviour
     public float maxX = 5f;    // Initial right boundary
     public float acceleration = 5f;
     public float deceleration = 10f;
+    [Range(0.1f, 1f)] public float groundedSpeedMultiplier = 0.75f; // Global horizontal speed reduction on ground
+    [Range(0.1f, 1f)] public float airAccelerationMultiplier = 0.55f; // Prevents building excessive X speed in air
+    [Range(0.01f, 0.5f)] public float landingVelocityBlendTime = 0.12f; // Smooths airborne -> grounded transition
     private float currentHorizontalVelocity = 0f;
     private float targetVelocityX = 0f;
+    private float appliedHorizontalVelocity = 0f;
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
@@ -231,6 +235,7 @@ public class PlayerMovement : MonoBehaviour
         
         // If turning, use deceleration to stop quickly first. Otherwise use acceleration/deceleration normally.
         float accelRate = isTurning ? actualDecel : (Mathf.Abs(desiredVelocity) > 0.01f ? actualAccel : actualDecel);
+        if (!isGrounded) accelRate *= airAccelerationMultiplier;
         
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
         targetVelocityX = currentHorizontalVelocity;
@@ -250,6 +255,7 @@ public class PlayerMovement : MonoBehaviour
             GameSpeed.Multiplier = 0f; // Dünyayı dondur
             currentHorizontalVelocity = 0f;
             targetVelocityX = 0f;
+            appliedHorizontalVelocity = 0f;
         }
         else
         {
@@ -318,12 +324,14 @@ public class PlayerMovement : MonoBehaviour
         {
             targetVelocityX = 0f;
             currentHorizontalVelocity = 0f;
+            appliedHorizontalVelocity = 0f;
         }
         
         if (transform.position.x <= CurrentLeftBoundaryX && targetVelocityX < 0)
         {
             targetVelocityX = 0f;
             currentHorizontalVelocity = 0f;
+            appliedHorizontalVelocity = 0f;
         }
 
         if (!introFinished || (rules != null && rules.IsDead)) return;
@@ -340,19 +348,23 @@ public class PlayerMovement : MonoBehaviour
         totalDistance += distanceStep;
         if (totalDistance > peakDistance) peakDistance = totalDistance;
 
-        float finalVelocityX = targetVelocityX;
+        float finalVelocityX = targetVelocityX * groundedSpeedMultiplier;
 
         // Apply air control while genuinely airborne (including takeoff/landing frames).
         bool isAirborneForControl = !isGrounded || Mathf.Abs(rb.linearVelocity.y) > 0.05f;
-        if (isAirborneForControl)
-        {
-            finalVelocityX *= airControlMultiplier;
-        }
+        if (isAirborneForControl) finalVelocityX *= airControlMultiplier;
+
+        // Smoothly blend applied horizontal velocity to prevent "rocket" bursts on landing.
+        float blendDuration = Mathf.Max(landingVelocityBlendTime, 0.01f);
+        float blendRate = (Mathf.Abs(finalVelocityX) > 0.01f)
+            ? Mathf.Abs(finalVelocityX - appliedHorizontalVelocity) / blendDuration
+            : deceleration;
+        appliedHorizontalVelocity = Mathf.MoveTowards(appliedHorizontalVelocity, finalVelocityX, blendRate * Time.fixedDeltaTime);
 
         // 3. FİNAL HIZ KISITLAMALARI (Viewport ve Limitler)
-        if (transform.position.x >= maxX && finalVelocityX > 0) finalVelocityX = 0f;
+        if (transform.position.x >= maxX && appliedHorizontalVelocity > 0) appliedHorizontalVelocity = 0f;
         
-        rb.linearVelocity = new Vector2(finalVelocityX, rb.linearVelocity.y);
+        rb.linearVelocity = new Vector2(appliedHorizontalVelocity, rb.linearVelocity.y);
 
         // BETTER JUMP Mekaniği: Havada asılı kalmayı önler ve düşüşü hızlandırır
         if (rb.linearVelocity.y < 0) // Kedi aşağı düşüyorsa
@@ -372,6 +384,7 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.position = new Vector2(maxX, rb.position.y);
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            appliedHorizontalVelocity = 0f;
         }
     }
 
@@ -508,6 +521,7 @@ public class PlayerMovement : MonoBehaviour
     {
         currentHorizontalVelocity = 0f;
         targetVelocityX = 0f;
+        appliedHorizontalVelocity = 0f;
         if (rb != null) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
     }
 }
