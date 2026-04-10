@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PlayerObstacleRules : MonoBehaviour
 {
-    public float topNormalThreshold = 0.7f; // Higher value = more sensitive side-hit detection
+    public float topNormalThreshold = 0.7f; // Daha yüksek değer = daha hassas yan vuruş algılama
 
     [Header("Hearts (Wall hits)")]
     public GameObject[] heartUI;
@@ -117,8 +117,17 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             // Inputs for exiting the stuck state
             bool jumpInput = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow);
-            bool moveLeft = Input.GetKey(KeyCode.LeftArrow) || (movementScript != null && movementScript.IsMovingLeft);
-            bool moveRight = Input.GetKey(KeyCode.RightArrow) || (movementScript != null && movementScript.IsMovingRight);
+            float h = Input.GetAxisRaw("Horizontal");
+            bool moveLeft =
+                Input.GetKey(KeyCode.LeftArrow) ||
+                Input.GetKey(KeyCode.A) ||
+                h < -0.1f ||
+                (movementScript != null && movementScript.IsMovingLeft);
+            bool moveRight =
+                Input.GetKey(KeyCode.RightArrow) ||
+                Input.GetKey(KeyCode.D) ||
+                h > 0.1f ||
+                (movementScript != null && movementScript.IsMovingRight);
 
             // Direction-Aware Escape Logic:
             // If they hit the LEFT side of the wall (lastHitNormalX < 0), only moving LEFT escapes.
@@ -171,8 +180,8 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
-        // Left boundary lock is handled in PlayerMovement via velocity clamp.
-        // Do not enter stuck state at screen boundary; that can delay jump reactivation.
+        // Note: Left boundary handling is done by PlayerMovement clamping.
+        // We do NOT enter stuck state for screen/world edges, to keep jump responsive.
     }
 
     private void EnterStuckState(GameObject hitSource)
@@ -211,6 +220,69 @@ public class PlayerObstacleRules : MonoBehaviour
         if (bgVideo != null) bgVideo.Pause();
     }
 
+    private void ApplyTightPlayerCollider()
+    {
+        BoxCollider2D boxCol = GetComponent<BoxCollider2D>();
+        SpriteRenderer sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
+
+        if (boxCol != null && sr != null && sr.sprite != null)
+        {
+            Sprite sprite = sr.sprite;
+            int shapeCount = sprite.GetPhysicsShapeCount();
+            if (shapeCount == 0) return;
+
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minY = float.MaxValue, maxY = float.MinValue;
+            List<Vector2> path = new List<Vector2>();
+
+            for (int i = 0; i < shapeCount; i++)
+            {
+                sprite.GetPhysicsShape(i, path);
+                foreach (Vector2 p in path)
+                {
+                    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+                    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+                }
+            }
+
+            Vector2 size = new Vector2(maxX - minX, maxY - minY);
+            Vector2 center = new Vector2(minX + size.x / 2f, minY + size.y / 2f);
+
+            // Apply ONLY the offset to keep the collider centered on visuals.
+            // Preservation Rule: Keep the manually set size from the prefab/LevelManager.
+            boxCol.offset = center;
+            
+            Debug.Log("Player: Auto-Centered Offset Applied (Size Preserved).");
+        }
+    }
+
+    private float CalculateTightCatHalfWidth()
+    {
+        // Get the active sprite renderer (child objects might have the skin)
+        SpriteRenderer sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
+        if (sr == null || sr.sprite == null) return GetComponent<Collider2D>().bounds.size.x / 2f;
+
+        Sprite sprite = sr.sprite;
+        int shapeCount = sprite.GetPhysicsShapeCount();
+        if (shapeCount == 0) return sprite.bounds.size.x / 2f;
+
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        List<Vector2> path = new List<Vector2>();
+
+        for (int i = 0; i < shapeCount; i++)
+        {
+            sprite.GetPhysicsShape(i, path);
+            foreach (Vector2 p in path)
+            {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+            }
+        }
+
+        float visualWidth = (maxX - minX) * transform.localScale.x;
+        return visualWidth / 2f;
+    }
 
     private void OnCollisionEnter2D(Collision2D col)
     {
@@ -358,7 +430,7 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (isMovingAway) return;
 
-            // Side hit (wall contact): sensitivity increased.
+            // Yan vuruş (duvara çarpma): Hassasiyeti artırdık (0.3 -> 0.1)
             bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.1f);
             if (shouldFreeze) 
             {

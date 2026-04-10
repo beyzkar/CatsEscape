@@ -3010,7 +3010,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &525559374
 Transform:
   m_ObjectHideFlags: 0
@@ -3525,7 +3525,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d183188d3eb4144e696f059ad14276f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  jumpForce: 15
+  jumpForce: 16
   fallMultiplier: 2
   lowJumpMultiplier: 2
   maxJumps: 2
@@ -3543,7 +3543,7 @@ MonoBehaviour:
   deceleration: 10
   useViewportClamping: 1
   airControlMultiplier: 0.1
-  jumpTakeoffHorizontalMultiplier: 0.5
+  jumpTakeoffHorizontalMultiplier: 0.2
   xScrollLimit: 0.35
   viewportPaddingX: 0.9
   rotationRight: 120
@@ -3949,7 +3949,7 @@ ParticleSystemRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 50
+  m_SortingOrder: -20
   m_MaskInteraction: 0
   m_RenderMode: 0
   m_MeshDistribution: 0
@@ -19215,7 +19215,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8230a59335e1457f83caf60f674de60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  currentLevel: 1
+  currentLevel: 3
   obstaclesPassed: 0
   levelSpeeds:
   - 0.8
@@ -19423,7 +19423,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2025304965
 MonoBehaviour:
   m_ObjectHideFlags: 0
