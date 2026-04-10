@@ -346,6 +346,8 @@ public class LevelManager : MonoBehaviour
         if (playerMovement != null)
         {
             PlayerObstacleRules rules = playerMovement.GetComponent<PlayerObstacleRules>();
+            if (rules != null) rules.ResetForLevelStart();
+            playerMovement.PrepareForLevelStart();
             if (rules != null) rules.UpdateGameSpeed();
         }
         else

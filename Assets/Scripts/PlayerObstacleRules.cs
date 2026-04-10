@@ -321,7 +321,7 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
-        HandleInteraction(other.gameObject, Vector2.left, true);
+        HandleInteraction(other.gameObject, GetTriggerNormal(other), true);
     }
 
     private void OnTriggerStay2D(Collider2D other)
@@ -336,8 +336,21 @@ public class PlayerObstacleRules : MonoBehaviour
         bool isEnemyHit = IsEnemy(other.gameObject);
         if (other.CompareTag("Obstacle") || other.CompareTag("Wall") || other.CompareTag("LongWall") || other.CompareTag("Bush") || isEnemyHit)
         {
-            HandleInteraction(other.gameObject, Vector2.left, true);
+            HandleInteraction(other.gameObject, GetTriggerNormal(other), true);
         }
+    }
+
+    private Vector2 GetTriggerNormal(Collider2D other)
+    {
+        if (other == null) return Vector2.left;
+
+        Vector2 delta = (Vector2)transform.position - (Vector2)other.bounds.center;
+        if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
+        {
+            return new Vector2(Mathf.Sign(delta.x == 0f ? -1f : delta.x), 0f);
+        }
+
+        return new Vector2(0f, Mathf.Sign(delta.y == 0f ? 1f : delta.y));
     }
 
     private void HandleInteraction(GameObject other, Vector2 normal, bool isTrigger)
@@ -579,6 +592,35 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             GameSpeed.Multiplier = baseSpeed * multiplier;
         }
+    }
+
+    public void ResetForLevelStart()
+    {
+        stuck = false;
+        dead = false;
+        lastHitWall = null;
+        lastHitNormalX = 0f;
+        unstickJumpTimer = 0f;
+        jumpGraceTimer = 0f;
+        damageCooldown = 0f;
+
+        if (animator != null)
+        {
+            animator.speed = 1f;
+            animator.SetBool("walking", false);
+            animator.SetBool("Idle", true);
+        }
+
+        if (rb != null)
+        {
+            rb.simulated = true;
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+        }
+
+        UpdateGameSpeed();
     }
 
     private IEnumerator PowerUpSequence()

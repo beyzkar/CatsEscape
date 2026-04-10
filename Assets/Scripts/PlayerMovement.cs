@@ -48,6 +48,7 @@ public class PlayerMovement : MonoBehaviour
     public float maxX = 5f;    // Initial right boundary
     public float acceleration = 5f;
     public float deceleration = 10f;
+    public float stoppingDeceleration = 60f; // High rate for instant stops when input is released
     [Range(0.1f, 1f)] public float groundedSpeedMultiplier = 0.75f; // Global horizontal speed reduction on ground
     [Range(0.1f, 1f)] public float airAccelerationMultiplier = 0.55f; // Prevents building excessive X speed in air
     [Range(0.01f, 0.5f)] public float landingVelocityBlendTime = 0.12f; // Smooths airborne -> grounded transition
@@ -79,6 +80,9 @@ public class PlayerMovement : MonoBehaviour
     [Header("Intro Settings")]
     public float introSpeed = 3f;
     public float stopX = -4f;
+    public Transform levelStartPoint;
+    public float levelStartProbeHeight = 3f;
+    public float levelStartProbeDistance = 15f;
     private bool introFinished = false;
     private bool dead = false;
     public float externalVisualYOffset { get; set; } = 0f; // Persistent visual offset managed by LevelManager
@@ -226,18 +230,26 @@ public class PlayerMovement : MonoBehaviour
         float actualAccel = acceleration;
         float actualDecel = deceleration;
 
-        // Smoothed velocity calculation with turn-brake logic
+        // Smoothed velocity calculation with smart deceleration
         float desiredVelocity = hInput * (hInput > 0 ? actualRightSpeed : actualLeftSpeed);
         
-        // Detect if we are changing direction (Turning)
+        // Differentiate between actively turning around and simply stopping
+        bool isStopping = (hInput == 0);
         bool isTurning = (desiredVelocity > 0 && currentHorizontalVelocity < 0) || 
                          (desiredVelocity < 0 && currentHorizontalVelocity > 0);
         
-        // If turning, use deceleration to stop quickly first. Otherwise use acceleration/deceleration normally.
-        float accelRate = isTurning ? actualDecel : (Mathf.Abs(desiredVelocity) > 0.01f ? actualAccel : actualDecel);
+        // Determine the rates: Stopping is immediate, Turning is snappy but fluid
+        float currentDecelRate = isStopping ? stoppingDeceleration : deceleration;
+        float accelRate = isTurning ? (deceleration * 2f) : (Mathf.Abs(desiredVelocity) > 0.01f ? actualAccel : currentDecelRate);
+        
         if (!isGrounded) accelRate *= airAccelerationMultiplier;
         
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
+        
+        // SNAP TO ZERO: Prevent micro-sliding when input is released
+        if (isStopping && Mathf.Abs(currentHorizontalVelocity) < 0.01f)
+            currentHorizontalVelocity = 0f;
+
         targetVelocityX = currentHorizontalVelocity;
 
         // Dynamic animator fetch for multiple character skins
@@ -356,9 +368,13 @@ public class PlayerMovement : MonoBehaviour
 
         // Smoothly blend applied horizontal velocity to prevent "rocket" bursts on landing.
         float blendDuration = Mathf.Max(landingVelocityBlendTime, 0.01f);
+        
+        // Use stoppingDeceleration in physics blend for instant stopping feel
+        float currentPhysicsDecel = (Mathf.Abs(finalVelocityX) < 0.01f) ? stoppingDeceleration : deceleration;
+        
         float blendRate = (Mathf.Abs(finalVelocityX) > 0.01f)
             ? Mathf.Abs(finalVelocityX - appliedHorizontalVelocity) / blendDuration
-            : deceleration;
+            : currentPhysicsDecel;
         appliedHorizontalVelocity = Mathf.MoveTowards(appliedHorizontalVelocity, finalVelocityX, blendRate * Time.fixedDeltaTime);
 
         // 3. FİNAL HIZ KISITLAMALARI (Viewport ve Limitler)
@@ -523,5 +539,63 @@ public class PlayerMovement : MonoBehaviour
         targetVelocityX = 0f;
         appliedHorizontalVelocity = 0f;
         if (rb != null) rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+    }
+
+    public void PrepareForLevelStart()
+    {
+        float targetX = (levelStartPoint != null) ? levelStartPoint.position.x : stopX;
+        float probeBaseY = (levelStartPoint != null) ? levelStartPoint.position.y : transform.position.y;
+        float targetY = probeBaseY;
+
+        Collider2D playerCol = GetComponent<Collider2D>();
+        float halfHeight = (playerCol != null) ? playerCol.bounds.extents.y : 0.5f;
+        Vector2 probeOrigin = new Vector2(targetX, probeBaseY + Mathf.Max(1f, levelStartProbeHeight));
+        RaycastHit2D hit = Physics2D.Raycast(probeOrigin, Vector2.down, Mathf.Max(2f, levelStartProbeDistance), groundLayer);
+
+        if (hit.collider != null)
+        {
+            targetY = hit.point.y + halfHeight + 0.02f;
+        }
+        else if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
+        {
+            targetY = -3.7f;
+        }
+
+        Vector2 spawnPosition = new Vector2(targetX, targetY);
+        if (rb != null)
+        {
+            rb.bodyType = RigidbodyType2D.Dynamic;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.position = spawnPosition;
+        }
+        else
+        {
+            transform.position = new Vector3(targetX, targetY, transform.position.z);
+        }
+
+        currentHorizontalVelocity = 0f;
+        targetVelocityX = 0f;
+        appliedHorizontalVelocity = 0f;
+        mobileLeft = false;
+        mobileRight = false;
+        wasAtRetreatLimit = false;
+        dead = false;
+        isGrounded = true;
+        introFinished = true;
+        WorldDirection = 1;
+        ResetJumps();
+
+        if (anim != null)
+        {
+            anim.SetBool("walking", false);
+            anim.SetBool("Idle", true);
+            anim.transform.localRotation = Quaternion.Euler(0, rotationRight, 0);
+        }
+
+        transform.localRotation = Quaternion.identity;
+        transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
+        ResetRetreatLimit();
     }
 }

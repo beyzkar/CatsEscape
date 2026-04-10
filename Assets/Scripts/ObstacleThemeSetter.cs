@@ -62,6 +62,12 @@ public class ObstacleThemeSetter : MonoBehaviour
         BoxCollider2D box = GetComponent<BoxCollider2D>() ?? GetComponentInChildren<BoxCollider2D>();
         if (box != null)
         {
+            // Level 4 requirement: bush must behave as a solid obstacle from both sides.
+            if (isBush && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 4)
+            {
+                box.isTrigger = false;
+            }
+
             Vector2 targetSize = Vector2.zero;
             Vector2 targetOffset = Vector2.zero;
             bool hasFieldOverride = false;
