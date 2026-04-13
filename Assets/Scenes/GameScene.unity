@@ -1054,33 +1054,35 @@ MonoBehaviour:
   backgroundSource: {fileID: 0}
   sfxSource: {fileID: 0}
   backgroundMusic: {fileID: 8300000, guid: 98fe1f915ce544f54a69dae1c86c2c6b, type: 3}
-  backgroundMusicVolume: 0
+  backgroundMusicVolume: 0.5
   gameOverClip: {fileID: 8300000, guid: d179a49c48d164ea088b1786770e7f98, type: 3}
-  gameOverVolume: 0
+  gameOverVolume: 0.5
   levelWinClip: {fileID: 8300000, guid: 6e9bcb8cb674b485ca9524d63504edb3, type: 3}
-  levelWinVolume: 0
+  levelWinVolume: 0.4
   finalWinClip: {fileID: 8300000, guid: e546bb67411994b7a9547bc0440f00d1, type: 3}
-  finalWinVolume: 0
+  finalWinVolume: 0.6
   jumpSfx: {fileID: 8300000, guid: cd1917c8e04994c709a83c1b72f2c17f, type: 3}
-  jumpVolume: 0
+  jumpVolume: 0.2
   crushSfx: {fileID: 8300000, guid: aa49e2f9aed774a3f99931b731f03ac3, type: 3}
-  crushVolume: 0
+  crushVolume: 0.4
   gameOverSfx: {fileID: 8300000, guid: d179a49c48d164ea088b1786770e7f98, type: 3}
-  gameOverSfxVolume: 0
+  gameOverSfxVolume: 0.3
   hitWallAudio: {fileID: 8300000, guid: 8945cffd43e834b2d8807ea882aac4ad, type: 3}
-  hitWallVolume: 0
+  hitWallVolume: 0.6
   heartLostSfx: {fileID: 8300000, guid: 286d53a94afe447d79ff0720dea2a616, type: 3}
-  heartLostVolume: 0
+  heartLostVolume: 0.5
   heartFillSfx: {fileID: 8300000, guid: f04e036c732ee45fabf6d7523f4e3077, type: 3}
-  heartFillVolume: 0
+  heartFillVolume: 0.5
   extraXPSfx: {fileID: 8300000, guid: c70586eeaa299480d8d8beeb96b37901, type: 3}
-  extraXPVolume: 0
+  extraXPVolume: 0.4
   potionIncreaseSfx: {fileID: 8300000, guid: 5fe4f584d0b1e458f9e36e2910b74987, type: 3}
-  potionIncreaseVolume: 0
+  potionIncreaseVolume: 0.4
   potionDecreaseSfx: {fileID: 8300000, guid: 7a43cbdd9eb124e7c8e94266a0d7116d, type: 3}
-  potionDecreaseVolume: 0
+  potionDecreaseVolume: 0.4
   fallingSfx: {fileID: 8300000, guid: 85bf08952b4734c0eb1e1aaa9a30fa20, type: 3}
   fallingVolume: 1
+  passTheGateSfx: {fileID: 8300000, guid: 7b9978206f4a0409fbe7e009e3c5d00e, type: 3}
+  passTheGateVolume: 0.5
   backgroundGlobalVolume: 0.5
   sfxGlobalVolume: 0.5
 --- !u!1 &258602234
@@ -1962,7 +1964,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &371110518
 RectTransform:
   m_ObjectHideFlags: 0
@@ -18658,7 +18660,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1981490126
 RectTransform:
   m_ObjectHideFlags: 0
@@ -18958,6 +18960,12 @@ MonoBehaviour:
   - {fileID: 525559373}
   - {fileID: 376032484}
   - {fileID: 1136188182}
+  homeSprite: {fileID: 7651772406251352727, guid: 5d73ad3ac037d4c1ba5f4b42a92924f7, type: 3}
+  homeSpawnPosition: {x: 12, y: -2.25}
+  homeScale: {x: 0.4, y: 0.4, z: 0.4}
+  homeColliderSize: {x: 1.4, y: 1.4}
+  homeMoveSpeed: 7
+  homeDestroyX: -15
   levelThemes:
   - obstacleSprite: {fileID: -7247545730495976057, guid: 38b3b6cbb374f4e8daf2b35c6573680c, type: 3}
     obstacleScale: {x: 0.18, y: 0.18, z: 0.18}
@@ -19872,7 +19880,6 @@ GameObject:
   - component: {fileID: 2125444060}
   - component: {fileID: 2125444063}
   - component: {fileID: 2125444062}
-  - component: {fileID: 2125444064}
   m_Layer: 5
   m_Name: SaveScoreTitle
   m_TagString: Untagged
@@ -19999,18 +20006,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2125444059}
   m_CullTransparentMesh: 1
---- !u!114 &2125444064
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2125444059}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7d676e79bd13418e86efc75e2540aab, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIShineEffect
 --- !u!1 &2129417633
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class AudioManager : MonoBehaviour
 {
@@ -40,10 +41,16 @@ public class AudioManager : MonoBehaviour
     [Range(0f, 1f)] public float potionDecreaseVolume = 1f;
     public AudioClip fallingSfx;
     [Range(0f, 1f)] public float fallingVolume = 1f;
+    public AudioClip passTheGateSfx;
+    [Range(0f, 1f)] public float passTheGateVolume = 1f;
 
     [Header("Global Settings")]
     [Range(0f, 1f)] public float backgroundGlobalVolume = 0.5f;
     [Range(0f, 1f)] public float sfxGlobalVolume = 0.5f;
+
+    private bool gateSfxSequenceActive = false;
+    private bool resumeBackgroundAfterGate = false;
+    private Coroutine gateSfxCoroutine;
 
     private void Awake()
     {
@@ -99,6 +106,8 @@ public class AudioManager : MonoBehaviour
 
     public void PlayBackgroundMusic()
     {
+        if (gateSfxSequenceActive) return;
+
         if (backgroundMusic != null && backgroundSource != null && !backgroundSource.isPlaying)
         {
             backgroundSource.clip = backgroundMusic;
@@ -120,6 +129,31 @@ public class AudioManager : MonoBehaviour
             backgroundSource.Stop();
     }
 
+    private IEnumerator PlayPassTheGateSequence()
+    {
+        gateSfxSequenceActive = true;
+        resumeBackgroundAfterGate = (backgroundSource != null && backgroundSource.isPlaying);
+
+        if (resumeBackgroundAfterGate)
+        {
+            backgroundSource.Pause();
+        }
+
+        PlaySFX(passTheGateSfx, passTheGateVolume);
+        float waitDuration = (passTheGateSfx != null) ? passTheGateSfx.length : 0f;
+        if (waitDuration > 0f)
+            yield return new WaitForSecondsRealtime(waitDuration);
+
+        gateSfxSequenceActive = false;
+
+        if (resumeBackgroundAfterGate && backgroundSource != null)
+        {
+            backgroundSource.UnPause();
+        }
+        resumeBackgroundAfterGate = false;
+        gateSfxCoroutine = null;
+    }
+
     // --- Helper Methods ---
     public void PlayJump() { PlaySFX(jumpSfx, jumpVolume); }
     public void PlayCrush() { PlaySFX(crushSfx, crushVolume); }
@@ -131,6 +165,11 @@ public class AudioManager : MonoBehaviour
     public void PlayPotionIncrease() { PlaySFX(potionIncreaseSfx, potionIncreaseVolume); }
     public void PlayPotionDecrease() { PlaySFX(potionDecreaseSfx, potionDecreaseVolume); }
     public void PlayFalling() { PlaySFX(fallingSfx, fallingVolume); }
+    public void PlayPassTheGate()
+    {
+        if (gateSfxCoroutine != null) StopCoroutine(gateSfxCoroutine);
+        gateSfxCoroutine = StartCoroutine(PlayPassTheGateSequence());
+    }
 
     public void PlayGameOverSound() { if (gameOverClip != null) PlaySFX(gameOverClip, gameOverVolume); }
     public void PlayLevelWinSound() { if (levelWinClip != null) PlaySFX(levelWinClip, levelWinVolume); }

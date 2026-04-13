@@ -33,6 +33,14 @@ public class LevelManager : MonoBehaviour
     [Header("Backgrounds")]
     public GameObject[] levelBackgrounds; // List of 5 background objects
 
+    [Header("Home Exit (Levels 1-4)")]
+    public Sprite homeSprite;
+    public Vector2 homeSpawnPosition = new Vector2(12f, -2.2f);
+    public Vector3 homeScale = Vector3.one;
+    public Vector2 homeColliderSize = new Vector2(1.4f, 1.4f);
+    public float homeMoveSpeed = 7f;
+    public float homeDestroyX = -15f;
+
     [System.Serializable]
     public class ThemeAssets
     {
@@ -91,6 +99,8 @@ public class LevelManager : MonoBehaviour
 
     private bool pendingVictory = false;
     private PlayerMovement playerMovement;
+    private GameObject homeExitObject;
+    private bool homeExitActive = false;
 
     private void Start()
     {
@@ -146,6 +156,7 @@ public class LevelManager : MonoBehaviour
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
         ApplyPlayerOffset();
+        PrepareHomeExitForCurrentLevel();
     }
 
     private void ApplyPlayerOffset()
@@ -167,6 +178,88 @@ public class LevelManager : MonoBehaviour
         {
             inGameLevelText.text = "LEVEL " + currentLevel;
         }
+    }
+
+    private void PrepareHomeExitForCurrentLevel()
+    {
+        homeExitActive = false;
+
+        if (currentLevel >= 5)
+        {
+            if (homeExitObject != null) homeExitObject.SetActive(false);
+            return;
+        }
+
+        EnsureHomeExitObject();
+        if (homeExitObject != null)
+        {
+            homeExitObject.SetActive(false);
+            homeExitObject.transform.position = new Vector3(homeSpawnPosition.x, homeSpawnPosition.y, 0f);
+        }
+    }
+
+    private void EnsureHomeExitObject()
+    {
+        if (homeExitObject != null || homeSprite == null) return;
+
+        homeExitObject = new GameObject("HomeExit");
+        homeExitObject.transform.position = new Vector3(homeSpawnPosition.x, homeSpawnPosition.y, 0f);
+        homeExitObject.transform.localScale = homeScale;
+
+        SpriteRenderer sr = homeExitObject.AddComponent<SpriteRenderer>();
+        sr.sprite = homeSprite;
+        sr.sortingLayerName = "Default";
+        sr.sortingOrder = 25;
+
+        BoxCollider2D col = homeExitObject.AddComponent<BoxCollider2D>();
+        col.isTrigger = true;
+        col.size = homeColliderSize;
+
+        Rigidbody2D rb2d = homeExitObject.AddComponent<Rigidbody2D>();
+        rb2d.bodyType = RigidbodyType2D.Kinematic;
+        rb2d.simulated = true;
+        rb2d.gravityScale = 0f;
+        rb2d.useFullKinematicContacts = true;
+
+        ObstacleMove move = homeExitObject.AddComponent<ObstacleMove>();
+        move.speed = homeMoveSpeed;
+        move.destroyX = homeDestroyX;
+        move.moveEvenWhenMultiplierIsZero = false;
+
+        homeExitObject.AddComponent<HomeExitTrigger>();
+        homeExitObject.SetActive(false);
+    }
+
+    private void ActivateHomeExit()
+    {
+        if (currentLevel >= 5 || homeExitActive) return;
+
+        EnsureHomeExitObject();
+        if (homeExitObject == null) return;
+
+        homeExitObject.transform.position = new Vector3(homeSpawnPosition.x, homeSpawnPosition.y, 0f);
+        homeExitObject.transform.localScale = homeScale;
+
+        ObstacleMove move = homeExitObject.GetComponent<ObstacleMove>();
+        if (move != null)
+        {
+            move.speed = homeMoveSpeed;
+            move.destroyX = homeDestroyX;
+        }
+
+        homeExitObject.SetActive(true);
+        homeExitActive = true;
+    }
+
+    public void TryCompleteLevelViaHome()
+    {
+        if (currentLevel >= 5 || !homeExitActive) return;
+
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayPassTheGate();
+
+        homeExitActive = false;
+        if (homeExitObject != null) homeExitObject.SetActive(false);
+        NextLevel();
     }
 
     private void Update()
@@ -273,7 +366,14 @@ public class LevelManager : MonoBehaviour
 
         if (obstaclesPassed >= levelGoals[currentLevel])
         {
-            pendingVictory = true; 
+            if (currentLevel < 5)
+            {
+                ActivateHomeExit();
+            }
+            else
+            {
+                pendingVictory = true;
+            }
         }
     }
 
@@ -331,6 +431,9 @@ public class LevelManager : MonoBehaviour
     {
         if (currentLevel >= 5) return;
 
+        homeExitActive = false;
+        if (homeExitObject != null) homeExitObject.SetActive(false);
+
         ClearCurrentObstacles();
 
         currentLevel++;
@@ -363,6 +466,7 @@ public class LevelManager : MonoBehaviour
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
         ApplyPlayerOffset();
+        PrepareHomeExitForCurrentLevel();
 
         Debug.Log("Starting Level " + currentLevel);
     }
