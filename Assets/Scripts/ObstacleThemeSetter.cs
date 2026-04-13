@@ -62,6 +62,12 @@ public class ObstacleThemeSetter : MonoBehaviour
         BoxCollider2D box = GetComponent<BoxCollider2D>() ?? GetComponentInChildren<BoxCollider2D>();
         if (box != null)
         {
+            if (isEnemy)
+            {
+                box.enabled = true;
+                box.isTrigger = false;
+            }
+
             // Level 4 requirement: bush must behave as a solid obstacle from both sides.
             if (isBush && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 4)
             {
@@ -140,13 +146,22 @@ public class ObstacleThemeSetter : MonoBehaviour
             }
         }
 
+        Rigidbody2D rb2d = GetComponent<Rigidbody2D>() ?? GetComponentInChildren<Rigidbody2D>();
+        if (isEnemy && rb2d != null)
+        {
+            // Enemy must remain physically solid even when player gains fish speed boost.
+            rb2d.bodyType = RigidbodyType2D.Kinematic;
+            rb2d.useFullKinematicContacts = true;
+            rb2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        }
+
         // 2. PolygonCollider2D Setup
         PolygonCollider2D poly = GetComponent<PolygonCollider2D>() ?? GetComponentInChildren<PolygonCollider2D>();
         if (poly != null)
         {
-            if (isWall)
+            if (isWall || isEnemy)
             {
-                // Keep wall collision simple and stable: one solid box collider only.
+                // Keep wall/enemy collision simple and stable: one solid box collider only.
                 poly.enabled = false;
                 if (box != null)
                 {

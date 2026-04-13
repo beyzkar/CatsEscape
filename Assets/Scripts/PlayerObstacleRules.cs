@@ -56,9 +56,9 @@ public class PlayerObstacleRules : MonoBehaviour
     [Header("Effects")]
     public ParticleSystem sparkleEffect;
     [Header("Hit Recovery")]
-    public float hitRecoveryDuration = 5f;
+    public float hitRecoveryDuration = 2.5f;
     private float damageCooldown = 0f;
-    private const float DAMAGE_COOLDOWN_TIME = 0.5f;
+    private const float DAMAGE_COOLDOWN_TIME = 2.5f;
 
     void Awake()
     {
@@ -353,12 +353,31 @@ public class PlayerObstacleRules : MonoBehaviour
         return new Vector2(0f, Mathf.Sign(delta.y == 0f ? 1f : delta.y));
     }
 
+    private void SeparateFromLevel4Bush(GameObject bushObject)
+    {
+        if (rb == null || bushObject == null) return;
+
+        Collider2D bushCol = bushObject.GetComponent<Collider2D>();
+        if (bushCol == null) return;
+
+        Vector2 toPlayer = (Vector2)transform.position - (Vector2)bushCol.bounds.center;
+        Vector2 pushDir = (toPlayer.sqrMagnitude > 0.0001f) ? toPlayer.normalized : Vector2.up;
+
+        // Ensure vertical escape so the player cannot remain standing/trapped on the bush top.
+        if (pushDir.y < 0.35f) pushDir.y = 0.35f;
+        pushDir.Normalize();
+
+        rb.position += pushDir * 0.2f;
+        rb.linearVelocity = new Vector2(pushDir.x * 3.5f, Mathf.Max(rb.linearVelocity.y, 4.5f));
+    }
+
     private void HandleInteraction(GameObject other, Vector2 normal, bool isTrigger)
     {
         bool isEnemy = IsEnemy(other);
         bool isBush = other.CompareTag("Bush");
         bool isWall = other.CompareTag("Wall") || other.CompareTag("LongWall");
         bool isObstacle = other.CompareTag("Obstacle");
+        bool isLevel4Bush = isBush && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 4;
 
         if (!isEnemy && !isBush && !isWall && !isObstacle) return;
 
@@ -385,6 +404,31 @@ public class PlayerObstacleRules : MonoBehaviour
 
         if (hitTop && !isTrigger) // Crush logic (only for physics collisions)
         {
+            // Level 4 Bush must always hurt on contact and must not behave like a platform.
+            if (isLevel4Bush)
+            {
+                if (damageCooldown <= 0 && !isInvincible)
+                {
+                    if (isPotionActive)
+                    {
+                        ResetPotionEffect();
+                        damageCooldown = 0.2f;
+                    }
+                    else
+                    {
+                        LoseHeart();
+                        damageCooldown = DAMAGE_COOLDOWN_TIME;
+                    }
+
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayHitWall();
+                    lastHitWall = other;
+                }
+                
+                // Bush is a pure damage obstacle in Level 4; do not freeze/stick the player.
+                SeparateFromLevel4Bush(other);
+                return;
+            }
+
             if (isObstacle)
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
@@ -395,7 +439,9 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
-        if (isInvincible && (isEnemy || isBush || isWall)) 
+        // Fish invincibility should prevent DAMAGE, not PHYSICS.
+        // Do not ignore enemy collisions; enemy must remain a blocking obstacle.
+        if (isInvincible && (isBush || isWall)) 
         {
             return;
         }
@@ -405,7 +451,9 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             // NEW SAFETY: Don't take damage if moving left (retreating) unless it's a very specific intentional hazard.
             bool isRetreating = movementScript != null && movementScript.IsMovingLeft;
-            bool isLethal = (isEnemy || isBush) && !isRetreating;
+            bool isLethalBush = isLevel4Bush && !isInvincible;
+            bool isLethalEnemy = isEnemy && !isRetreating && !isInvincible;
+            bool isLethal = isLethalBush || isLethalEnemy;
             
             if (isLethal)
             {
@@ -430,6 +478,13 @@ public class PlayerObstacleRules : MonoBehaviour
             lastHitWall = other;
             ObstacleMove move = other.GetComponent<ObstacleMove>();
             if (move != null) move.canRewardCleanJump = false;
+        }
+
+        // Level 4 Bush should damage on touch but never lock the player in stuck state.
+        if (isLevel4Bush)
+        {
+            SeparateFromLevel4Bush(other);
+            return;
         }
 
         // Side hit freeze
@@ -705,7 +760,7 @@ public class PlayerObstacleRules : MonoBehaviour
         Renderer[] all = GetComponentsInChildren<Renderer>(true);
         if (all != null)
         {
-            foreach (var r in all)
+            foreach (var r in all) 
             {
                 // Only blink things that are part of the cat but NOT hidden helper objects
                 // and were enabled when the hit happened.
