@@ -15,7 +15,7 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 2, 12, 17, 22, 27 };
+    private int[] levelGoals = { 0, 7, 12, 17, 22, 27 };
 
     public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };

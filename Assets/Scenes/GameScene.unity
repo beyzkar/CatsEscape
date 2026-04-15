@@ -1637,6 +1637,7 @@ GameObject:
   m_Component:
   - component: {fileID: 302690817}
   - component: {fileID: 302690816}
+  - component: {fileID: 302690818}
   m_Layer: 0
   m_Name: LeaderboardManager
   m_TagString: Untagged
@@ -1666,6 +1667,9 @@ MonoBehaviour:
   - {fileID: 1933799840}
   - {fileID: 1873424262}
   nextPanelToOpen: {fileID: 371110517}
+  apiService: {fileID: 302690818}
+  submitScoreToServer: 1
+  loadLeaderboardFromServer: 1
 --- !u!4 &302690817
 Transform:
   m_ObjectHideFlags: 0
@@ -1681,6 +1685,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &302690818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 302690815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73d06bd76cead4b8a97caa070f289730, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeaderboardApiService
+  baseUrl: http://localhost:8080
+  submitScorePath: /scores
+  leaderboardPath: /leaderboard
+  leaderboardQuery: ?limit=10
+  requestTimeoutSeconds: 15
+  logRequests: 0
 --- !u!1 &312585830
 GameObject:
   m_ObjectHideFlags: 0
@@ -3303,8 +3325,8 @@ MonoBehaviour:
     fishChance: 0.15
     potionChance: 0.08
   level4:
-    minDistance: 11
-    maxDistance: 16
+    minDistance: 2
+    maxDistance: 17
     bagChance: 0.25
     enemyChance: 0.25
     levelEnemyPrefab: {fileID: 6792327054025522797, guid: 64db8d48fab1ceb43a8ee5d52643029a, type: 3}
@@ -19179,6 +19201,7 @@ MonoBehaviour:
   - 0.8
   - 1.5
   - 2.2
+  - 0
   speedSmoothRate: 4.5
   victoryPanel: {fileID: 371110517}
   levelStatusText: {fileID: 2133008544}
