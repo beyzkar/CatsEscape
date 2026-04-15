@@ -12377,7 +12377,6 @@ GameObject:
   - component: {fileID: 968831688}
   - component: {fileID: 968831687}
   - component: {fileID: 968831686}
-  - component: {fileID: 968831685}
   m_Layer: 0
   m_Name: LevelTransition
   m_TagString: Untagged
@@ -12385,28 +12384,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!95 &968831685
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 968831684}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: f611ac78218434ab182d3074a8323460, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!328 &968831686
 VideoPlayer:
   m_ObjectHideFlags: 0
@@ -12437,7 +12414,7 @@ VideoPlayer:
   m_EnabledAudioTracks: 01
   m_DirectAudioMutes: 00
   m_ControlledAudioTrackCount: 1
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_SkipOnDrop: 1
   m_Looping: 0
   m_WaitForFirstFrame: 1
@@ -12464,12 +12441,13 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
-  videoPlaybackStartDelay: 0.1
-  useFadeEffect: 1
-  fadeInDuration: 0.3
-  fadeOutDuration: 0.3
+  videoPlaybackStartDelay: 0
+  useFadeEffect: 0
+  fadeInDuration: 2
+  fadeOutDuration: 2
+  disableAnimatorDuringTransition: 1
   pauseMusicOnTransition: 1
-  showDebugLogs: 0
+  showDebugLogs: 1
   nextSceneName: 
   nextSceneIndex: -1
 --- !u!114 &968831688
@@ -12500,7 +12478,7 @@ CanvasGroup:
   m_Alpha: 1
   m_Interactable: 1
   m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
+  m_IgnoreParentGroups: 1
 --- !u!223 &968831690
 Canvas:
   m_ObjectHideFlags: 0
@@ -12510,7 +12488,7 @@ Canvas:
   m_GameObject: {fileID: 968831684}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 2
+  m_RenderMode: 0
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -12532,18 +12510,18 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 968831684}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 4.95344}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 571248449}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 10.91952, y: -1.78331}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0, y: 0}
 --- !u!1 &973442862
 GameObject:
   m_ObjectHideFlags: 0
@@ -19216,12 +19194,12 @@ MonoBehaviour:
   homeSprite: {fileID: 7651772406251352727, guid: 5d73ad3ac037d4c1ba5f4b42a92924f7, type: 3}
   homeSpawnPosition: {x: 12, y: -2.25}
   homeScale: {x: 0.4, y: 0.4, z: 0.4}
-  homeColliderSize: {x: 1.4, y: 1.4}
+  homeColliderSize: {x: 11.23285, y: 5.490673}
   homeMoveSpeed: 7
   homeDestroyX: -15
   transitionController: {fileID: 0}
   videoTransitionManager: {fileID: 968831687}
-  homeTransitionAnimator: {fileID: 968831685}
+  homeTransitionAnimator: {fileID: 0}
   homeTransitionTriggerName: Play
   homeTransitionDuration: 1.6
   levelThemes:

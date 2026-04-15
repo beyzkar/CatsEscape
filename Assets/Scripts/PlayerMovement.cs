@@ -598,4 +598,29 @@ public class PlayerMovement : MonoBehaviour
         transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
         ResetRetreatLimit();
     }
+    public void FreezeForTransition(bool freeze)
+    {
+        if (freeze)
+        {
+            ResetHorizontalVelocity();
+            if (rb != null)
+            {
+                rb.bodyType = RigidbodyType2D.Kinematic;
+                rb.linearVelocity = Vector2.zero;
+            }
+            
+            if (anim != null)
+            {
+                anim.SetBool("walking", false);
+                anim.SetBool("Idle", true);
+            }
+        }
+        else
+        {
+            if (rb != null)
+            {
+                rb.bodyType = RigidbodyType2D.Dynamic;
+            }
+        }
+    }
 }

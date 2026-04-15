@@ -300,13 +300,19 @@ public class LevelManager : MonoBehaviour
     private void DisablePlayerMovement()
     {
         if (playerMovement != null)
+        {
+            playerMovement.FreezeForTransition(true);
             playerMovement.enabled = false;
+        }
     }
 
     private void EnablePlayerMovement()
     {
         if (playerMovement != null)
+        {
             playerMovement.enabled = true;
+            playerMovement.FreezeForTransition(false);
+        }
     }
 
     private IEnumerator HomeTransitionWithController()
