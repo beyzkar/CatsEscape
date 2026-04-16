@@ -4,7 +4,7 @@
 
 ---
 
-## 🎮 How to Play
+##  How to Play
 
 ### Objectives
 - **Survive:** Navigate through 5 unique levels by dodging hurdles, obstacles, and enemies.
@@ -21,7 +21,7 @@
 
 ---
 
-## 🚀 Key Features
+##  Key Features
 
 -   **5 Thematic Levels:** Progress through specialized environments with increasing difficulty.
 -   **Advanced Physics:** Responsive "Better Jump" mechanics for precise platforming.
@@ -33,7 +33,7 @@
 
 ---
 
-## 💻 Tech Stack
+##  Tech Stack
 
 ### Frontend (Game)
 -   **Engine:** Unity 2022.x+
@@ -50,7 +50,7 @@
 
 ---
 
-## ⚙️ Setup & Installation
+##  Setup & Installation
 
 ### 1. Server Setup
 Before running the game, start the leaderboard server:
@@ -69,4 +69,4 @@ The server will start at `http://localhost:8080`.
 ---
 
 ## 📄 License
-This project is for educational and personal use. Designed with ❤️ for cat lovers and game devs.
+This project is for educational and personal use. 
