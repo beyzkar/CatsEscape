@@ -9,6 +9,7 @@ public class ObstacleMove : MonoBehaviour
     [HideInInspector] public bool canRewardCleanJump = true;
 
     private bool passedPlayer = false;
+    private bool hasBeenCounted = false;
     private Transform player;
 
     void Start()
@@ -71,7 +72,10 @@ public class ObstacleMove : MonoBehaviour
                 // Level 1-4 use this check
                 if (LevelManager.Instance != null && LevelManager.Instance.currentLevel < 5)
                 {
-                    LevelManager.Instance.ObstaclePassed();
+                    if (TryCountPass())
+                    {
+                        LevelManager.Instance.ObstaclePassed();
+                    }
                 }
             }
         }
@@ -79,5 +83,12 @@ public class ObstacleMove : MonoBehaviour
         // Cleanup: destroy object when well off-screen
         if (transform.position.x < destroyX)
             Destroy(gameObject);
+    }
+
+    public bool TryCountPass()
+    {
+        if (hasBeenCounted) return false;
+        hasBeenCounted = true;
+        return true;
     }
 }

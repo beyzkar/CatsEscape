@@ -98,6 +98,8 @@ public class PlayerMovement : MonoBehaviour
     private bool mobileLeft = false;
     private bool mobileRight = false;
     private bool wasAtRetreatLimit = false;
+    private bool jumpDisabled = false;
+    private bool isLevelEnding = false;
     // Keep a single global retreat wall for all levels.
     private float CurrentLeftBoundaryX => FixedLeftBoundaryX;
 
@@ -221,8 +223,15 @@ public class PlayerMovement : MonoBehaviour
 
         // Input processing
         float hInput = Input.GetAxisRaw("Horizontal");
-        if (mobileLeft) hInput = -1f;
-        if (mobileRight) hInput = 1f;
+        if (isLevelEnding)
+        {
+            hInput = 1f; // Force move right automatically
+        }
+        else
+        {
+            if (mobileLeft) hInput = -1f;
+            if (mobileRight) hInput = 1f;
+        }
 
         // FIXED MOVEMENT: Removed Harmonic Agility Scaling for simpler, predictable controls
         float actualRightSpeed = moveRightSpeed;
@@ -492,7 +501,7 @@ public class PlayerMovement : MonoBehaviour
     
     public void MobileJumpDown()
     {
-        if (dead) return;
+        if (dead || jumpDisabled) return;
         
         // Level 5 specific check for pit depths
         bool canJump = true;
@@ -585,6 +594,8 @@ public class PlayerMovement : MonoBehaviour
         isGrounded = true;
         introFinished = true;
         WorldDirection = 1;
+        jumpDisabled = false;
+        isLevelEnding = false;
         ResetJumps();
 
         if (anim != null)
@@ -623,4 +634,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
     }
+
+    public void DisableJumping() => jumpDisabled = true;
+    public void StartLevelEndWalk() => isLevelEnding = true;
 }

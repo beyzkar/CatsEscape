@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using TMPro;
 
 [RequireComponent(typeof(Canvas), typeof(CanvasGroup), typeof(GraphicRaycaster))]
 public class LevelVideoTransitionManager : MonoBehaviour
@@ -12,6 +13,11 @@ public class LevelVideoTransitionManager : MonoBehaviour
     [Header("UI Components")]
     [SerializeField] private RawImage transitionRawImage;
     [SerializeField] private VideoPlayer videoPlayer;
+    [SerializeField] private TextMeshProUGUI statusText;
+
+    [Header("Transition Text")]
+    [SerializeField] private string statusMessage = "Closer to Home";
+    [SerializeField] private bool showStatusText = true;
 
     [Header("Video Settings")]
     [SerializeField] private VideoClip defaultVideoClip;
@@ -325,6 +331,12 @@ public class LevelVideoTransitionManager : MonoBehaviour
             transitionRawImage.color = Color.white;
         }
 
+        if (showStatusText && statusText != null)
+        {
+            statusText.text = statusMessage;
+            statusText.gameObject.SetActive(true);
+        }
+
         Log("Panel shown.");
     }
 
@@ -337,6 +349,11 @@ public class LevelVideoTransitionManager : MonoBehaviour
         if (transitionRawImage != null)
         {
             transitionRawImage.enabled = false;
+        }
+
+        if (statusText != null)
+        {
+            statusText.gameObject.SetActive(false);
         }
 
         if (videoPlayer != null && videoPlayer.isPlaying)
@@ -469,6 +486,11 @@ public class LevelVideoTransitionManager : MonoBehaviour
             canvasGroup.alpha = 0f;
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
+        }
+
+        if (statusText != null)
+        {
+            statusText.gameObject.SetActive(false);
         }
 
         gameObject.SetActive(false);

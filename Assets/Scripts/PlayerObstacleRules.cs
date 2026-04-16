@@ -433,8 +433,15 @@ public class PlayerObstacleRules : MonoBehaviour
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
+                
+                // NEW: Use counting gate to prevent double counting with ObstacleMove.Update
+                ObstacleMove move = other.GetComponent<ObstacleMove>();
+                if (move != null && move.TryCountPass())
+                {
+                    if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
+                }
+                
                 Destroy(other);
-                if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
             }
             return;
         }

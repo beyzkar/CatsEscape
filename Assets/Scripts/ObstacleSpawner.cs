@@ -46,6 +46,7 @@ public class ObstacleSpawner : MonoBehaviour
     
     private int lastTrackedLevel = -1;
     private int lethalPassedCount = 0; // Tracks how many Enemies/Bushes the player bypassed
+    private bool isSpawningDisabled = false;
 
     [System.Serializable]
     public class Level1Settings {
@@ -113,6 +114,8 @@ public class ObstacleSpawner : MonoBehaviour
 
     void Update()
     {
+        if (isSpawningDisabled) return;
+
         // Only accumulate distance if the game is actually "moving" and player is NOT stuck
         if (GameSpeed.Multiplier <= 0) return;
         if (PlayerMovement.Instance != null)
@@ -312,4 +315,6 @@ public class ObstacleSpawner : MonoBehaviour
     {
         lethalPassedCount++;
     }
+
+    public void SetSpawningEnabled(bool enabled) => isSpawningDisabled = !enabled;
 }

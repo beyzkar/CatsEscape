@@ -15,7 +15,7 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 7, 12, 17, 22, 27 };
+    private int[] levelGoals = { 0, 1, 12, 17, 22, 27 };
 
     public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };
@@ -106,6 +106,9 @@ public class LevelManager : MonoBehaviour
     private GameObject homeExitObject;
     private bool homeExitActive = false;
     private bool homeTransitionInProgress = false;
+    private bool worldStoppedForHome = false;
+    private bool goalReachedPendingHome = false;
+    private float distanceAtGoal = 0f;
 
     private void Start()
     {
@@ -191,6 +194,7 @@ public class LevelManager : MonoBehaviour
     private void PrepareHomeExitForCurrentLevel()
     {
         homeExitActive = false;
+        worldStoppedForHome = false;
 
         if (currentLevel >= 5)
         {
@@ -257,6 +261,9 @@ public class LevelManager : MonoBehaviour
 
         homeExitObject.SetActive(true);
         homeExitActive = true;
+
+        if (playerMovement != null)
+            playerMovement.DisableJumping();
     }
 
     public void TryCompleteLevelViaHome()
@@ -356,6 +363,30 @@ public class LevelManager : MonoBehaviour
                     GameSpeed.Multiplier, targetGameMultiplier, speedSmoothRate * Time.deltaTime);
         }
 
+        // --- EMPTY ROAD DELAY ---
+        if (goalReachedPendingHome && playerMovement != null)
+        {
+            if (playerMovement.totalDistance >= distanceAtGoal + 12f)
+            {
+                goalReachedPendingHome = false;
+                ActivateHomeExit();
+            }
+        }
+
+        // --- HOME EXIT CINEMATIC LOGIC ---
+        if (homeExitActive && homeExitObject != null && !worldStoppedForHome)
+        {
+            if (homeExitObject.transform.position.x <= 0f) // Mid-screen
+            {
+                worldStoppedForHome = true;
+                SetTargetSpeed(0f);
+                GameSpeed.Multiplier = 0f; // Force instant stop for better feel
+                
+                if (playerMovement != null)
+                    playerMovement.StartLevelEndWalk();
+            }
+        }
+
         if (pendingVictory && playerMovement != null && playerMovement.IsGrounded)
         {
             pendingVictory = false;
@@ -431,7 +462,15 @@ public class LevelManager : MonoBehaviour
         if (obstaclesPassed >= levelGoals[currentLevel])
         {
             if (currentLevel < 5)
-                ActivateHomeExit();
+            {
+                if (!goalReachedPendingHome && !homeExitActive)
+                {
+                    if (ObstacleSpawner.Instance != null) ObstacleSpawner.Instance.SetSpawningEnabled(false);
+                    goalReachedPendingHome = true;
+                    distanceAtGoal = (playerMovement != null) ? playerMovement.totalDistance : 0f;
+                    Debug.Log("Level goal reached. Spawning stopped. Waiting for empty road...");
+                }
+            }
             else
                 pendingVictory = true;
         }
@@ -497,6 +536,9 @@ public class LevelManager : MonoBehaviour
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (normalLevelContent != null) normalLevelContent.SetActive(false);
         if (finalLevelContent != null) finalLevelContent.SetActive(false);
+
+        goalReachedPendingHome = false;
+        if (ObstacleSpawner.Instance != null) ObstacleSpawner.Instance.SetSpawningEnabled(true);
         
         Time.timeScale = 1f;
         

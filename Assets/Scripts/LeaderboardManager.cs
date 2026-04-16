@@ -63,7 +63,12 @@ public class LeaderboardManager : MonoBehaviour
 
             if (isScoreboardActive || isLeaderboardActive)
             {
+                // If keyboard is busy typing name, don't restart
                 if (nameSpace != null && nameSpace.isFocused) return;
+                
+                // If leaderboard popup is open, don't restart (Wait for X or manual retry)
+                if (isLeaderboardActive) return;
+
                 OnRetryButtonClick();
             }
         }
@@ -108,6 +113,12 @@ public class LeaderboardManager : MonoBehaviour
     {
         ResetGameDynamics();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void OnCloseLeaderboard()
+    {
+        if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
+        if (scoreboard != null) scoreboard.SetActive(true);
     }
 
     private void ResetGameDynamics()
