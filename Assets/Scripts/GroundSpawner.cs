@@ -32,8 +32,26 @@ public class GroundSpawner : MonoBehaviour
 
     private List<GameObject> activeGrounds = new List<GameObject>();
     private float nextSpawnX = 0f;        // Bir sonraki parçanın ekleneceği X koordinatı
+    /// <summary>Returns the world X position where the next ground segment would be spawned (effective end of current path).</summary>
+    public float NextSpawnX => nextSpawnX;
+
     private bool isSpawnerStarted = false;
+    private bool isSpawningStopped = false; // Minimal flag to end the path
     private int segmentsSinceLastPit = 0; // İki köprü arasındaki mesafeyi korumak için
+
+    /// <summary>Stops creating new forward segments (used for Level 5 ending gap).</summary>
+    public void StopSpawning() { isSpawningStopped = true; }
+
+    /// <summary>Returns the world X position of the last physically spawned bridge segment.</summary>
+    public float GetLastBridgeX()
+    {
+        if (activeGrounds.Count > 0)
+        {
+            GameObject last = activeGrounds[activeGrounds.Count - 1];
+            if (last != null) return last.transform.position.x;
+        }
+        return nextSpawnX - groundWidth; // Fallback to virtual position
+    }
 
     void Start()
     {
@@ -66,8 +84,8 @@ public class GroundSpawner : MonoBehaviour
             // Spawning: Handle both directions
             float rightLimit = (PlayerMovement.Instance.ScreenMaxX > 0) ? PlayerMovement.Instance.ScreenMaxX : PlayerMovement.Instance.maxX;
             
-            // Forward (Right side)
-            if (activeGrounds.Count > 0 && activeGrounds[activeGrounds.Count - 1].transform.position.x < (rightLimit + groundWidth))
+            // Forward (Right side) - Check if spawning is allowed
+            if (!isSpawningStopped && activeGrounds.Count > 0 && activeGrounds[activeGrounds.Count - 1].transform.position.x < (rightLimit + groundWidth))
             {
                 SpawnNextSegment(true, true);
             }

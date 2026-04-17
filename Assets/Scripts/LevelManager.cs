@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Serialization;
@@ -15,7 +16,7 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 1, 12, 17, 22, 27 };
+    private int[] levelGoals = { 0, 7, 12, 17, 22, 5 };
 
     public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };
@@ -33,6 +34,10 @@ public class LevelManager : MonoBehaviour
     
     [Header("Backgrounds")]
     public GameObject[] levelBackgrounds;
+
+    [Header("Final Level 5 Portal")]
+    [Tooltip("Assign the static portal prefab/instance. When null, Level 5 falls back to the legacy grounded victory.")]
+    [SerializeField] private FinalPortal finalPortal;
 
     [Header("Home Exit (Levels 1-4)")]
     public Sprite homeSprite;
@@ -102,6 +107,16 @@ public class LevelManager : MonoBehaviour
     }
 
     private bool pendingVictory = false;
+
+    /// <summary>Obstacle count required to finish the current level (from internal goals; Level 5 uses this for the portal).</summary>
+    public int LevelTargetObstacleCount
+    {
+        get
+        {
+            if (currentLevel < 0 || currentLevel >= levelGoals.Length) return 0;
+            return levelGoals[currentLevel];
+        }
+    }
     private PlayerMovement playerMovement;
     private GameObject homeExitObject;
     private bool homeExitActive = false;
@@ -165,6 +180,31 @@ public class LevelManager : MonoBehaviour
 
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null) playerMovement = p.GetComponent<PlayerMovement>();
+
+        // Ensure we prioritize any portal already placed/edited in the Scene Hierarchy
+        if (finalPortal == null || !finalPortal.gameObject.scene.IsValid())
+        {
+            FinalPortal existingInScene = Object.FindAnyObjectByType<FinalPortal>();
+            if (existingInScene != null) 
+            {
+                finalPortal = existingInScene;
+                Debug.Log($"LEVEL_MANAGER: Found existing portal in scene: {finalPortal.name}. Using its settings.");
+            }
+        }
+
+        if (finalPortal != null)
+        {
+            Scene s = finalPortal.gameObject.scene;
+            if (!s.IsValid() || !s.isLoaded)
+            {
+                // Only instantiate if the reference is a prefab and no scene instance was found
+                GameObject spawned = Instantiate(finalPortal.gameObject);
+                spawned.name = "FinalPortal";
+                spawned.SetActive(false);
+                finalPortal = spawned.GetComponent<FinalPortal>();
+                Debug.Log("LEVEL_MANAGER: Instantiated new portal from prefab.");
+            }
+        }
 
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
@@ -439,7 +479,7 @@ public class LevelManager : MonoBehaviour
         obstaclesPassed++;
         
         if (currentLevel == 5)
-            Debug.Log("Level 5 Progress: " + obstaclesPassed + "/10");
+            Debug.Log("Level 5 Progress: " + obstaclesPassed + "/" + LevelTargetObstacleCount);
 
         CheckLevelProgress();
         UpdateInGameLevelText();
@@ -450,6 +490,8 @@ public class LevelManager : MonoBehaviour
         if (currentLevel == 5)
         {
             obstaclesPassed = 0;
+            if (finalPortal != null)
+                finalPortal.ResetAfterLevelProgressCleared();
             UpdateInGameLevelText();
             Debug.Log("Level 5: Engel çarpması! Progress SIFIRLAND.");
         }
@@ -472,8 +514,26 @@ public class LevelManager : MonoBehaviour
                 }
             }
             else
-                pendingVictory = true;
+            {
+                // Stop spawning ground pieces to create a 'gap' / end of path
+                if (GroundSpawner.Instance != null && currentLevel == 5)
+                    GroundSpawner.Instance.StopSpawning();
+
+                if (finalPortal != null)
+                    finalPortal.TrySpawnFromLevelManager();
+                else
+                {
+                    Debug.LogWarning("LEVEL_MANAGER: FinalPortal atanmamış — Level 5 için eski 'zeminde zafer' akışı kullanılıyor.");
+                    pendingVictory = true;
+                }
+            }
         }
+    }
+
+    /// <summary>Invoked by FinalPortal after the exit animation and delay; opens victory / save-score flow once.</summary>
+    public void OpenFinalVictoryAfterPortalExit()
+    {
+        ShowVictory();
     }
 
     private void ShowVictory()

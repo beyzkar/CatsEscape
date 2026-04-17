@@ -35,7 +35,7 @@ public class GroundPoint : MonoBehaviour
             // Opsiyonel: Sadece önemli ilerlemeleri logla
             if (LevelManager.Instance.obstaclesPassed % 2 == 0)
             {
-                Debug.Log($"GroundPoint: Level 5 Progress: {LevelManager.Instance.obstaclesPassed}/10");
+                Debug.Log($"GroundPoint: Level 5 Progress: {LevelManager.Instance.obstaclesPassed}/{LevelManager.Instance.LevelTargetObstacleCount}");
             }
         }
     }

@@ -100,6 +100,7 @@ public class PlayerMovement : MonoBehaviour
     private bool wasAtRetreatLimit = false;
     private bool jumpDisabled = false;
     private bool isLevelEnding = false;
+    private bool portalExitSequenceActive = false;
     // Keep a single global retreat wall for all levels.
     private float CurrentLeftBoundaryX => FixedLeftBoundaryX;
 
@@ -193,6 +194,9 @@ public class PlayerMovement : MonoBehaviour
             }
             return;
         } 
+
+        if (portalExitSequenceActive)
+            return;
 
         // Handle Death State
         if (rules != null && rules.IsDead) 
@@ -357,6 +361,8 @@ public class PlayerMovement : MonoBehaviour
 
         if (!introFinished || (rules != null && rules.IsDead)) return;
 
+        if (portalExitSequenceActive) return;
+
         // 2. HAREKET HESABI (Sıfırlanmış değerler üzerinden)
         float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
         
@@ -416,6 +422,8 @@ public class PlayerMovement : MonoBehaviour
     void LateUpdate()
     {
         UpdateViewportBounds();
+
+        if (portalExitSequenceActive) return;
         
         if (!useViewportClamping) return;
         
@@ -501,7 +509,7 @@ public class PlayerMovement : MonoBehaviour
     
     public void MobileJumpDown()
     {
-        if (dead || jumpDisabled) return;
+        if (dead || jumpDisabled || portalExitSequenceActive) return;
         
         // Level 5 specific check for pit depths
         bool canJump = true;
@@ -637,4 +645,14 @@ public class PlayerMovement : MonoBehaviour
 
     public void DisableJumping() => jumpDisabled = true;
     public void StartLevelEndWalk() => isLevelEnding = true;
+
+    public void SetPortalExitSequenceActive(bool active) => portalExitSequenceActive = active;
+
+    public void SetPortalDrivenWorldPosition(Vector3 worldPos)
+    {
+        if (rb != null)
+            rb.position = worldPos;
+        else
+            transform.position = worldPos;
+    }
 }
