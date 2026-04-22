@@ -6,6 +6,7 @@ public class MainMenuManager : MonoBehaviour
     public string gameSceneName = "GameScene";
     public GameObject characterSelectPanel; // Unity'den seçim panelini buraya sürükleyin
     public GameObject mainMenuView;         // Ana menü yazılarını içeren obje
+    public GameObject authPanel;            // Authentication paneli (opsiyonel)
 
     public void StartGame()
     {

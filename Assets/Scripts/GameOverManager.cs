@@ -63,6 +63,9 @@ public class GameOverManager : MonoBehaviour
 
     public void LoadMainMenu()
     {
+        // Global hard reset for XP when returning to start
+        if (ScoreManager.Instance != null) ScoreManager.Instance.ResetAllXP();
+
         // Seviye sürekliliğini sıfırla
         LevelManager.ResetPersistentLevel();
 

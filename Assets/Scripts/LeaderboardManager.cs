@@ -78,6 +78,16 @@ public class LeaderboardManager : MonoBehaviour
     {
         if (scoreboard != null) scoreboard.SetActive(true);
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
+
+        // Pre-fill name if logged in via Google (Phase 1)
+        if (nameSpace != null && nameSpace.text == "")
+        {
+            var auth = GameObject.FindObjectOfType<CatsEscape.Auth.AuthManager>();
+            if (auth != null && auth.IsUserLoggedIn())
+            {
+                nameSpace.text = auth.GetUserName();
+            }
+        }
     }
 
     public void ShowLeaderboardOnly()

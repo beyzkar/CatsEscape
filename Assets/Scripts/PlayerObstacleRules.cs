@@ -434,11 +434,10 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
                 
-                // NEW: Use counting gate to prevent double counting with ObstacleMove.Update
-                ObstacleMove move = other.GetComponent<ObstacleMove>();
-                if (move != null && move.TryCountPass())
+                // ONLY count as progress for Levels 1-4. Level 5 uses distinct bridge-landing logic.
+                if (LevelManager.Instance != null && LevelManager.Instance.currentLevel < 5)
                 {
-                    if (LevelManager.Instance != null) LevelManager.Instance.ObstaclePassed();
+                    LevelManager.Instance.ObstaclePassed();
                 }
                 
                 Destroy(other);

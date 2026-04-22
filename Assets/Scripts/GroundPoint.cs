@@ -26,17 +26,14 @@ public class GroundPoint : MonoBehaviour
 
     private void HandlePlayerContact()
     {
-        // Sadece Level 5'te ve daha önce puan verilmemişse çalışır
+        // AUTHORITY: Only the first landing on a NEW ground segment counts for Level 5 progress.
         if (!hasGivenPoint && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
         {
             hasGivenPoint = true;
             LevelManager.Instance.ObstaclePassed();
             
-            // Opsiyonel: Sadece önemli ilerlemeleri logla
-            if (LevelManager.Instance.obstaclesPassed % 2 == 0)
-            {
-                Debug.Log($"GroundPoint: Level 5 Progress: {LevelManager.Instance.obstaclesPassed}/{LevelManager.Instance.LevelTargetObstacleCount}");
-            }
+            // Clean production log
+            Debug.Log($"[GroundPoint] Valid landing detected on {gameObject.name}. Total Progress: {LevelManager.Instance.obstaclesPassed}/{LevelManager.Instance.LevelTargetObstacleCount}");
         }
     }
 }

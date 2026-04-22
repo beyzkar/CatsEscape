@@ -169,13 +169,18 @@ public class LevelManager : MonoBehaviour
             savedLevel = currentLevel;
         }
 
-        // --- HIGHLANDER PATTERN: TEK PLAYER ZORUNLU ---
+        // --- HIGHLANDER PATTERN: Ensure only a single Player instance exists ---
         PlayerMovement[] allPlayers = Object.FindObjectsByType<PlayerMovement>(FindObjectsSortMode.None);
         if (allPlayers.Length > 1)
         {
-            Debug.LogWarning("LEVEL MANAGER: Duplicate player bulundu! Temizleniyor...");
-            for (int i = 1; i < allPlayers.Length; i++) 
-                Destroy(allPlayers[i].gameObject);
+            Debug.LogWarning($"[LevelManager] {allPlayers.Length} players detected. Cleanup in progress...");
+            foreach (var p_obj in allPlayers)
+            {
+                if (p_obj != PlayerMovement.Instance && p_obj != null)
+                {
+                    Destroy(p_obj.gameObject);
+                }
+            }
         }
 
         GameObject p = GameObject.FindGameObjectWithTag("Player");
@@ -210,6 +215,15 @@ public class LevelManager : MonoBehaviour
         UpdateInGameLevelText();
         ApplyPlayerOffset();
         PrepareHomeExitForCurrentLevel();
+    }
+
+    /// <summary>
+    /// Surgical Fix 5.0: Resets the static saved level to force a fresh start.
+    /// </summary>
+    public static void ResetSavedLevel()
+    {
+        savedLevel = -1;
+        Debug.Log("[LevelManager] Global SavedLevel has been reset for a fresh start.");
     }
 
     private void ApplyPlayerOffset()
@@ -466,6 +480,10 @@ public class LevelManager : MonoBehaviour
     public void MainMenu()
     {
         ResetPersistentLevel();
+        
+        // Global hard reset for XP when returning to start
+        if (ScoreManager.Instance != null) ScoreManager.Instance.ResetAllXP();
+
         Time.timeScale = 1f;
         targetGameMultiplier = 1f;
         GameSpeed.Multiplier = 1f;
@@ -476,10 +494,16 @@ public class LevelManager : MonoBehaviour
 
     public void ObstaclePassed()
     {
+        // Level 5 Completion Lock: Ensure we never count beyond the target for a clean end-state
+        if (currentLevel == 5 && obstaclesPassed >= LevelTargetObstacleCount) 
+        {
+            return;
+        }
+
         obstaclesPassed++;
         
         if (currentLevel == 5)
-            Debug.Log("Level 5 Progress: " + obstaclesPassed + "/" + LevelTargetObstacleCount);
+            Debug.Log("[LevelManager] Level 5 Bridge Landed: " + obstaclesPassed + "/" + LevelTargetObstacleCount);
 
         CheckLevelProgress();
         UpdateInGameLevelText();
@@ -583,6 +607,9 @@ public class LevelManager : MonoBehaviour
     public void NextLevel()
     {
         if (currentLevel >= 5) return;
+
+        // Bank current XP before switching levels
+        if (ScoreManager.Instance != null) ScoreManager.Instance.CommitSessionXP();
 
         homeExitActive = false;
         if (homeExitObject != null) homeExitObject.SetActive(false);

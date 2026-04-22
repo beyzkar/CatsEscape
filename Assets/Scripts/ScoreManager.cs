@@ -12,6 +12,9 @@ public class ScoreManager : MonoBehaviour
     private int totalXP = 0;
     private int bonusXP = 0;
 
+    // Banked XP from previously completed levels. Static so it survives scene reloads (Retries).
+    private static int persistentXP = 0;
+
     [Header("XP Prefabs")]
     public GameObject xp20Prefab;
     public GameObject xp50Prefab;
@@ -30,6 +33,10 @@ public class ScoreManager : MonoBehaviour
         // Cache player for XP icon spawning
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null) playerTransform = player.transform;
+
+        // NEW: Initialize XP and UI immediately on load so persistent XP is displayed at level start
+        CalculateXP();
+        UpdateUI();
     }
 
     private void Update()
@@ -60,7 +67,36 @@ public class ScoreManager : MonoBehaviour
         else if (distance <= 150f) tempXP = 30f + (distance - 100f) * 0.6f; // 30 = 10 + 20
         else tempXP = 60f + (distance - 150f) * 1.0f; // 60 = 30 + 30
 
-        totalXP = Mathf.FloorToInt(tempXP) + bonusXP;
+        // Final XP is the BANKed previous levels XP + current level session XP
+        totalXP = persistentXP + Mathf.FloorToInt(tempXP) + bonusXP;
+    }
+
+    /// <summary>
+    /// Officially "Banks" the current total XP into persistent storage.
+    /// Called when a level is successfully completed.
+    /// </summary>
+    public void CommitSessionXP()
+    {
+        persistentXP = totalXP;
+        
+        // Reset session progress so it doesn't carry over as 'earned twice'
+        distance = 0f;
+        bonusXP = 0;
+        
+        Debug.Log($"[ScoreManager] XP Committed! New Banked XP: {persistentXP}");
+    }
+
+    /// <summary>
+    /// Resets all XP to absolute zero. Called for Main Menu or New Game.
+    /// </summary>
+    public void ResetAllXP()
+    {
+        persistentXP = 0;
+        totalXP = 0;
+        bonusXP = 0;
+        distance = 0f;
+        Debug.Log("[ScoreManager] All XP data wiped (Persistent and Session).");
+        UpdateUI();
     }
 
     public void AddXP(int amount, bool playSound = true)
