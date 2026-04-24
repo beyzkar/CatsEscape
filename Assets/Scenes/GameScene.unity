@@ -254,8 +254,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 440049670}
-        m_TargetAssemblyTypeName: CatsEscape.Auth.AuthManager, Assembly-CSharp
+      - m_Target: {fileID: 1505732494}
+        m_TargetAssemblyTypeName: CatsEscape.Auth.AuthUIController, Assembly-CSharp
         m_MethodName: ContinueAsGuest
         m_Mode: 1
         m_Arguments:
@@ -966,9 +966,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 440049670}
-        m_TargetAssemblyTypeName: CatsEscape.Auth.AuthManager, Assembly-CSharp
-        m_MethodName: SignInWithGoogle
+      - m_Target: {fileID: 1505732494}
+        m_TargetAssemblyTypeName: CatsEscape.Auth.AuthUIController, Assembly-CSharp
+        m_MethodName: OnGoogleLoginClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

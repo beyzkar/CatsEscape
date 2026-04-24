@@ -82,7 +82,7 @@ public class LeaderboardManager : MonoBehaviour
         // Pre-fill name if logged in via Google (Phase 1)
         if (nameSpace != null && nameSpace.text == "")
         {
-            var auth = GameObject.FindObjectOfType<CatsEscape.Auth.AuthManager>();
+            var auth = GameObject.FindAnyObjectByType<CatsEscape.Auth.AuthManager>();
             if (auth != null && auth.IsUserLoggedIn())
             {
                 nameSpace.text = auth.GetUserName();
