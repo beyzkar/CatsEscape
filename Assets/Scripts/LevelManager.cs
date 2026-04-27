@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Serialization;
 using System.Collections;
+using CatsEscape.Networking;
 
 public class LevelManager : MonoBehaviour
 {
@@ -134,6 +135,9 @@ public class LevelManager : MonoBehaviour
         }
 
         InitializeTransitionPanel();
+        
+        if (GameplayStatsTracker.Instance != null)
+            GameplayStatsTracker.Instance.ResetStats(currentLevel);
     }
 
     private void InitializeTransitionPanel()
@@ -585,10 +589,14 @@ public class LevelManager : MonoBehaviour
             }
             else
             {
-                if (normalLevelContent != null) normalLevelContent.SetActive(false);
-                if (finalLevelContent != null) finalLevelContent.SetActive(true);
-
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
+                
+                // NEW: Update game stats
+                if (CatsEscape.Auth.AuthManager.Instance != null)
+                {
+                    CatsEscape.Auth.AuthManager.Instance.TotalCompletions++;
+                    CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 5;
+                }
 
                 if (LeaderboardManager.Instance != null)
                 {
@@ -602,11 +610,25 @@ public class LevelManager : MonoBehaviour
                 }
             }
         }
+
+        // Send results to backend
+        if (GameDataApiClient.Instance != null)
+            GameDataApiClient.Instance.SendLevelResult("completed");
     }
 
     public void NextLevel()
     {
         if (currentLevel >= 5) return;
+
+        // NEW: Sync results to backend IMMEDIATELY
+        if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+        {
+            CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("completed");
+        }
+        else
+        {
+            Debug.LogError("[CRITICAL-API-ERROR] GameDataApiClient.Instance is NULL in NextLevel! Is the object missing from MainMenu?");
+        }
 
         // Bank current XP before switching levels
         if (ScoreManager.Instance != null) ScoreManager.Instance.CommitSessionXP();
@@ -618,6 +640,13 @@ public class LevelManager : MonoBehaviour
 
         currentLevel++;
         savedLevel = currentLevel;
+
+        // NEW: Update last reached level
+        if (CatsEscape.Auth.AuthManager.Instance != null)
+        {
+            CatsEscape.Auth.AuthManager.Instance.LastLevelReached = currentLevel;
+        }
+
         obstaclesPassed = 0;
         
         if (victoryPanel != null) victoryPanel.SetActive(false);
@@ -653,6 +682,9 @@ public class LevelManager : MonoBehaviour
         UpdateInGameLevelText();
         ApplyPlayerOffset();
         PrepareHomeExitForCurrentLevel();
+
+        if (GameplayStatsTracker.Instance != null)
+            GameplayStatsTracker.Instance.ResetStats(currentLevel);
 
         Debug.Log("Level " + currentLevel + " başladı.");
     }

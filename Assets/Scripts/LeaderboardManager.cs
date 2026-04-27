@@ -85,7 +85,7 @@ public class LeaderboardManager : MonoBehaviour
             var auth = GameObject.FindAnyObjectByType<CatsEscape.Auth.AuthManager>();
             if (auth != null && auth.IsUserLoggedIn())
             {
-                nameSpace.text = auth.GetUserName();
+                nameSpace.text = auth.GetFormattedUserName();
             }
         }
     }

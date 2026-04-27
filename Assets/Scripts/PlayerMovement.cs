@@ -233,7 +233,11 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            if (mobileLeft) hInput = -1f;
+            if (mobileLeft) 
+            {
+                hInput = -1f;
+                Debug.Log("[MOBILE_INPUT] Left input value: -1");
+            }
             if (mobileRight) hInput = 1f;
         }
 
@@ -374,6 +378,11 @@ public class PlayerMovement : MonoBehaviour
 
         totalDistance += distanceStep;
         if (totalDistance > peakDistance) peakDistance = totalDistance;
+
+        if (distanceStep < -0.001f)
+        {
+            Debug.Log("[PLAYER_MOVEMENT] Moving left");
+        }
 
         float finalVelocityX = targetVelocityX * groundedSpeedMultiplier;
 

@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using CatsEscape.Networking;
 
 // Manages the procedural spawning of obstacles, enemies, and power-ups across different levels
 public class ObstacleSpawner : MonoBehaviour
@@ -293,6 +294,9 @@ public class ObstacleSpawner : MonoBehaviour
             {
                 Instantiate(fishPrefab, new Vector3(fishSpawnX, fishSpawnY, 0f), Quaternion.identity);
                 lastRewardDistance = accumulatedDistance; // Reset cooldown
+                
+                if (GameplayStatsTracker.Instance != null)
+                    GameplayStatsTracker.Instance.OnFishSpawned();
             }
             return;
         }
@@ -306,6 +310,9 @@ public class ObstacleSpawner : MonoBehaviour
                 float randomY = Random.Range(potionSpawnMinY, potionSpawnMaxY);
                 Instantiate(potionPrefab, new Vector3(fishSpawnX, randomY, 0f), Quaternion.identity);
                 lastRewardDistance = accumulatedDistance; // Reset cooldown
+
+                if (GameplayStatsTracker.Instance != null)
+                    GameplayStatsTracker.Instance.OnPotionSpawned();
             }
             return;
         }

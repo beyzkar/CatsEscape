@@ -84,6 +84,8 @@ public class ScoreManager : MonoBehaviour
         bonusXP = 0;
         
         Debug.Log($"[ScoreManager] XP Committed! New Banked XP: {persistentXP}");
+        
+        Debug.Log($"[ScoreManager] XP Committed! New Banked XP: {persistentXP}");
     }
 
     /// <summary>
@@ -139,6 +141,12 @@ public class ScoreManager : MonoBehaviour
         if (scoreText != null)
         {
             scoreText.text = totalXP.ToString() + " XP";
+        }
+
+        // NEW: Sync with AuthManager for high score tracking
+        if (CatsEscape.Auth.AuthManager.Instance != null)
+        {
+            CatsEscape.Auth.AuthManager.Instance.HighestXP = totalXP;
         }
     }
 

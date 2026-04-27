@@ -22,7 +22,13 @@ public class MobileButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (player == null) return;
+        if (player == null) 
+        {
+            Debug.LogError($"[MOBILE_INPUT] {gameObject.name} (Type: {type}) has NO Player assigned!");
+            return;
+        }
+
+        Debug.Log($"[MOBILE_INPUT] {type} button down at {eventData.position}");
 
         switch (type)
         {
@@ -41,6 +47,8 @@ public class MobileButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     public void OnPointerUp(PointerEventData eventData)
     {
         if (player == null) return;
+
+        Debug.Log($"[MOBILE_INPUT] {type} button up");
 
         // Reset movement flags on button release (except for Up/Jump)
         switch (type)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using CatsEscape.Networking;
 
 public class GameOverManager : MonoBehaviour
 {
@@ -49,6 +50,10 @@ public class GameOverManager : MonoBehaviour
             // Fallback: If no leaderboard system, just show GameOver panel
             if (gameOverPanel != null) gameOverPanel.SetActive(true);
         }
+
+        // Send results to backend
+        if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+            CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("failed");
     }
 
     public void Replay()

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using CatsEscape.Networking;
 
 public class PlayerObstacleRules : MonoBehaviour
 {
@@ -434,6 +435,9 @@ public class PlayerObstacleRules : MonoBehaviour
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayCrush();
                 if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(20);
                 
+                if (GameplayStatsTracker.Instance != null)
+                    GameplayStatsTracker.Instance.AddXPEarned(20);
+                
                 // ONLY count as progress for Levels 1-4. Level 5 uses distinct bridge-landing logic.
                 if (LevelManager.Instance != null && LevelManager.Instance.currentLevel < 5)
                 {
@@ -519,6 +523,9 @@ public class PlayerObstacleRules : MonoBehaviour
         if (dead) return;
         currentHearts--;
         
+        if (GameplayStatsTracker.Instance != null)
+            GameplayStatsTracker.Instance.OnHeartLost();
+        
         if (heartUI != null && currentHearts >= 0 && currentHearts < heartUI.Length)
         {
             if (heartUI[currentHearts] != null)
@@ -555,6 +562,12 @@ public class PlayerObstacleRules : MonoBehaviour
             currentHearts++;
         }
 
+        if (GameplayStatsTracker.Instance != null)
+        {
+            GameplayStatsTracker.Instance.OnHeartGained();
+            GameplayStatsTracker.Instance.AddXPEarned(50);
+        }
+
         if (heartUI != null)
         {
             for (int i = 0; i < heartUI.Length; i++)
@@ -589,12 +602,18 @@ public class PlayerObstacleRules : MonoBehaviour
 
             // First pickup: Add XP but skip XP sound (user request)
             if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75, false);
+
+            if (GameplayStatsTracker.Instance != null)
+                GameplayStatsTracker.Instance.AddXPEarned(75);
         }
         // Scenario 2: Already growing (Big -> Big)
         else
         {
             // Just add XP and play XP sound
             if (ScoreManager.Instance != null) ScoreManager.Instance.AddXP(75, true);
+
+            if (GameplayStatsTracker.Instance != null)
+                GameplayStatsTracker.Instance.AddXPEarned(75);
         }
 
         // ALWAYS play Increase sound for every bottle collected
