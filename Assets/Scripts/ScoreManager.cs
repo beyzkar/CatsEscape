@@ -91,14 +91,52 @@ public class ScoreManager : MonoBehaviour
     /// <summary>
     /// Resets all XP to absolute zero. Called for Main Menu or New Game.
     /// </summary>
-    public void ResetAllXP()
+    public static void ResetAllXP()
     {
         persistentXP = 0;
-        totalXP = 0;
-        bonusXP = 0;
-        distance = 0f;
-        Debug.Log("[ScoreManager] All XP data wiped (Persistent and Session).");
-        UpdateUI();
+        if (Instance != null)
+        {
+            Instance.totalXP = 0;
+            Instance.bonusXP = 0;
+            Instance.distance = 0f;
+            Instance.UpdateUI();
+        }
+        Debug.Log("[ScoreManager] All XP data wiped (Static Persistent and Instance Session).");
+    }
+
+    /// <summary>
+    /// Forcefully sets the total XP from an authoritative source (like Backend).
+    /// Resets all session progress (distance, bonus) to ensure a clean state.
+    /// </summary>
+    public static void SetTotalXP(int amount)
+    {
+        persistentXP = amount;
+        if (Instance != null)
+        {
+            Instance.totalXP = amount;
+            Instance.bonusXP = 0;
+            Instance.distance = 0f;
+            Instance.UpdateUI();
+        }
+        Debug.Log($"[ScoreManager] Total XP SET: {amount}");
+    }
+
+    /// <summary>
+    /// Centralized point to decide XP state based on starting level.
+    /// RULE: If Level 1, XP is ALWAYS 0. If Level > 1, XP is restored from account.
+    /// </summary>
+    public static void InitializeForLevel(int level, int accountXP)
+    {
+        if (level <= 1)
+        {
+            ResetAllXP();
+            Debug.Log($"[ScoreManager] Level 1 detected. XP forced to 0 for a fresh start.");
+        }
+        else
+        {
+            SetTotalXP(accountXP);
+            Debug.Log($"[ScoreManager] Resume detected (Level {level}). XP restored: {accountXP}");
+        }
     }
 
     public void AddXP(int amount, bool playSound = true)

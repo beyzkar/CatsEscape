@@ -87,7 +87,7 @@ public class PlayerMovement : MonoBehaviour
     private bool dead = false;
     public float externalVisualYOffset { get; set; } = 0f; // Persistent visual offset managed by LevelManager
     
-    // Internal references and state
+    private Camera cam;
     private PlayerObstacleRules rules;
     private Animator anim;
     private float originalAbsScaleX;
@@ -111,9 +111,8 @@ public class PlayerMovement : MonoBehaviour
         if (rb != null) 
         {
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            rb.constraints = RigidbodyConstraints2D.FreezeRotation; // Lock physics rotation
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         }
-        
         
         rules = GetComponent<PlayerObstacleRules>();
         anim = GetComponentInChildren<Animator>(); 
@@ -125,40 +124,25 @@ public class PlayerMovement : MonoBehaviour
         jumpsLeft = maxJumps;
         originalAbsScaleX = Mathf.Abs(transform.localScale.x);
         
-        // UNIVERSAL PARITY: Force camera to standard Level 1 settings
-        if (Camera.main != null)
-        {
-            Camera.main.orthographicSize = 5f; // Standardize zoom level
-        }
+        if (Camera.main != null) cam = Camera.main;
 
-        // PROFESSIONAL: Initialize screen dimensions for backtracking logic
         UpdateViewportBounds();
         FullScreenWidth = topRight.x - bottomLeft.x;
-        
-        // Reset progress tracking to current camera position at level start
         peakCameraX = bottomLeft.x;
         
-        ResetRetreatLimit(); // Set the fixed boundary for this level
+        ResetRetreatLimit();
 
-        // Capture original visual height to apply offsets additively
         if (anim != null) originalVisualLocalY = anim.transform.localPosition.y;
         totalDistance = 0f;
         peakDistance = 0f;
-        
-        // Ensure parent rotation is locked at identity
         transform.localRotation = Quaternion.identity; 
     }
 
     public void ResetRetreatLimit()
     {
-        // UNIVERSAL: Set the fixed world-space anchor for the current level
         levelAnchorX = transform.position.x;
-        
-        // Force bounds update to get fresh bottomLeft coordinates
         UpdateViewportBounds(); 
-        peakCameraX = bottomLeft.x; // Initialize to current edge
-        
-        // Reset progress tracking to ensure consistency across all level transitions
+        peakCameraX = bottomLeft.x;
         totalDistance = 0f;
         peakDistance = 0f;
     }
@@ -177,12 +161,9 @@ public class PlayerMovement : MonoBehaviour
     {
         if (dead) return;
 
-        // Handle Intro Sequence
         if (!introFinished)
         {
             DoIntroWalk();
-            
-            // Lock visuals for intro
             transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
             transform.localRotation = Quaternion.identity;
             if (anim != null) anim.transform.localRotation = Quaternion.Euler(0, rotationRight, 0);
@@ -195,10 +176,8 @@ public class PlayerMovement : MonoBehaviour
             return;
         } 
 
-        if (portalExitSequenceActive)
-            return;
+        if (portalExitSequenceActive) return;
 
-        // Handle Death State
         if (rules != null && rules.IsDead) 
         {
             targetVelocityX = 0f;
@@ -211,62 +190,31 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // Ground check logic: Consider both physics overlap and the manual Y-clamp as grounded.
         bool physicsGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         bool clampGrounded = (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4 && transform.position.y <= -3.69f);
-        
         isGrounded = physicsGrounded || clampGrounded;
 
-        // Reset jumps immediately upon touching the ground. 
-        // We allow a small upward velocity buffer (0.1f) to ensure the reset happens 
-        // even if the character jumps and lands in very rapid succession.
-        if (isGrounded && rb.linearVelocity.y <= 0.1f)
-        {
-            ResetJumps();
-        }
+        if (isGrounded && rb.linearVelocity.y <= 0.1f) ResetJumps();
 
-        // Input processing
         float hInput = Input.GetAxisRaw("Horizontal");
-        if (isLevelEnding)
-        {
-            hInput = 1f; // Force move right automatically
-        }
+        if (isLevelEnding) hInput = 1f;
         else
         {
-            if (mobileLeft) 
-            {
-                hInput = -1f;
-                Debug.Log("[MOBILE_INPUT] Left input value: -1");
-            }
+            if (mobileLeft) hInput = -1f;
             if (mobileRight) hInput = 1f;
         }
 
-        // FIXED MOVEMENT: Removed Harmonic Agility Scaling for simpler, predictable controls
-        float actualRightSpeed = moveRightSpeed;
-        float actualLeftSpeed = moveLeftSpeed;
-        float actualAccel = acceleration;
-        float actualDecel = deceleration;
-
-        // Smoothed velocity calculation with smart deceleration
-        float desiredVelocity = hInput * (hInput > 0 ? actualRightSpeed : actualLeftSpeed);
-        
-        // Differentiate between actively turning around and simply stopping
+        float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
         bool isStopping = (hInput == 0);
-        bool isTurning = (desiredVelocity > 0 && currentHorizontalVelocity < 0) || 
-                         (desiredVelocity < 0 && currentHorizontalVelocity > 0);
+        bool isTurning = (desiredVelocity > 0 && currentHorizontalVelocity < 0) || (desiredVelocity < 0 && currentHorizontalVelocity > 0);
         
-        // Determine the rates: Stopping is immediate, Turning is snappy but fluid
         float currentDecelRate = isStopping ? stoppingDeceleration : deceleration;
-        float accelRate = isTurning ? (deceleration * 2f) : (Mathf.Abs(desiredVelocity) > 0.01f ? actualAccel : currentDecelRate);
+        float accelRate = isTurning ? (deceleration * 2f) : (Mathf.Abs(desiredVelocity) > 0.01f ? acceleration : currentDecelRate);
         
         if (!isGrounded) accelRate *= airAccelerationMultiplier;
-        
         currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
         
-        // SNAP TO ZERO: Prevent micro-sliding when input is released
-        if (isStopping && Mathf.Abs(currentHorizontalVelocity) < 0.01f)
-            currentHorizontalVelocity = 0f;
-
+        if (isStopping && Mathf.Abs(currentHorizontalVelocity) < 0.01f) currentHorizontalVelocity = 0f;
         targetVelocityX = currentHorizontalVelocity;
 
         // Dynamic animator fetch for multiple character skins
@@ -299,56 +247,33 @@ public class PlayerMovement : MonoBehaviour
             ResetJumps();
         }
         wasAtRetreatLimit = isAtRetreatLimit;
-
-        // Animation state management
         if (anim != null)
         {
             bool isStuck = (rules != null && rules.IsStuck) || isAtRetreatLimit;
             bool isMovingInput = (hInput != 0) && !isStuck;
-            
             anim.SetBool("walking", isMovingInput);
             anim.SetBool("Idle", !isMovingInput || isStuck);
         }
         
-        // Direction and Rotation management (Synchronized with velocity to prevent moonwalking)
-        if (hInput > 0 && currentHorizontalVelocity > -0.5f) 
-        {
-            WorldDirection = 1;
-        }
-        else if (hInput < 0 && currentHorizontalVelocity < 0.5f) 
-        {
-            WorldDirection = -1;
-        }
+        if (hInput > 0 && currentHorizontalVelocity > -0.5f) WorldDirection = 1;
+        else if (hInput < 0 && currentHorizontalVelocity < 0.5f) WorldDirection = -1;
 
-        // Explicit transform and child rotation enforcement
         transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
         transform.localRotation = Quaternion.identity;
 
         if (anim != null)
         {
             float targetRY = (WorldDirection == 1) ? rotationRight : rotationLeft;
-            Quaternion targetRot = Quaternion.Euler(0, targetRY, 0);
-            
-            // Smoothly rotate towards the target direction
-            anim.transform.localRotation = Quaternion.RotateTowards(
-                anim.transform.localRotation, 
-                targetRot, 
-                rotationSpeed * Time.deltaTime
-            );
+            anim.transform.localRotation = Quaternion.RotateTowards(anim.transform.localRotation, Quaternion.Euler(0, targetRY, 0), rotationSpeed * Time.deltaTime);
         }
 
-        // Jump input handling (keyboard + tap/click)
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetMouseButtonDown(0))
-        {
-            MobileJumpDown();
-        }
+        if (Input.GetKeyDown(KeyCode.UpArrow)) MobileJumpDown();
     }
 
     void FixedUpdate()
     {
         UpdateViewportBounds();
 
-        // 1. KİLİT MEKANİZMASI: Mesafe hesaplanmadan önce hızları sıfırlıyoruz (Mikro kaymayı önler)
         if (rules != null && rules.IsHorizontalBlocked && targetVelocityX > 0)
         {
             targetVelocityX = 0f;
@@ -364,62 +289,35 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (!introFinished || (rules != null && rules.IsDead)) return;
-
         if (portalExitSequenceActive) return;
 
-        // 2. HAREKET HESABI (Sıfırlanmış değerler üzerinden)
         float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
-        
-        // Use the fixed world left boundary (minX) so retreat limit matches design exactly.
-        if (transform.position.x <= CurrentLeftBoundaryX && distanceStep < 0)
-        {
-            distanceStep = 0; 
-        }
+        if (transform.position.x <= CurrentLeftBoundaryX && distanceStep < 0) distanceStep = 0; 
 
         totalDistance += distanceStep;
         if (totalDistance > peakDistance) peakDistance = totalDistance;
 
-        if (distanceStep < -0.001f)
-        {
-            Debug.Log("[PLAYER_MOVEMENT] Moving left");
-        }
-
         float finalVelocityX = targetVelocityX * groundedSpeedMultiplier;
-
-        // Apply air control while genuinely airborne (including takeoff/landing frames).
         bool isAirborneForControl = !isGrounded || Mathf.Abs(rb.linearVelocity.y) > 0.05f;
         if (isAirborneForControl) finalVelocityX *= airControlMultiplier;
 
-        // Smoothly blend applied horizontal velocity to prevent "rocket" bursts on landing.
         float blendDuration = Mathf.Max(landingVelocityBlendTime, 0.01f);
-        
-        // Use stoppingDeceleration in physics blend for instant stopping feel
         float currentPhysicsDecel = (Mathf.Abs(finalVelocityX) < 0.01f) ? stoppingDeceleration : deceleration;
-        
-        float blendRate = (Mathf.Abs(finalVelocityX) > 0.01f)
-            ? Mathf.Abs(finalVelocityX - appliedHorizontalVelocity) / blendDuration
-            : currentPhysicsDecel;
+        float blendRate = (Mathf.Abs(finalVelocityX) > 0.01f) ? Mathf.Abs(finalVelocityX - appliedHorizontalVelocity) / blendDuration : currentPhysicsDecel;
         appliedHorizontalVelocity = Mathf.MoveTowards(appliedHorizontalVelocity, finalVelocityX, blendRate * Time.fixedDeltaTime);
 
-        // 3. FİNAL HIZ KISITLAMALARI (Viewport ve Limitler)
         if (transform.position.x >= maxX && appliedHorizontalVelocity > 0) appliedHorizontalVelocity = 0f;
-        
         rb.linearVelocity = new Vector2(appliedHorizontalVelocity, rb.linearVelocity.y);
 
-        // BETTER JUMP Mekaniği: Havada asılı kalmayı önler ve düşüşü hızlandırır
-        if (rb.linearVelocity.y < 0) // Kedi aşağı düşüyorsa
+        if (rb.linearVelocity.y < 0)
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
         }
-        else if (rb.linearVelocity.y > 0 && !(Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.UpArrow) || mobileRight || mobileLeft)) 
+        else if (rb.linearVelocity.y > 0 && !Input.GetKey(KeyCode.UpArrow)) 
         {
-            // Kedi yukarı çıkıyor ama zıplama tuşu bırakıldıysa (Kısa zıplama)
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
         }
 
-        // Position enforcement for hard screen boundaries (X and Y)
-        // Note: Distance clamping only limits VELOCITY to prevent backtracking.
-        // Screen position clamping handles the visuals.
         if (transform.position.x > maxX)
         {
             rb.position = new Vector2(maxX, rb.position.y);
@@ -431,21 +329,17 @@ public class PlayerMovement : MonoBehaviour
     void LateUpdate()
     {
         UpdateViewportBounds();
-
         if (portalExitSequenceActive) return;
-        
         if (!useViewportClamping) return;
         
-        // Sadece X ekseninde (Sağ-Sol) kısıtlama uyguluyoruz
         float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
-        
         if (clampedX != transform.position.x)
         {
             transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         }
 
-         if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
+        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
         {
             if (transform.position.y < -3.7f)
             {
@@ -454,60 +348,37 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-         if (anim != null)
+        if (anim != null)
         {
-            Vector3 visualPos = anim.transform.localPosition;
-            visualPos.x = 0f; // Force visual to stay centered on the collider/pivot
-            visualPos.y = originalVisualLocalY + externalVisualYOffset;
-            anim.transform.localPosition = visualPos;
+            anim.transform.localPosition = new Vector3(0f, originalVisualLocalY + externalVisualYOffset, 0f);
         }
 
         if (boxCol != null && LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
         {
-           boxCol.size = new Vector2(1.050137f, 1.623463f);
-            
-            // Mirror the horizontal offset based on facing direction
-            float dynamicOffsetX = 0.1874768f * WorldDirection;
-            boxCol.offset = new Vector2(dynamicOffsetX, 0.6628802f);
+            boxCol.size = new Vector2(1.050137f, 1.623463f);
+            boxCol.offset = new Vector2(0.1874768f * WorldDirection, 0.6628802f);
         }
     }
 
     void DoIntroWalk()
     {
-        float step = introSpeed * Time.deltaTime;
-        Vector3 targetPos = new Vector3(stopX, transform.position.y, transform.position.z);
-        transform.position = Vector3.MoveTowards(transform.position, targetPos, step);
-
-        if (Mathf.Abs(transform.position.x - stopX) < 0.1f || transform.position.x >= maxX - 0.1f)
-        {
-            introFinished = true;
-        }
+        transform.position = Vector3.MoveTowards(transform.position, new Vector3(stopX, transform.position.y, transform.position.z), introSpeed * Time.deltaTime);
+        if (Mathf.Abs(transform.position.x - stopX) < 0.1f || transform.position.x >= maxX - 0.1f) introFinished = true;
     }
 
-    public void ResetJumps()
-    {
-        jumpsLeft = maxJumps;
-    }
-
+    public void ResetJumps() => jumpsLeft = maxJumps;
     public void TryJump()
     {
         if (jumpsLeft <= 0) return;  
-
-        // Keep jump height unchanged, but reduce horizontal carry-over at takeoff.
         rb.linearVelocity = new Vector2(rb.linearVelocity.x * jumpTakeoffHorizontalMultiplier, 0f);
-        // Doğrudan güncel jumpForce değerini kullanıyoruz
         rb.AddForce(Vector2.up * (jumpForce * currentJumpMultiplier), ForceMode2D.Impulse);
-
-        if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayJump();
-
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayJump();
         jumpsLeft--;
     }
 
     public void SetJumpMultiplier(float multiplier) => currentJumpMultiplier = multiplier;
     public void ResetJumpMultiplier() => currentJumpMultiplier = 1f;
 
-    // Mobile input flags management
     public void SetMoveLeft(bool isMoving) { mobileLeft = isMoving; }
     public void SetMoveRight(bool isMoving) { mobileRight = isMoving; }
     
@@ -519,13 +390,8 @@ public class PlayerMovement : MonoBehaviour
     public void MobileJumpDown()
     {
         if (dead || jumpDisabled || portalExitSequenceActive) return;
-        
-        // Level 5 specific check for pit depths
         bool canJump = true;
-        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5)
-        {
-            if (transform.position.y < deathThresholdY) canJump = false;
-        }
+        if (LevelManager.Instance != null && LevelManager.Instance.currentLevel == 5 && transform.position.y < deathThresholdY) canJump = false;
 
         if (canJump) TryJump();
         else if (AudioManager.Instance != null) AudioManager.Instance.PlayFalling();
@@ -538,24 +404,17 @@ public class PlayerMovement : MonoBehaviour
         if (cam == null) return;
 
         float zDist = Mathf.Abs(cam.transform.position.z);
-        
-        // Dinamik olarak ekran kenarlarını dünya koordinatlarına çeviriyoruz
         Vector3 trueLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, zDist));
-        bottomLeft = trueLeft; // LateUpdate içinde Y ekseni kısıtlaması için gerekli
-        topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist)); // Genişlik hesaplamaları için güncelliyoruz
-        Vector3 trueRight = topRight;
-        Vector3 trueCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0, zDist)); // Ekranın tam ortası
+        bottomLeft = trueLeft; 
+        topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, zDist));
+        Vector3 trueCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0, zDist));
 
-        FullScreenWidth = trueRight.x - trueLeft.x;
-        ScreenMaxX = trueRight.x;
+        FullScreenWidth = topRight.x - trueLeft.x;
+        ScreenMaxX = topRight.x;
 
-        float effectivePadding = Mathf.Max(viewportPaddingX, 0.7f);
-        
-        // Final Sınırlar: Sol sabit tuned value, Sağ ekranın tam ortası
         minX = FixedLeftBoundaryX; 
         maxX = trueCenter.x; 
 
-        // Keep left world boundary fixed; only push right boundary if needed.
         if (maxX < minX + 0.5f) maxX = minX + 0.5f;
     }
 
@@ -575,44 +434,27 @@ public class PlayerMovement : MonoBehaviour
 
         Collider2D playerCol = GetComponent<Collider2D>();
         float halfHeight = (playerCol != null) ? playerCol.bounds.extents.y : 0.5f;
-        Vector2 probeOrigin = new Vector2(targetX, probeBaseY + Mathf.Max(1f, levelStartProbeHeight));
-        RaycastHit2D hit = Physics2D.Raycast(probeOrigin, Vector2.down, Mathf.Max(2f, levelStartProbeDistance), groundLayer);
+        RaycastHit2D hit = Physics2D.Raycast(new Vector2(targetX, probeBaseY + Mathf.Max(1f, levelStartProbeHeight)), Vector2.down, Mathf.Max(2f, levelStartProbeDistance), groundLayer);
 
-        if (hit.collider != null)
-        {
-            targetY = hit.point.y + halfHeight + 0.02f;
-        }
-        else if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
-        {
-            targetY = -3.7f;
-        }
+        if (hit.collider != null) targetY = hit.point.y + halfHeight + 0.02f;
+        else if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4) targetY = -3.7f;
 
-        Vector2 spawnPosition = new Vector2(targetX, targetY);
         if (rb != null)
         {
             rb.bodyType = RigidbodyType2D.Dynamic;
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             rb.linearVelocity = Vector2.zero;
-            rb.angularVelocity = 0f;
-            rb.position = spawnPosition;
+            rb.position = new Vector2(targetX, targetY);
         }
-        else
-        {
-            transform.position = new Vector3(targetX, targetY, transform.position.z);
-        }
+        else transform.position = new Vector3(targetX, targetY, transform.position.z);
 
         currentHorizontalVelocity = 0f;
         targetVelocityX = 0f;
         appliedHorizontalVelocity = 0f;
-        mobileLeft = false;
-        mobileRight = false;
-        wasAtRetreatLimit = false;
-        dead = false;
-        isGrounded = true;
-        introFinished = true;
+        mobileLeft = mobileRight = wasAtRetreatLimit = dead = false;
+        isGrounded = introFinished = true;
         WorldDirection = 1;
-        jumpDisabled = false;
-        isLevelEnding = false;
+        jumpDisabled = isLevelEnding = false;
         ResetJumps();
 
         if (anim != null)
@@ -626,6 +468,7 @@ public class PlayerMovement : MonoBehaviour
         transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
         ResetRetreatLimit();
     }
+
     public void FreezeForTransition(bool freeze)
     {
         if (freeze)
@@ -636,32 +479,22 @@ public class PlayerMovement : MonoBehaviour
                 rb.bodyType = RigidbodyType2D.Kinematic;
                 rb.linearVelocity = Vector2.zero;
             }
-            
             if (anim != null)
             {
                 anim.SetBool("walking", false);
                 anim.SetBool("Idle", true);
             }
         }
-        else
-        {
-            if (rb != null)
-            {
-                rb.bodyType = RigidbodyType2D.Dynamic;
-            }
-        }
+        else if (rb != null) rb.bodyType = RigidbodyType2D.Dynamic;
     }
 
     public void DisableJumping() => jumpDisabled = true;
     public void StartLevelEndWalk() => isLevelEnding = true;
-
     public void SetPortalExitSequenceActive(bool active) => portalExitSequenceActive = active;
 
     public void SetPortalDrivenWorldPosition(Vector3 worldPos)
     {
-        if (rb != null)
-            rb.position = worldPos;
-        else
-            transform.position = worldPos;
+        if (rb != null) rb.position = worldPos;
+        else transform.position = worldPos;
     }
 }

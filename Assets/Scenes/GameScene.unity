@@ -3608,7 +3608,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d183188d3eb4144e696f059ad14276f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  jumpForce: 16
+  jumpForce: 18
   fallMultiplier: 2
   lowJumpMultiplier: 2
   maxJumps: 2

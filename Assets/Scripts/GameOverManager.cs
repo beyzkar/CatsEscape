@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using CatsEscape.Networking;
+using CatsEscape.Auth;
 
 public class GameOverManager : MonoBehaviour
 {
@@ -69,7 +70,7 @@ public class GameOverManager : MonoBehaviour
     public void LoadMainMenu()
     {
         // Global hard reset for XP when returning to start
-        if (ScoreManager.Instance != null) ScoreManager.Instance.ResetAllXP();
+        // XP reset is now handled centrally in Awake via InitializeForLevel
 
         // Seviye sürekliliğini sıfırla
         LevelManager.ResetPersistentLevel();

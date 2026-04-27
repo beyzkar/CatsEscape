@@ -162,43 +162,43 @@ public class LevelManager : MonoBehaviour
             return;
         }
 
-        // --- RESUME MECHANIC ---
+        // --- RESUME MECHANIC (UID Aware) ---
         if (savedLevel > 0)
         {
             currentLevel = savedLevel;
-            Debug.Log("LEVEL MANAGER: Saved Level'dan devam ediliyor: " + currentLevel);
+        }
+        else if (CatsEscape.Auth.AuthManager.Instance != null)
+        {
+            currentLevel = CatsEscape.Auth.AuthManager.Instance.LastLevelReached;
+            savedLevel = currentLevel;
         }
         else
         {
             savedLevel = currentLevel;
         }
 
-        // --- HIGHLANDER PATTERN: Ensure only a single Player instance exists ---
+        // --- NEW: Centralized XP Initialization ---
+        // Rule: Level 1 start = 0 XP, Level > 1 = Load Account XP
+        int accountXP = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.HighestXP : 0;
+        ScoreManager.InitializeForLevel(currentLevel, accountXP);
+
+        // Highlander Pattern: Ensure single player instance
         PlayerMovement[] allPlayers = Object.FindObjectsByType<PlayerMovement>(FindObjectsSortMode.None);
         if (allPlayers.Length > 1)
         {
-            Debug.LogWarning($"[LevelManager] {allPlayers.Length} players detected. Cleanup in progress...");
             foreach (var p_obj in allPlayers)
             {
-                if (p_obj != PlayerMovement.Instance && p_obj != null)
-                {
-                    Destroy(p_obj.gameObject);
-                }
+                if (p_obj != PlayerMovement.Instance && p_obj != null) Destroy(p_obj.gameObject);
             }
         }
 
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null) playerMovement = p.GetComponent<PlayerMovement>();
 
-        // Ensure we prioritize any portal already placed/edited in the Scene Hierarchy
         if (finalPortal == null || !finalPortal.gameObject.scene.IsValid())
         {
             FinalPortal existingInScene = Object.FindAnyObjectByType<FinalPortal>();
-            if (existingInScene != null) 
-            {
-                finalPortal = existingInScene;
-                Debug.Log($"LEVEL_MANAGER: Found existing portal in scene: {finalPortal.name}. Using its settings.");
-            }
+            if (existingInScene != null) finalPortal = existingInScene;
         }
 
         if (finalPortal != null)
@@ -206,12 +206,10 @@ public class LevelManager : MonoBehaviour
             Scene s = finalPortal.gameObject.scene;
             if (!s.IsValid() || !s.isLoaded)
             {
-                // Only instantiate if the reference is a prefab and no scene instance was found
                 GameObject spawned = Instantiate(finalPortal.gameObject);
                 spawned.name = "FinalPortal";
                 spawned.SetActive(false);
                 finalPortal = spawned.GetComponent<FinalPortal>();
-                Debug.Log("LEVEL_MANAGER: Instantiated new portal from prefab.");
             }
         }
 
@@ -221,13 +219,9 @@ public class LevelManager : MonoBehaviour
         PrepareHomeExitForCurrentLevel();
     }
 
-    /// <summary>
-    /// Surgical Fix 5.0: Resets the static saved level to force a fresh start.
-    /// </summary>
     public static void ResetSavedLevel()
     {
         savedLevel = -1;
-        Debug.Log("[LevelManager] Global SavedLevel has been reset for a fresh start.");
     }
 
     private void ApplyPlayerOffset()
@@ -235,18 +229,13 @@ public class LevelManager : MonoBehaviour
         ThemeAssets theme = GetCurrentTheme();
         if (playerMovement != null)
         {
-            float targetY = (theme != null) ? theme.playerYOffset : 0f;
-            playerMovement.externalVisualYOffset = targetY;
-            
-            if (targetY != 0)
-                Debug.Log("Level " + currentLevel + ": Player Y Offset -> " + targetY);
+            playerMovement.externalVisualYOffset = (theme != null) ? theme.playerYOffset : 0f;
         }
     }
 
     private void UpdateInGameLevelText()
     {
-        if (inGameLevelText != null)
-            inGameLevelText.text = "LEVEL " + currentLevel;
+        if (inGameLevelText != null) inGameLevelText.text = "LEVEL " + currentLevel;
     }
 
     private void PrepareHomeExitForCurrentLevel()
@@ -278,7 +267,6 @@ public class LevelManager : MonoBehaviour
 
         SpriteRenderer sr = homeExitObject.AddComponent<SpriteRenderer>();
         sr.sprite = homeSprite;
-        sr.sortingLayerName = "Default";
         sr.sortingOrder = 25;
 
         BoxCollider2D col = homeExitObject.AddComponent<BoxCollider2D>();
@@ -288,13 +276,10 @@ public class LevelManager : MonoBehaviour
         Rigidbody2D rb2d = homeExitObject.AddComponent<Rigidbody2D>();
         rb2d.bodyType = RigidbodyType2D.Kinematic;
         rb2d.simulated = true;
-        rb2d.gravityScale = 0f;
-        rb2d.useFullKinematicContacts = true;
 
         ObstacleMove move = homeExitObject.AddComponent<ObstacleMove>();
         move.speed = homeMoveSpeed;
         move.destroyX = homeDestroyX;
-        move.moveEvenWhenMultiplierIsZero = false;
 
         homeExitObject.AddComponent<HomeExitTrigger>();
         homeExitObject.SetActive(false);
@@ -308,20 +293,10 @@ public class LevelManager : MonoBehaviour
         if (homeExitObject == null) return;
 
         homeExitObject.transform.position = new Vector3(homeSpawnPosition.x, homeSpawnPosition.y, 0f);
-        homeExitObject.transform.localScale = homeScale;
-
-        ObstacleMove move = homeExitObject.GetComponent<ObstacleMove>();
-        if (move != null)
-        {
-            move.speed = homeMoveSpeed;
-            move.destroyX = homeDestroyX;
-        }
-
         homeExitObject.SetActive(true);
         homeExitActive = true;
 
-        if (playerMovement != null)
-            playerMovement.DisableJumping();
+        if (playerMovement != null) playerMovement.DisableJumping();
     }
 
     public void TryCompleteLevelViaHome()
@@ -334,22 +309,13 @@ public class LevelManager : MonoBehaviour
         homeExitActive = false;
         if (homeExitObject != null) homeExitObject.SetActive(false);
 
-        if (videoTransitionManager != null)
-            StartCoroutine(HomeVideoTransition());
-        else if (transitionController != null)
-            StartCoroutine(HomeTransitionWithController());
-        else
-        {
-            Debug.LogError("LEVEL_MANAGER: TransitionController atanmamış! Fallback kullanılıyor.");
-            StartCoroutine(HomeTransitionFallback());
-        }
+        if (videoTransitionManager != null) StartCoroutine(HomeVideoTransition());
+        else if (transitionController != null) StartCoroutine(HomeTransitionWithController());
     }
 
     private IEnumerator HomeVideoTransition()
     {
-        if (homeTransitionAnimator != null)
-            homeTransitionAnimator.SetTrigger(homeTransitionTriggerName);
-
+        if (homeTransitionAnimator != null) homeTransitionAnimator.SetTrigger(homeTransitionTriggerName);
         DisablePlayerMovement();
 
         videoTransitionManager.StartTransition(() =>
@@ -358,7 +324,6 @@ public class LevelManager : MonoBehaviour
             homeTransitionInProgress = false;
             EnablePlayerMovement();
         });
-
         yield break;
     }
 
@@ -382,46 +347,23 @@ public class LevelManager : MonoBehaviour
 
     private IEnumerator HomeTransitionWithController()
     {
-        if (homeTransitionAnimator != null)
-            homeTransitionAnimator.SetTrigger(homeTransitionTriggerName);
-
+        if (homeTransitionAnimator != null) homeTransitionAnimator.SetTrigger(homeTransitionTriggerName);
         transitionController.StartTransition(() =>
         {
             NextLevel();
             homeTransitionInProgress = false;
         });
-
         yield break;
-    }
-
-    private IEnumerator HomeTransitionFallback()
-    {
-        SetTargetSpeed(0f);
-        GameSpeed.Multiplier = 0f;
-
-        bool hadPlayerMovement = (playerMovement != null && playerMovement.enabled);
-        if (playerMovement != null) playerMovement.enabled = false;
-
-        yield return new WaitForSecondsRealtime(homeTransitionDuration);
-
-        if (playerMovement != null) playerMovement.enabled = hadPlayerMovement;
-        
-        NextLevel();
-        homeTransitionInProgress = false;
     }
 
     private void Update()
     {
         if (targetGameMultiplier != GameSpeed.Multiplier)
         {
-            if (targetGameMultiplier == 0f)
-                GameSpeed.Multiplier = 0f;
-            else
-                GameSpeed.Multiplier = Mathf.MoveTowards(
-                    GameSpeed.Multiplier, targetGameMultiplier, speedSmoothRate * Time.deltaTime);
+            GameSpeed.Multiplier = (targetGameMultiplier == 0f) ? 0f : 
+                Mathf.MoveTowards(GameSpeed.Multiplier, targetGameMultiplier, speedSmoothRate * Time.deltaTime);
         }
 
-        // --- EMPTY ROAD DELAY ---
         if (goalReachedPendingHome && playerMovement != null)
         {
             if (playerMovement.totalDistance >= distanceAtGoal + 12f)
@@ -431,17 +373,14 @@ public class LevelManager : MonoBehaviour
             }
         }
 
-        // --- HOME EXIT CINEMATIC LOGIC ---
         if (homeExitActive && homeExitObject != null && !worldStoppedForHome)
         {
-            if (homeExitObject.transform.position.x <= 0f) // Mid-screen
+            if (homeExitObject.transform.position.x <= 0f)
             {
                 worldStoppedForHome = true;
                 SetTargetSpeed(0f);
-                GameSpeed.Multiplier = 0f; // Force instant stop for better feel
-                
-                if (playerMovement != null)
-                    playerMovement.StartLevelEndWalk();
+                GameSpeed.Multiplier = 0f;
+                if (playerMovement != null) playerMovement.StartLevelEndWalk();
             }
         }
 
@@ -452,63 +391,40 @@ public class LevelManager : MonoBehaviour
         }
     }
 
-    public void SetTargetSpeed(float target)
-    {
-        targetGameMultiplier = target;
-    }
+    public void SetTargetSpeed(float target) => targetGameMultiplier = target;
 
     private void OnValidate()
     {
-        if (!Application.isPlaying)
-            UpdateBackgroundVisibility();
-        else
-            ApplyPlayerOffset();
+        if (!Application.isPlaying) UpdateBackgroundVisibility();
+        else ApplyPlayerOffset();
     }
 
     private void UpdateBackgroundVisibility()
     {
         if (levelBackgrounds == null || levelBackgrounds.Length == 0) return;
-
         for (int i = 0; i < levelBackgrounds.Length; i++)
         {
-            if (levelBackgrounds[i] != null)
-                levelBackgrounds[i].SetActive(i == (currentLevel - 1));
+            if (levelBackgrounds[i] != null) levelBackgrounds[i].SetActive(i == (currentLevel - 1));
         }
     }
 
-    public static void ResetPersistentLevel()
-    {
-        savedLevel = 1;
-    }
+    public static void ResetPersistentLevel() => savedLevel = 1;
 
     public void MainMenu()
     {
         ResetPersistentLevel();
         
-        // Global hard reset for XP when returning to start
-        if (ScoreManager.Instance != null) ScoreManager.Instance.ResetAllXP();
-
+        // XP reset is now handled centrally in Awake via InitializeForLevel
         Time.timeScale = 1f;
         targetGameMultiplier = 1f;
         GameSpeed.Multiplier = 1f;
-        
-        if (GameOverManager.Instance != null)
-            GameOverManager.Instance.LoadMainMenu();
+        if (GameOverManager.Instance != null) GameOverManager.Instance.LoadMainMenu();
     }
 
     public void ObstaclePassed()
     {
-        // Level 5 Completion Lock: Ensure we never count beyond the target for a clean end-state
-        if (currentLevel == 5 && obstaclesPassed >= LevelTargetObstacleCount) 
-        {
-            return;
-        }
-
+        if (currentLevel == 5 && obstaclesPassed >= LevelTargetObstacleCount) return;
         obstaclesPassed++;
-        
-        if (currentLevel == 5)
-            Debug.Log("[LevelManager] Level 5 Bridge Landed: " + obstaclesPassed + "/" + LevelTargetObstacleCount);
-
         CheckLevelProgress();
         UpdateInGameLevelText();
     }
@@ -518,17 +434,14 @@ public class LevelManager : MonoBehaviour
         if (currentLevel == 5)
         {
             obstaclesPassed = 0;
-            if (finalPortal != null)
-                finalPortal.ResetAfterLevelProgressCleared();
+            if (finalPortal != null) finalPortal.ResetAfterLevelProgressCleared();
             UpdateInGameLevelText();
-            Debug.Log("Level 5: Engel çarpması! Progress SIFIRLAND.");
         }
     }
 
     private void CheckLevelProgress()
     {
         if (currentLevel > 5) return;
-
         if (obstaclesPassed >= levelGoals[currentLevel])
         {
             if (currentLevel < 5)
@@ -538,64 +451,43 @@ public class LevelManager : MonoBehaviour
                     if (ObstacleSpawner.Instance != null) ObstacleSpawner.Instance.SetSpawningEnabled(false);
                     goalReachedPendingHome = true;
                     distanceAtGoal = (playerMovement != null) ? playerMovement.totalDistance : 0f;
-                    Debug.Log("Level goal reached. Spawning stopped. Waiting for empty road...");
                 }
             }
             else
             {
-                // Stop spawning ground pieces to create a 'gap' / end of path
-                if (GroundSpawner.Instance != null && currentLevel == 5)
-                    GroundSpawner.Instance.StopSpawning();
-
-                if (finalPortal != null)
-                    finalPortal.TrySpawnFromLevelManager();
-                else
-                {
-                    Debug.LogWarning("LEVEL_MANAGER: FinalPortal atanmamış — Level 5 için eski 'zeminde zafer' akışı kullanılıyor.");
-                    pendingVictory = true;
-                }
+                if (GroundSpawner.Instance != null) GroundSpawner.Instance.StopSpawning();
+                if (finalPortal != null) finalPortal.TrySpawnFromLevelManager();
+                else pendingVictory = true;
             }
         }
     }
 
-    /// <summary>Invoked by FinalPortal after the exit animation and delay; opens victory / save-score flow once.</summary>
-    public void OpenFinalVictoryAfterPortalExit()
-    {
-        ShowVictory();
-    }
+    public void OpenFinalVictoryAfterPortalExit() => ShowVictory();
 
     private void ShowVictory()
     {
         Time.timeScale = 0f;
         targetGameMultiplier = 0f;
         GameSpeed.Multiplier = 0f;
-
         if (AudioManager.Instance != null) AudioManager.Instance.StopBackgroundMusic();
-
-        UpdateInGameLevelText();
 
         if (victoryPanel != null)
         {
-            if (levelStatusText != null)
-                levelStatusText.text = "Level " + currentLevel + " Survived!";
-
+            if (levelStatusText != null) levelStatusText.text = "Level " + currentLevel + " Survived!";
             if (currentLevel < 5)
             {
                 if (normalLevelContent != null) normalLevelContent.SetActive(true);
                 if (finalLevelContent != null) finalLevelContent.SetActive(false);
-                
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayLevelWinSound();
                 victoryPanel.SetActive(true);
             }
             else
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
-                
-                // NEW: Update game stats
                 if (CatsEscape.Auth.AuthManager.Instance != null)
                 {
                     CatsEscape.Auth.AuthManager.Instance.TotalCompletions++;
-                    CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 5;
+                    CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 1;
                 }
 
                 if (LeaderboardManager.Instance != null)
@@ -604,58 +496,41 @@ public class LevelManager : MonoBehaviour
                     int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
                     LeaderboardManager.Instance.CheckForHighScore(currentXP);
                 }
-                else
-                {
-                    victoryPanel.SetActive(true);
-                }
+                else victoryPanel.SetActive(true);
             }
         }
 
-        // Send results to backend
-        if (GameDataApiClient.Instance != null)
-            GameDataApiClient.Instance.SendLevelResult("completed");
+        if (GameDataApiClient.Instance != null) GameDataApiClient.Instance.SendLevelResult("completed");
     }
 
     public void NextLevel()
     {
         if (currentLevel >= 5) return;
 
-        // NEW: Sync results to backend IMMEDIATELY
         if (CatsEscape.Networking.GameDataApiClient.Instance != null)
         {
             CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("completed");
         }
-        else
-        {
-            Debug.LogError("[CRITICAL-API-ERROR] GameDataApiClient.Instance is NULL in NextLevel! Is the object missing from MainMenu?");
-        }
 
-        // Bank current XP before switching levels
         if (ScoreManager.Instance != null) ScoreManager.Instance.CommitSessionXP();
 
         homeExitActive = false;
         if (homeExitObject != null) homeExitObject.SetActive(false);
-
         ClearCurrentObstacles();
 
         currentLevel++;
         savedLevel = currentLevel;
 
-        // NEW: Update last reached level
         if (CatsEscape.Auth.AuthManager.Instance != null)
         {
             CatsEscape.Auth.AuthManager.Instance.LastLevelReached = currentLevel;
         }
 
         obstaclesPassed = 0;
-        
         if (victoryPanel != null) victoryPanel.SetActive(false);
-        if (normalLevelContent != null) normalLevelContent.SetActive(false);
-        if (finalLevelContent != null) finalLevelContent.SetActive(false);
-
+        
         goalReachedPendingHome = false;
         if (ObstacleSpawner.Instance != null) ObstacleSpawner.Instance.SetSpawningEnabled(true);
-        
         Time.timeScale = 1f;
         
         if (playerMovement != null)
@@ -665,28 +540,18 @@ public class LevelManager : MonoBehaviour
             playerMovement.PrepareForLevelStart();
             if (rules != null) rules.UpdateGameSpeed();
         }
-        else
-        {
-            GameSpeed.Multiplier = GetCurrentBaseSpeed();
-        }
+        else GameSpeed.Multiplier = GetCurrentBaseSpeed();
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlayBackgroundMusic();
-
-        if (transitionController != null)
-            transitionController.ForceReset();
-
-        if (videoTransitionManager != null)
-            videoTransitionManager.ForceReset();
+        if (transitionController != null) transitionController.ForceReset();
+        if (videoTransitionManager != null) videoTransitionManager.ForceReset();
 
         UpdateBackgroundVisibility();
         UpdateInGameLevelText();
         ApplyPlayerOffset();
         PrepareHomeExitForCurrentLevel();
 
-        if (GameplayStatsTracker.Instance != null)
-            GameplayStatsTracker.Instance.ResetStats(currentLevel);
-
-        Debug.Log("Level " + currentLevel + " başladı.");
+        if (GameplayStatsTracker.Instance != null) GameplayStatsTracker.Instance.ResetStats(currentLevel);
     }
 
     private void ClearCurrentObstacles()
