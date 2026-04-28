@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "184930841241",
+    "project_id": "cats-escape",
+    "storage_bucket": "cats-escape.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184930841241:android:82c2fd3f46e16b3187fe08",
+        "android_client_info": {
+          "package_name": "com.beyza.catsescape"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "184930841241-qjq0k2pa8gv80pjnfus46qqvd04ojagh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beyza.catsescape",
+            "certificate_hash": "a3adeeead9e8b3625a6a15ba951f287b93054b97"
+          }
+        },
+        {
+          "client_id": "184930841241-j90mv71eujvhj2jftmii3bt2l6e4j2id.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqjIH5bOS3-tW5AXkYyYXSbUroVeS7Kt0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184930841241-j90mv71eujvhj2jftmii3bt2l6e4j2id.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

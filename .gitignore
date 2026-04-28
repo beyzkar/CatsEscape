@@ -11,3 +11,27 @@ Thumbs.db
 
 *.csproj
 *.sln
+
+# Backend ignores
+backend/node_modules/
+backend/.env
+backend/serviceAccountKey.json
+backend/.DS_Store
+
+# Mobile/Unity Secrets & Junk
+*.keystore
+mono_crash.*
+.utmp/
+*.apk
+Docker.dmg
+
+# Unity Build Artifacts (Gereksiz dosyalar)
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+*_BurstDebugInformation_DoNotShip/
+ProjectSettings/AndroidResolverDependencies.xml
+ProjectSettings/GvhProjectSettings.xml
+
+# Large Firebase Binaries (GitHub 100MB limit)
+Assets/Firebase/Plugins/x86_64/*.so
+Assets/Firebase/Plugins/x86_64/*.bundle
+Assets/Firebase/Plugins/x86_64/*.dll

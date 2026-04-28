@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/gcm_defaultSenderId,@string/google_storage_bucket,@string/project_id,@string/google_api_key,@string/google_crash_reporting_api_key,@string/google_app_id,@string/default_android_client_id,@string/default_web_client_id">
+  <string name="gcm_defaultSenderId" translatable="false">184930841241</string>
+  <string name="google_storage_bucket" translatable="false">cats-escape.firebasestorage.app</string>
+  <string name="project_id" translatable="false">cats-escape</string>
+  <string name="google_api_key" translatable="false">AIzaSyDqjIH5bOS3-tW5AXkYyYXSbUroVeS7Kt0</string>
+  <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDqjIH5bOS3-tW5AXkYyYXSbUroVeS7Kt0</string>
+  <string name="google_app_id" translatable="false">1:184930841241:android:82c2fd3f46e16b3187fe08</string>
+  <string name="default_android_client_id" translatable="false">184930841241-qjq0k2pa8gv80pjnfus46qqvd04ojagh.apps.googleusercontent.com</string>
+  <string name="default_web_client_id" translatable="false">184930841241-j90mv71eujvhj2jftmii3bt2l6e4j2id.apps.googleusercontent.com</string>
+</resources>
