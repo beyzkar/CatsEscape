@@ -110,6 +110,8 @@ public class ScoreManager : MonoBehaviour
     /// </summary>
     public static void SetTotalXP(int amount)
     {
+        if (amount < 0) amount = 0; // Guard against negative values
+        
         persistentXP = amount;
         if (Instance != null)
         {
@@ -118,7 +120,7 @@ public class ScoreManager : MonoBehaviour
             Instance.distance = 0f;
             Instance.UpdateUI();
         }
-        Debug.Log($"[ScoreManager] Total XP SET: {amount}");
+        Debug.Log($"[ScoreManager] Total XP RESTORED: {amount}");
     }
 
     /// <summary>
@@ -130,12 +132,12 @@ public class ScoreManager : MonoBehaviour
         if (level <= 1)
         {
             ResetAllXP();
-            Debug.Log($"[ScoreManager] Level 1 detected. XP forced to 0 for a fresh start.");
+            Debug.Log($"[ScoreManager] Fresh Start (Level 1). XP forced to 0.");
         }
         else
         {
             SetTotalXP(accountXP);
-            Debug.Log($"[ScoreManager] Resume detected (Level {level}). XP restored: {accountXP}");
+            Debug.Log($"[ScoreManager] Resume Start (Level {level}). Account XP loaded: {accountXP}");
         }
     }
 

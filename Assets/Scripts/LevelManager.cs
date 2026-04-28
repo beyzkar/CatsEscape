@@ -12,12 +12,12 @@ public class LevelManager : MonoBehaviour
 
     [Header("Level Settings")]
     public int currentLevel = 1;
-    public int obstaclesPassed = 0;
+    public int obstaclesPassed = 0;  
     
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 7, 12, 17, 22, 5 };
+    private int[] levelGoals = { 0, 5, 12, 15, 20, 20 };
 
     public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };

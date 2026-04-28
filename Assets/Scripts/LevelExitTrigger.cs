@@ -52,7 +52,13 @@ public class LevelExitTrigger : MonoBehaviour
 
         if (transitionManager != null)
         {
-            transitionManager.StartTransition();
+            transitionManager.StartTransition(() => 
+            {
+                if (LevelManager.Instance != null)
+                {
+                    LevelManager.Instance.NextLevel();
+                }
+            });
         }
         else
         {
