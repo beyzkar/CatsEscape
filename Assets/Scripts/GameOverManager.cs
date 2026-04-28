@@ -57,8 +57,10 @@ public class GameOverManager : MonoBehaviour
         {
             if (GameplayStatsTracker.Instance != null)
             {
-                GameplayStatsTracker.Instance.hasSentResult = true;
-                GameplayStatsTracker.Instance.isLevelActive = false;
+                Debug.Log("[RunState] Game ended result=failed");
+                GameplayStatsTracker.Instance.hasSentGameEnd = true;
+                GameplayStatsTracker.Instance.hasSentLevelResult = true;
+                GameplayStatsTracker.Instance.hasActiveLevelRun = false;
             }
             CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("failed");
             int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 1;

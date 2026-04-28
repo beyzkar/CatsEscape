@@ -513,8 +513,10 @@ public class LevelManager : MonoBehaviour
         {
             if (GameplayStatsTracker.Instance != null) 
             {
-                GameplayStatsTracker.Instance.hasSentResult = true;
-                GameplayStatsTracker.Instance.isLevelActive = false;
+                Debug.Log("[RunState] Game ended result=completed");
+                GameplayStatsTracker.Instance.hasSentGameEnd = true;
+                GameplayStatsTracker.Instance.hasSentLevelResult = true;
+                GameplayStatsTracker.Instance.hasActiveLevelRun = false;
             }
             GameDataApiClient.Instance.SendLevelResult("completed");
             GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "completed");
@@ -529,8 +531,10 @@ public class LevelManager : MonoBehaviour
         {
             if (GameplayStatsTracker.Instance != null) 
             {
-                GameplayStatsTracker.Instance.hasSentResult = true;
-                GameplayStatsTracker.Instance.isLevelActive = false;
+                Debug.Log("[RunState] Game ended result=completed");
+                GameplayStatsTracker.Instance.hasSentGameEnd = true;
+                GameplayStatsTracker.Instance.hasSentLevelResult = true;
+                GameplayStatsTracker.Instance.hasActiveLevelRun = false;
             }
             CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("completed");
             CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "completed");

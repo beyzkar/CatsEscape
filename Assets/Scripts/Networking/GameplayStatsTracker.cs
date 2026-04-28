@@ -17,8 +17,10 @@ namespace CatsEscape.Networking
         private int xpAtStart;
 
         [Header("State Tracking")]
-        public bool isLevelActive = false;
-        public bool hasSentResult = false;
+        public bool hasActiveLevelRun = false;
+        public bool hasSentGameEnd = false;
+        public bool hasSentLevelResult = false;
+        
         public string levelStartedAtISO;
         private float levelStartedAtRealTime;
 
@@ -28,6 +30,7 @@ namespace CatsEscape.Networking
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
+                UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
             }
             else
             {
@@ -35,9 +38,27 @@ namespace CatsEscape.Networking
             }
         }
 
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            }
+        }
+
+        private void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+        {
+            // If the unloaded scene was the GameScene and we haven't sent a result, it's an abandonment
+            if (scene.name == "GameScene")
+            {
+                Debug.Log("[RunState] GameScene unloaded. Checking for abandonment...");
+                SendAbandonedResult();
+            }
+        }
+
         public void ResetStats(int levelNumber)
         {
-            Debug.Log($"[StatsTracker] Resetting stats for Level {levelNumber}");
+            Debug.Log($"[RunState] Game started level={levelNumber} sessionId={GameDataApiClient.Instance?.SessionId}");
             currentLevelNumber = levelNumber;
             fishSpawnCount = 0;
             potionSpawnCount = 0;
@@ -49,15 +70,17 @@ namespace CatsEscape.Networking
                 xpAtStart = ScoreManager.Instance.GetTotalXP();
 
             // Reset state
-            isLevelActive = true;
-            hasSentResult = false;
+            hasActiveLevelRun = true;
+            hasSentGameEnd = false;
+            hasSentLevelResult = false;
+            
             levelStartedAtISO = DateTime.UtcNow.ToString("O");
             levelStartedAtRealTime = Time.realtimeSinceStartup;
         }
 
         public float GetLevelDuration()
         {
-            if (!isLevelActive) return 0f;
+            if (!hasActiveLevelRun) return 0f;
             return Time.realtimeSinceStartup - levelStartedAtRealTime;
         }
 
@@ -70,29 +93,31 @@ namespace CatsEscape.Networking
 
         public void SendAbandonedResult()
         {
-            if (isLevelActive && !hasSentResult)
+            if (hasActiveLevelRun && !hasSentGameEnd)
             {
-                hasSentResult = true;
-                isLevelActive = false;
-                Debug.Log($"[StatsTracker] Level {currentLevelNumber} ABANDONED. Sending result...");
+                Debug.Log("[RunState] Sending abandoned result");
+                hasSentGameEnd = true;
+                hasSentLevelResult = true;
+                hasActiveLevelRun = false;
                 
                 if (GameDataApiClient.Instance != null)
                 {
-                    GameDataApiClient.Instance.SendLevelResult("abandoned");
+                    Debug.Log("[Activity] game_end abandoned sent");
                     GameDataApiClient.Instance.SendActivity("game_end", currentLevelNumber, "abandoned");
+                    
+                    Debug.Log("[LevelResult] abandoned sent");
+                    GameDataApiClient.Instance.SendLevelResult("abandoned");
                 }
+            }
+            else if (hasActiveLevelRun)
+            {
+                Debug.Log("[RunState] Skipped abandoned because result already sent");
             }
         }
 
         private void OnApplicationQuit()
         {
             SendAbandonedResult();
-        }
-
-        private void OnDestroy()
-        {
-            // If this object is destroyed while a level is active, it might be a scene change to Main Menu
-            // However, since it's DontDestroyOnLoad, it only destroys on app quit or manual destroy.
         }
 
         public void OnFishSpawned() => fishSpawnCount++;

@@ -71,6 +71,13 @@ namespace CatsEscape.Auth
 #if USE_FIREBASE_AUTH
             try
             {
+                // Security Check: Verify if configuration file exists
+                if (!System.IO.File.Exists(Application.streamingAssetsPath + "/google-services-desktop.json") && 
+                    !System.IO.File.Exists(Application.dataPath + "/google-services.json"))
+                {
+                    Debug.LogError("[SECURITY] Firebase configuration file (google-services.json) is missing! Firebase initialization will likely fail.");
+                }
+
                 var checkTask = FirebaseApp.CheckAndFixDependenciesAsync();
                 await checkTask;
 

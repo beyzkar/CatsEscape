@@ -31,6 +31,13 @@ Docker.dmg
 ProjectSettings/AndroidResolverDependencies.xml
 ProjectSettings/GvhProjectSettings.xml
 
+# [SECURITY] Firebase Configuration Files
+# These files contain your Google API Key. While low risk for Firebase-only projects,
+# it is best practice to keep them out of public repositories.
+# Assets/google-services.json
+# Assets/StreamingAssets/google-services-desktop.json
+# GoogleService-Info.plist
+
 # Large Firebase Binaries (GitHub 100MB limit)
 Assets/Firebase/Plugins/x86_64/*.so
 Assets/Firebase/Plugins/x86_64/*.bundle
