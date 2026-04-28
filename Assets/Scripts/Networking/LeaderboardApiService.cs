@@ -3,6 +3,7 @@ using System.Collections;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+using CatsEscape.Auth;
 
 /// <summary>
 /// POST score + GET leaderboard using UnityWebRequest. Attach to a GameObject (e.g. same as LeaderboardManager).
@@ -11,18 +12,20 @@ using UnityEngine.Networking;
 public class LeaderboardApiService : MonoBehaviour
 {
     [Header("Endpoints")]
-    [Tooltip("e.g. https://your-api.com — no trailing slash")]
-    public string baseUrl = "https://example.com";
+    public string editorBaseUrl = "http://localhost:5001/api/game";
+    public string androidBaseUrl = "http://192.168.1.180:5001/api/game";
 
-    [Tooltip("POST path, e.g. /scores or /api/v1/scores")]
+    private string BaseUrl => Application.platform == RuntimePlatform.Android ? androidBaseUrl : editorBaseUrl;
+
+    [Tooltip("POST path, e.g. /scores")]
     public string submitScorePath = "/scores";
 
-    [Tooltip("GET path returning JSON with an \"entries\" array")]
+    [Tooltip("GET path, e.g. /leaderboard")]
     public string leaderboardPath = "/leaderboard";
 
     [Header("Request")]
-    [Tooltip("Optional query appended to GET, e.g. ?limit=10&game=cats")]
-    public string leaderboardQuery = "?limit=10";
+    [Tooltip("Optional query appended to GET, e.g. ?limit=10&sortBy=score")]
+    public string leaderboardQuery = "?limit=10&sortBy=score";
 
     [Tooltip("Seconds before request is aborted (0 = Unity default)")]
     public int requestTimeoutSeconds = 15;
@@ -49,24 +52,41 @@ public class LeaderboardApiService : MonoBehaviour
     }
 
     /// <summary>
-    /// POST JSON body { playerName, score }. Invokes onComplete on the main thread when finished.
+    /// POST JSON body. Invokes onComplete on the main thread when finished.
     /// </summary>
-    public IEnumerator SubmitScore(string playerName, int score, Action<SubmitScoreResult> onComplete)
+    public IEnumerator SubmitScore(string displayName, int score, int levelNumber, string authType, int xpEarned, float timeSeconds, Action<SubmitScoreResult> onComplete)
     {
         var result = new SubmitScoreResult();
-        if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("example.com"))
+        if (string.IsNullOrEmpty(BaseUrl))
         {
             result.success = false;
-            result.errorMessage = "LeaderboardApiService: set a valid baseUrl in the Inspector.";
+            result.errorMessage = "LeaderboardApiService: BaseUrl is empty.";
             onComplete?.Invoke(result);
             yield break;
         }
 
-        string url = CombineUrl(baseUrl, submitScorePath, null);
+        if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
+        {
+            result.success = false;
+            result.errorMessage = "LeaderboardApiService: User not authenticated.";
+            onComplete?.Invoke(result);
+            yield break;
+        }
+
+        var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
+        while (!tokenTask.IsCompleted) yield return null;
+        string idToken = tokenTask.Result;
+
+        string url = CombineUrl(BaseUrl, submitScorePath, null);
         var payload = new ScoreSubmitRequest
         {
-            playerName = string.IsNullOrEmpty(playerName) ? "Player" : playerName,
-            score = score
+            uid = AuthManager.Instance.UserId,
+            displayName = string.IsNullOrEmpty(displayName) ? "Player" : displayName,
+            authType = authType,
+            levelNumber = levelNumber,
+            score = score,
+            xpEarned = xpEarned,
+            timeSeconds = timeSeconds
         };
         string json = JsonUtility.ToJson(payload);
         byte[] body = Encoding.UTF8.GetBytes(json);
@@ -76,6 +96,7 @@ public class LeaderboardApiService : MonoBehaviour
             req.uploadHandler = new UploadHandlerRaw(body);
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
+            req.SetRequestHeader("Authorization", "Bearer " + idToken);
             if (requestTimeoutSeconds > 0)
                 req.timeout = requestTimeoutSeconds;
 
@@ -109,19 +130,36 @@ public class LeaderboardApiService : MonoBehaviour
     /// <summary>
     /// GET leaderboard JSON. Parses LeaderboardGetResponse with an "entries" array.
     /// </summary>
-    public IEnumerator FetchLeaderboard(Action<bool, string, LeaderboardApiEntry[]> onComplete)
+    public IEnumerator FetchLeaderboard(int? levelNumber, Action<bool, string, LeaderboardApiEntry[]> onComplete)
     {
-        if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("example.com"))
+        if (string.IsNullOrEmpty(BaseUrl))
         {
-            onComplete?.Invoke(false, "LeaderboardApiService: set a valid baseUrl in the Inspector.", null);
+            onComplete?.Invoke(false, "LeaderboardApiService: BaseUrl is empty.", null);
             yield break;
         }
 
-        string url = CombineUrl(baseUrl, leaderboardPath, leaderboardQuery);
+        if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
+        {
+            onComplete?.Invoke(false, "LeaderboardApiService: User not authenticated.", null);
+            yield break;
+        }
+
+        var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
+        while (!tokenTask.IsCompleted) yield return null;
+        string idToken = tokenTask.Result;
+
+        string query = leaderboardQuery;
+        if (levelNumber.HasValue)
+        {
+            query += $"&levelNumber={levelNumber.Value}";
+        }
+
+        string url = CombineUrl(BaseUrl, leaderboardPath, query);
 
         using (var req = UnityWebRequest.Get(url))
         {
             req.SetRequestHeader("Accept", "application/json");
+            req.SetRequestHeader("Authorization", "Bearer " + idToken);
             if (requestTimeoutSeconds > 0)
                 req.timeout = requestTimeoutSeconds;
 

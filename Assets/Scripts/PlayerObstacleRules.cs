@@ -61,6 +61,13 @@ public class PlayerObstacleRules : MonoBehaviour
     private float damageCooldown = 0f;
     private const float DAMAGE_COOLDOWN_TIME = 2.5f;
 
+    [Header("Recovery Collision Ignore")]
+    public List<string> ignoredPrefabNameKeywords = new List<string> 
+    { 
+        "Bush", "ObstacleBag", "LongWall", "Enemy", "DesertEnemy", "GraveyardEnemy", "SnowEnemy", "Wall" 
+    };
+    private List<Collider2D> currentlyIgnoredColliders = new List<Collider2D>();
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -701,6 +708,86 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         UpdateGameSpeed();
+        ResetCollisionIgnore();
+    }
+
+    private void StartCollisionIgnore()
+    {
+        ResetCollisionIgnore(); // Ensure clean state
+        Collider2D[] playerColliders = GetComponentsInChildren<Collider2D>();
+        Collider2D[] allSceneColliders = Object.FindObjectsByType<Collider2D>(FindObjectsSortMode.None);
+        
+        foreach (var otherCol in allSceneColliders)
+        {
+            if (otherCol == null || otherCol.gameObject == gameObject) continue;
+            
+            string name = otherCol.gameObject.name;
+            bool shouldIgnore = false;
+
+            // Check name against keywords
+            foreach (string keyword in ignoredPrefabNameKeywords)
+            {
+                if (name.Contains(keyword))
+                {
+                    shouldIgnore = true;
+                    break;
+                }
+            }
+
+            // Safety: Never ignore ground, collectibles, or portals
+            if (shouldIgnore)
+            {
+                bool isGround = name.Contains("Ground") || name.Contains("Pit");
+                bool isCollectible = otherCol.CompareTag("Fish") || otherCol.CompareTag("Potion") || name.Contains("Fish") || name.Contains("Potion");
+                bool isLevelExit = name.Contains("Portal") || name.Contains("Home") || name.Contains("Exit");
+
+                if (isGround || isCollectible || isLevelExit)
+                {
+                    shouldIgnore = false;
+                }
+            }
+
+            if (shouldIgnore)
+            {
+                foreach (var pCol in playerColliders)
+                {
+                    if (pCol != null && pCol.enabled && otherCol != null && otherCol.enabled)
+                    {
+                        Physics2D.IgnoreCollision(pCol, otherCol, true);
+                    }
+                }
+                if (!currentlyIgnoredColliders.Contains(otherCol))
+                    currentlyIgnoredColliders.Add(otherCol);
+            }
+        }
+    }
+
+    private void ResetCollisionIgnore()
+    {
+        if (currentlyIgnoredColliders == null || currentlyIgnoredColliders.Count == 0) return;
+
+        Collider2D[] playerColliders = GetComponentsInChildren<Collider2D>();
+        foreach (var otherCol in currentlyIgnoredColliders)
+        {
+            if (otherCol != null)
+            {
+                foreach (var pCol in playerColliders)
+                {
+                    if (pCol != null) Physics2D.IgnoreCollision(pCol, otherCol, false);
+                }
+            }
+        }
+        currentlyIgnoredColliders.Clear();
+    }
+
+    private void OnDisable()
+    {
+        ResetCollisionIgnore();
+    }
+
+    private void OnDestroy()
+    {
+        ResetCollisionIgnore();
     }
 
     private IEnumerator PowerUpSequence()
@@ -796,8 +883,12 @@ public class PlayerObstacleRules : MonoBehaviour
             }
         }
 
+        StartCollisionIgnore();
+
         while (elapsed < hitRecoveryDuration)
         {
+            if (dead) break;
+
             foreach (var r in targetRenderers) 
             {
                 if (r != null) r.enabled = !r.enabled;
@@ -810,5 +901,7 @@ public class PlayerObstacleRules : MonoBehaviour
         {
             if (r != null) r.enabled = true;
         }
+
+        ResetCollisionIgnore();
     }
 }

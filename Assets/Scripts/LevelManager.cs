@@ -138,6 +138,9 @@ public class LevelManager : MonoBehaviour
         
         if (GameplayStatsTracker.Instance != null)
             GameplayStatsTracker.Instance.ResetStats(currentLevel);
+            
+        if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+            CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_start", currentLevel);
     }
 
     private void InitializeTransitionPanel()
@@ -412,6 +415,12 @@ public class LevelManager : MonoBehaviour
 
     public void MainMenu()
     {
+        // Try to send abandoned result if we are leaving an active level
+        if (GameplayStatsTracker.Instance != null)
+        {
+            GameplayStatsTracker.Instance.SendAbandonedResult();
+        }
+
         ResetPersistentLevel();
         
         // XP reset is now handled centrally in Awake via InitializeForLevel
@@ -500,7 +509,16 @@ public class LevelManager : MonoBehaviour
             }
         }
 
-        if (GameDataApiClient.Instance != null) GameDataApiClient.Instance.SendLevelResult("completed");
+        if (GameDataApiClient.Instance != null) 
+        {
+            if (GameplayStatsTracker.Instance != null) 
+            {
+                GameplayStatsTracker.Instance.hasSentResult = true;
+                GameplayStatsTracker.Instance.isLevelActive = false;
+            }
+            GameDataApiClient.Instance.SendLevelResult("completed");
+            GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "completed");
+        }
     }
 
     public void NextLevel()
@@ -509,7 +527,13 @@ public class LevelManager : MonoBehaviour
 
         if (CatsEscape.Networking.GameDataApiClient.Instance != null)
         {
+            if (GameplayStatsTracker.Instance != null) 
+            {
+                GameplayStatsTracker.Instance.hasSentResult = true;
+                GameplayStatsTracker.Instance.isLevelActive = false;
+            }
             CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("completed");
+            CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "completed");
         }
 
         if (ScoreManager.Instance != null) ScoreManager.Instance.CommitSessionXP();
@@ -520,6 +544,11 @@ public class LevelManager : MonoBehaviour
 
         currentLevel++;
         savedLevel = currentLevel;
+
+        if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+        {
+            CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_start", currentLevel);
+        }
 
         if (CatsEscape.Auth.AuthManager.Instance != null)
         {

@@ -54,7 +54,16 @@ public class GameOverManager : MonoBehaviour
 
         // Send results to backend
         if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+        {
+            if (GameplayStatsTracker.Instance != null)
+            {
+                GameplayStatsTracker.Instance.hasSentResult = true;
+                GameplayStatsTracker.Instance.isLevelActive = false;
+            }
             CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("failed");
+            int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 1;
+            CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "failed");
+        }
     }
 
     public void Replay()
@@ -69,6 +78,13 @@ public class GameOverManager : MonoBehaviour
 
     public void LoadMainMenu()
     {
+        // Try to send abandoned if not already sent (e.g. if player leaves Game Over screen)
+        // But in ShowGameOver we already set hasSentResult = true, so this won't trigger unless logic changes.
+        if (GameplayStatsTracker.Instance != null)
+        {
+            GameplayStatsTracker.Instance.SendAbandonedResult();
+        }
+
         // Global hard reset for XP when returning to start
         // XP reset is now handled centrally in Awake via InitializeForLevel
 

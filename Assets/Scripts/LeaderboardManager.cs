@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using UnityEngine.SceneManagement;
+using CatsEscape.Networking;
 
 public class LeaderboardManager : MonoBehaviour
 {
@@ -148,13 +149,20 @@ public class LeaderboardManager : MonoBehaviour
         if (leaderboardPanel != null) leaderboardPanel.SetActive(true);
 
         if (apiService != null)
-            StartCoroutine(CoSubmitAndSync(playerName, currentXP));
+        {
+            int currentLevel = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 1;
+            string authType = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.GetLoginType().ToLower() : "guest";
+            int xpEarned = (GameplayStatsTracker.Instance != null) ? GameplayStatsTracker.Instance.GetFinalXPEarned() : 0;
+            float timeSeconds = 0f; // GameplayStatsTracker doesn't track time yet, setting to 0
+
+            StartCoroutine(CoSubmitAndSync(playerName, currentXP, currentLevel, authType, xpEarned, timeSeconds));
+        }
     }
 
-    private IEnumerator CoSubmitAndSync(string playerName, int currentXP)
+    private IEnumerator CoSubmitAndSync(string playerName, int currentXP, int levelNumber, string authType, int xpEarned, float timeSeconds)
     {
         SubmitScoreResult result = null;
-        yield return apiService.SubmitScore(playerName, currentXP, r => result = r);
+        yield return apiService.SubmitScore(playerName, currentXP, levelNumber, authType, xpEarned, timeSeconds, r => result = r);
 
         if (result == null || !result.success)
         {
@@ -180,7 +188,10 @@ public class LeaderboardManager : MonoBehaviour
             foreach (var ps in pendingScores)
             {
                 SubmitScoreResult res = null;
-                yield return apiService.SubmitScore(ps.playerName, ps.xp, r => res = r);
+                int level = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 1;
+                string auth = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.GetLoginType().ToLower() : "guest";
+                
+                yield return apiService.SubmitScore(ps.playerName, ps.xp, level, auth, 0, 0, r => res = r);
                 if (res != null && res.success)
                     toRemove.Add(ps);
                 else
@@ -194,7 +205,9 @@ public class LeaderboardManager : MonoBehaviour
         // 2. Fetch Latest from SSOT (Server)
         bool ok = false;
         LeaderboardApiEntry[] entries = null;
-        yield return apiService.FetchLeaderboard((success, error, list) =>
+        int? currentLevel = (LevelManager.Instance != null) ? (int?)LevelManager.Instance.currentLevel : null;
+
+        yield return apiService.FetchLeaderboard(currentLevel, (success, error, list) =>
         {
             ok = success;
             entries = list;
@@ -215,7 +228,7 @@ public class LeaderboardManager : MonoBehaviour
         foreach (var e in entries)
         {
             if (e == null) continue;
-            merged.Add(new ScoreData(e.playerName ?? "Player", e.score));
+            merged.Add(new ScoreData(e.displayName ?? "Player", e.score));
         }
         scores = merged.OrderByDescending(s => s.xp).Take(10).ToList();
     }
