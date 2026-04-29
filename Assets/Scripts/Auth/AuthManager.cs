@@ -201,24 +201,43 @@ namespace CatsEscape.Auth
         public async void ContinueAsGuest()
         {
             // NEW: Handle abandonment of current run BEFORE switching to Guest
-            if (GameplayStatsTracker.Instance != null)
+            if (GameplayStatsTracker.Instance != null && GameDataApiClient.Instance != null && GameDataApiClient.Instance.IsNetworkAvailable)
             {
                 await WaitForCoroutine(GameplayStatsTracker.Instance.TrySendAbandonedIfActiveCoroutine("switch_to_guest"));
             }
 
             try 
             {
-                bool success = await _authService.SignInAnonymouslyAsync();
+                bool isOnline = (GameDataApiClient.Instance != null) && GameDataApiClient.Instance.IsNetworkAvailable;
+                bool success = false;
+
+                if (isOnline)
+                {
+                    success = await _authService.SignInAnonymouslyAsync();
+                }
+                else
+                {
+                    Debug.Log("[GuestLogin] Starting offline guest session");
+                    success = true; // Offline guest is always allowed
+                }
+
                 if (success)
                 {
                     IsGuest = true;
-                    LogLoginState("Guest");
+                    LogLoginState(isOnline ? "Guest" : "Guest Offline");
                     
                     if (LevelManager.Instance != null) LevelManager.Instance.currentLevel = 1;
                     LevelManager.ResetSavedLevel();
                     ScoreManager.ResetAllXP();
 
-                    InitializeProfileOnBackend();
+                    if (isOnline)
+                    {
+                        InitializeProfileOnBackend();
+                    }
+                    else
+                    {
+                        Debug.Log("[GuestLogin] Backend unavailable, continuing offline");
+                    }
                     
                     EnqueueOnMainThread(() => OnGuestLogin?.Invoke());
                 }
@@ -246,6 +265,13 @@ namespace CatsEscape.Auth
 
         public async Task SignInWithGoogleAsync()
         {
+            if (GameDataApiClient.Instance != null && !GameDataApiClient.Instance.IsNetworkAvailable)
+            {
+                Debug.Log("[GoogleLogin] Internet required");
+                EnqueueOnMainThread(() => OnLoginFailed?.Invoke("Google ile giriş için internet bağlantısı gerekli."));
+                return;
+            }
+
             // NEW: Handle abandonment of current run BEFORE switching to Google
             if (GameplayStatsTracker.Instance != null)
             {
@@ -272,7 +298,11 @@ namespace CatsEscape.Auth
 
         public void InitializeProfileOnBackend()
         {
-            if (GameDataApiClient.Instance == null) return;
+            if (GameDataApiClient.Instance == null || !GameDataApiClient.Instance.IsNetworkAvailable) 
+            {
+                Debug.Log("[AuthManager] Skipping profile init (Offline or no API Client)");
+                return;
+            }
 
             string authType = IsGuest ? "guest" : "google";
             string displayName = IsGuest ? "Guest" : _authService.UserDisplayName;
@@ -341,6 +371,12 @@ namespace CatsEscape.Auth
         {
             if (CatsEscape.Networking.GameDataApiClient.Instance != null && IsUserLoggedIn())
             {
+                if (!CatsEscape.Networking.GameDataApiClient.Instance.IsNetworkAvailable)
+                {
+                    Debug.Log("[AuthManager] Skipping progress sync (Offline).");
+                    return;
+                }
+
                 Debug.Log("[AuthManager] Syncing progress with backend...");
                 CatsEscape.Networking.GameDataApiClient.Instance.FetchPlayerProgress((progress) => {
                     if (progress != null)

@@ -18,6 +18,8 @@ namespace CatsEscape.Networking
         public string androidBaseUrl = "http://192.168.1.180:5001/api/game"; 
 
         private string BaseUrl => Application.platform == RuntimePlatform.Android ? androidBaseUrl : editorBaseUrl;
+        
+        public bool IsNetworkAvailable => Application.internetReachability != NetworkReachability.NotReachable;
 
         private void Awake()
         {
@@ -67,25 +69,40 @@ namespace CatsEscape.Networking
 
         private IEnumerator PostActivityCoroutine(string eventType, int? levelNumber, string result)
         {
-            string url = $"{BaseUrl}/activity";
+            if (!IsNetworkAvailable)
+            {
+                Debug.Log("[Network] Offline detected. Skipping activity log.");
+                yield break;
+            }
 
             if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
             {
-                yield break; // Can't send activity without auth token
+                yield break; 
             }
 
             var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
-            while (!tokenTask.IsCompleted) yield return null;
+            float timer = 0f;
+            while (!tokenTask.IsCompleted && timer < 5f) 
+            {
+                timer += Time.deltaTime;
+                yield return null;
+            }
+            
+            if (!tokenTask.IsCompleted)
+            {
+                Debug.LogWarning("[API] Token retrieval timed out.");
+                yield break;
+            }
 
             string idToken = tokenTask.Result;
             if (string.IsNullOrEmpty(idToken)) yield break;
 
-            // Manually construct JSON to properly omit null values
             string json = $"{{\"eventType\":\"{eventType}\",\"sessionId\":\"{SessionId}\"";
             if (levelNumber.HasValue) json += $",\"levelNumber\":{levelNumber.Value}";
             if (!string.IsNullOrEmpty(result)) json += $",\"result\":\"{result}\"";
             json += "}";
 
+            string url = $"{BaseUrl}/activity";
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
@@ -93,6 +110,7 @@ namespace CatsEscape.Networking
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
                 request.SetRequestHeader("Authorization", "Bearer " + idToken);
+                request.timeout = 10;
 
                 yield return request.SendWebRequest();
 
@@ -157,6 +175,12 @@ namespace CatsEscape.Networking
                 yield break;
             }
 
+            if (!IsNetworkAvailable)
+            {
+                Debug.Log("[Network] Offline detected. Skipping level result sync.");
+                yield break;
+            }
+
             if (!AuthManager.Instance.IsAuthenticated)
             {
                 Debug.LogWarning("[GameDataApiClient] User NOT authenticated. Skipping telemetry sync.");
@@ -164,7 +188,18 @@ namespace CatsEscape.Networking
             }
 
             var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
-            while (!tokenTask.IsCompleted) yield return null;
+            float timer = 0f;
+            while (!tokenTask.IsCompleted && timer < 5f)
+            {
+                timer += Time.deltaTime;
+                yield return null;
+            }
+
+            if (!tokenTask.IsCompleted)
+            {
+                Debug.LogError("[API] Token retrieval timed out for level result.");
+                yield break;
+            }
 
             string idToken = tokenTask.Result;
             if (string.IsNullOrEmpty(idToken))
@@ -182,6 +217,7 @@ namespace CatsEscape.Networking
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
                 request.SetRequestHeader("Authorization", "Bearer " + idToken);
+                request.timeout = 10;
 
                 yield return request.SendWebRequest();
 
@@ -206,6 +242,13 @@ namespace CatsEscape.Networking
         {
             string url = $"{BaseUrl}/profile/init";
 
+            if (!IsNetworkAvailable)
+            {
+                Debug.Log("[Network] Offline detected. Skipping profile initialization.");
+                onComplete?.Invoke(false);
+                yield break;
+            }
+
             if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
             {
                 onComplete?.Invoke(false);
@@ -213,7 +256,19 @@ namespace CatsEscape.Networking
             }
 
             var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
-            while (!tokenTask.IsCompleted) yield return null;
+            float timer = 0f;
+            while (!tokenTask.IsCompleted && timer < 5f)
+            {
+                timer += Time.deltaTime;
+                yield return null;
+            }
+
+            if (!tokenTask.IsCompleted)
+            {
+                Debug.LogWarning("[API] Token retrieval timed out for profile init.");
+                onComplete?.Invoke(false);
+                yield break;
+            }
 
             string idToken = tokenTask.Result;
             if (string.IsNullOrEmpty(idToken))
@@ -236,6 +291,7 @@ namespace CatsEscape.Networking
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
                 request.SetRequestHeader("Authorization", "Bearer " + idToken);
+                request.timeout = 10;
 
                 yield return request.SendWebRequest();
 
