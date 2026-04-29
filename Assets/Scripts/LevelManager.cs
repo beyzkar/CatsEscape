@@ -17,7 +17,7 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 5, 12, 15, 20, 20 };
+    private int[] levelGoals = { 0, 5, 12, 17, 22, 28 };
 
     public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };
@@ -30,8 +30,6 @@ public class LevelManager : MonoBehaviour
     public GameObject victoryPanel;
     public TMP_Text levelStatusText;
     public TMP_Text inGameLevelText;
-    public GameObject normalLevelContent;
-    public GameObject finalLevelContent;
     
     [Header("Backgrounds")]
     public GameObject[] levelBackgrounds;
@@ -475,40 +473,52 @@ public class LevelManager : MonoBehaviour
 
     private void ShowVictory()
     {
+        Debug.Log("[FinalPortal] Player entered final portal - Processing completion");
+        
         Time.timeScale = 0f;
         targetGameMultiplier = 0f;
         GameSpeed.Multiplier = 0f;
         if (AudioManager.Instance != null) AudioManager.Instance.StopBackgroundMusic();
 
-        if (victoryPanel != null)
+        bool isFinalLevel = (currentLevel >= 5);
+
+        if (isFinalLevel)
         {
-            if (levelStatusText != null) levelStatusText.text = "Level " + currentLevel + " Survived!";
-            if (currentLevel < 5)
+            Debug.Log("[FinalPortal] Final completed, opening scoreboard");
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
+            
+            // Handle Stats & Progress
+            if (CatsEscape.Auth.AuthManager.Instance != null)
             {
-                if (normalLevelContent != null) normalLevelContent.SetActive(true);
-                if (finalLevelContent != null) finalLevelContent.SetActive(false);
+                CatsEscape.Auth.AuthManager.Instance.TotalCompletions++;
+                CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 1; // Reset to 1 for loop
+            }
+
+            // Open Scoreboard/Leaderboard
+            if (LeaderboardManager.Instance != null)
+            {
+                LeaderboardManager.Instance.nextPanelToOpen = victoryPanel; 
+                int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
+                LeaderboardManager.Instance.CheckForHighScore(currentXP);
+            }
+            else 
+            {
+                Debug.LogWarning("[FinalPortal] ScoreboardPanel / LeaderboardManager reference missing!");
+                if (victoryPanel != null) victoryPanel.SetActive(true);
+            }
+        }
+        else
+        {
+            // Levels 1-4 fallback victory UI (if not using video transitions)
+            if (victoryPanel != null)
+            {
+                if (levelStatusText != null) levelStatusText.text = "Level " + currentLevel + " Survived!";
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayLevelWinSound();
                 victoryPanel.SetActive(true);
             }
-            else
-            {
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
-                if (CatsEscape.Auth.AuthManager.Instance != null)
-                {
-                    CatsEscape.Auth.AuthManager.Instance.TotalCompletions++;
-                    CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 1;
-                }
-
-                if (LeaderboardManager.Instance != null)
-                {
-                    LeaderboardManager.Instance.nextPanelToOpen = victoryPanel; 
-                    int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
-                    LeaderboardManager.Instance.CheckForHighScore(currentXP);
-                }
-                else victoryPanel.SetActive(true);
-            }
         }
 
+        // Send results to backend
         if (GameDataApiClient.Instance != null) 
         {
             if (GameplayStatsTracker.Instance != null) 

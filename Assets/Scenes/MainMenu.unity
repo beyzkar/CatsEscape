@@ -3082,6 +3082,10 @@ MonoBehaviour:
   heartsGained: 0
   heartsLost: 0
   xpEarnedInLevel: 0
+  hasActiveLevelRun: 0
+  hasSentGameEnd: 0
+  hasSentLevelResult: 0
+  levelStartedAtISO: 
 --- !u!4 &1974608638
 Transform:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using CatsEscape.Auth;
 
 namespace CatsEscape.Networking
 {
@@ -93,26 +94,45 @@ namespace CatsEscape.Networking
 
         public void SendAbandonedResult()
         {
+            StartCoroutine(TrySendAbandonedIfActiveCoroutine("automatic"));
+        }
+
+        public System.Collections.IEnumerator TrySendAbandonedIfActiveCoroutine(string reason)
+        {
             if (hasActiveLevelRun && !hasSentGameEnd)
             {
-                Debug.Log("[RunState] Sending abandoned result");
+                string uid = (AuthManager.Instance != null) ? AuthManager.Instance.UserId : "UNKNOWN";
+                string sid = (GameDataApiClient.Instance != null) ? GameDataApiClient.Instance.SessionId : "UNKNOWN";
+                
+                Debug.Log($"[Abandoned] Active run detected. Reason: {reason}");
+                Debug.Log($"[Abandoned] Sending game_end abandoned uid={uid} level={currentLevelNumber} session={sid}");
+                
                 hasSentGameEnd = true;
                 hasSentLevelResult = true;
                 hasActiveLevelRun = false;
                 
                 if (GameDataApiClient.Instance != null)
                 {
-                    Debug.Log("[Activity] game_end abandoned sent");
-                    GameDataApiClient.Instance.SendActivity("game_end", currentLevelNumber, "abandoned");
+                    Debug.Log($"[Abandoned] Sending activity and levelResult for uid={uid}");
+                    var activityTask = GameDataApiClient.Instance.SendActivity("game_end", currentLevelNumber, "abandoned");
+                    var resultTask = GameDataApiClient.Instance.SendLevelResult("abandoned");
+
+                    // Wait for both requests to finish if we are in a Coroutine
+                    if (activityTask != null) yield return activityTask;
+                    if (resultTask != null) yield return resultTask;
                     
-                    Debug.Log("[LevelResult] abandoned sent");
-                    GameDataApiClient.Instance.SendLevelResult("abandoned");
+                    Debug.Log("[Abandoned] All telemetry sent successfully before state change.");
                 }
             }
             else if (hasActiveLevelRun)
             {
-                Debug.Log("[RunState] Skipped abandoned because result already sent");
+                Debug.Log($"[Abandoned] Skipped: result already sent (reason: {reason})");
             }
+            else
+            {
+                Debug.Log($"[Abandoned] Skipped: no active run (reason: {reason})");
+            }
+            yield break;
         }
 
         private void OnApplicationQuit()

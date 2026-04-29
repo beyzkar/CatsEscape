@@ -42,8 +42,8 @@ public class PlayerMovement : MonoBehaviour
     public bool IsGrounded => isGrounded;
 
     [Header("Horizontal Movement")]
-    public float moveRightSpeed = 7.5f; // Increased from 5f to match 1.5x request
-    public float moveLeftSpeed = 5f; 
+    public float moveRightSpeed = 9f; // Increased from 7.5f
+    public float moveLeftSpeed = 6.5f; // Increased from 5f
     public float minX = FixedLeftBoundaryX; // Fixed world left boundary
     public float maxX = 5f;    // Initial right boundary
     public float acceleration = 5f;
@@ -267,7 +267,9 @@ public class PlayerMovement : MonoBehaviour
             anim.transform.localRotation = Quaternion.RotateTowards(anim.transform.localRotation, Quaternion.Euler(0, targetRY, 0), rotationSpeed * Time.deltaTime);
         }
 
-        if (Input.GetKeyDown(KeyCode.UpArrow)) MobileJumpDown();
+        // Explicitly separate Jump input from Horizontal input
+        bool jumpInput = Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space);
+        if (jumpInput) MobileJumpDown();
     }
 
     void FixedUpdate()
@@ -313,7 +315,7 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
         }
-        else if (rb.linearVelocity.y > 0 && !Input.GetKey(KeyCode.UpArrow)) 
+        else if (rb.linearVelocity.y > 0 && !(Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Space))) 
         {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
         }

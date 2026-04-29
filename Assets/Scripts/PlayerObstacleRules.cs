@@ -60,6 +60,7 @@ public class PlayerObstacleRules : MonoBehaviour
     public float hitRecoveryDuration = 2.5f;
     private float damageCooldown = 0f;
     private const float DAMAGE_COOLDOWN_TIME = 2.5f;
+    private bool isRecovering = false;
 
     [Header("Recovery Collision Ignore")]
     public List<string> ignoredPrefabNameKeywords = new List<string> 
@@ -124,7 +125,8 @@ public class PlayerObstacleRules : MonoBehaviour
         if (stuck)
         {
             // Inputs for exiting the stuck state
-            bool jumpInput = Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.UpArrow);
+            // Explicit jump input: Only allow Up Arrow, W, or Space. Removed MouseButton0 to prevent jump on UI clicks.
+            bool jumpInput = Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W);
             float h = Input.GetAxisRaw("Horizontal");
             bool moveLeft =
                 Input.GetKey(KeyCode.LeftArrow) ||
@@ -295,6 +297,7 @@ public class PlayerObstacleRules : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D col)
     {
         if (dead) return;
+        if (isRecovering) { CheckAndIgnoreCollision(col.collider); return; }
         Vector2 normal = col.contactCount > 0 ? col.GetContact(0).normal : Vector2.left;
         HandleInteraction(col.gameObject, normal, false);
     }
@@ -329,6 +332,7 @@ public class PlayerObstacleRules : MonoBehaviour
             return;
         }
 
+        if (isRecovering) { CheckAndIgnoreCollision(other); return; }
         HandleInteraction(other.gameObject, GetTriggerNormal(other), true);
     }
 
@@ -378,7 +382,6 @@ public class PlayerObstacleRules : MonoBehaviour
         rb.position += pushDir * 0.2f;
         rb.linearVelocity = new Vector2(pushDir.x * 3.5f, Mathf.Max(rb.linearVelocity.y, 4.5f));
     }
-
     private void HandleInteraction(GameObject other, Vector2 normal, bool isTrigger)
     {
         bool isEnemy = IsEnemy(other);
@@ -388,6 +391,9 @@ public class PlayerObstacleRules : MonoBehaviour
         bool isLevel4Bush = isBush && LevelManager.Instance != null && LevelManager.Instance.currentLevel == 4;
 
         if (!isEnemy && !isBush && !isWall && !isObstacle) return;
+
+        // [Recovery] Damage ignored because player is recovering
+        if (isRecovering) return;
 
         // NEW: Priority Enemy Damage Rule
         // Any contact with an enemy (top, side, trigger, or physics) results in damage.
@@ -544,6 +550,7 @@ public class PlayerObstacleRules : MonoBehaviour
         // Reset Level 5 progress (on user request)
         if (LevelManager.Instance != null) LevelManager.Instance.ResetProgress();
 
+        isRecovering = true;
         StartCoroutine(FlashRecoveryEffect());
 
         if (currentHearts <= 0) Die();
@@ -708,38 +715,74 @@ public class PlayerObstacleRules : MonoBehaviour
         }
 
         UpdateGameSpeed();
+        isRecovering = false;
         ResetCollisionIgnore();
+    }
+
+    private void CheckAndIgnoreCollision(Collider2D otherCol)
+    {
+        if (!isRecovering || otherCol == null) return;
+
+        string tag = otherCol.tag;
+        string name = otherCol.gameObject.name;
+        bool shouldIgnore = (tag == "Bush" || tag == "LongWall" || tag == "Obstacle" || tag == "Wall" || tag == "Enemy" ||
+                             name.Contains("Enemy") || name.Contains("DesertEnemy") || name.Contains("GraveyardEnemy") || name.Contains("SnowEnemy"));
+
+        if (shouldIgnore)
+        {
+            // Safety: Never ignore ground, collectibles, or portals
+            bool isGround = tag == "Ground" || name.Contains("Ground") || name.Contains("Pit");
+            bool isCollectible = tag == "Fish" || tag == "Potion" || name.Contains("Fish") || name.Contains("Potion");
+            bool isLevelExit = tag == "Portal" || name.Contains("Portal") || name.Contains("Home") || name.Contains("Exit");
+
+            if (!isGround && !isCollectible && !isLevelExit)
+            {
+                Collider2D pCol = GetComponent<Collider2D>();
+                if (pCol != null)
+                {
+                    Physics2D.IgnoreCollision(pCol, otherCol, true);
+                    if (!currentlyIgnoredColliders.Contains(otherCol))
+                        currentlyIgnoredColliders.Add(otherCol);
+                }
+            }
+        }
     }
 
     private void StartCollisionIgnore()
     {
+        Debug.Log("[Recovery] Started - Collecting colliders to ignore");
         ResetCollisionIgnore(); // Ensure clean state
-        Collider2D[] playerColliders = GetComponentsInChildren<Collider2D>();
+        
+        Collider2D playerCollider = GetComponent<Collider2D>();
+        if (playerCollider == null) return;
+
         Collider2D[] allSceneColliders = Object.FindObjectsByType<Collider2D>(FindObjectsSortMode.None);
         
         foreach (var otherCol in allSceneColliders)
         {
             if (otherCol == null || otherCol.gameObject == gameObject) continue;
             
-            string name = otherCol.gameObject.name;
             bool shouldIgnore = false;
+            string tag = otherCol.tag;
+            string name = otherCol.gameObject.name;
 
-            // Check name against keywords
-            foreach (string keyword in ignoredPrefabNameKeywords)
+            // 1. Check by Tag (as requested)
+            if (tag == "Bush" || tag == "LongWall" || tag == "Obstacle" || tag == "Wall" || tag == "Enemy")
             {
-                if (name.Contains(keyword))
-                {
-                    shouldIgnore = true;
-                    break;
-                }
+                shouldIgnore = true;
+            }
+            // 2. Check by Enemy Name (for untagged variants)
+            else if (name.Contains("Enemy") || name.Contains("DesertEnemy") || name.Contains("GraveyardEnemy") || name.Contains("SnowEnemy"))
+            {
+                shouldIgnore = true;
             }
 
             // Safety: Never ignore ground, collectibles, or portals
             if (shouldIgnore)
             {
-                bool isGround = name.Contains("Ground") || name.Contains("Pit");
-                bool isCollectible = otherCol.CompareTag("Fish") || otherCol.CompareTag("Potion") || name.Contains("Fish") || name.Contains("Potion");
-                bool isLevelExit = name.Contains("Portal") || name.Contains("Home") || name.Contains("Exit");
+                bool isGround = tag == "Ground" || name.Contains("Ground") || name.Contains("Pit");
+                bool isCollectible = tag == "Fish" || tag == "Potion" || name.Contains("Fish") || name.Contains("Potion");
+                bool isLevelExit = tag == "Portal" || name.Contains("Portal") || name.Contains("Home") || name.Contains("Exit");
 
                 if (isGround || isCollectible || isLevelExit)
                 {
@@ -749,13 +792,8 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (shouldIgnore)
             {
-                foreach (var pCol in playerColliders)
-                {
-                    if (pCol != null && pCol.enabled && otherCol != null && otherCol.enabled)
-                    {
-                        Physics2D.IgnoreCollision(pCol, otherCol, true);
-                    }
-                }
+                Debug.Log($"[Recovery] Ignoring collider: {name} / Tag: {tag}");
+                Physics2D.IgnoreCollision(playerCollider, otherCol, true);
                 if (!currentlyIgnoredColliders.Contains(otherCol))
                     currentlyIgnoredColliders.Add(otherCol);
             }
@@ -766,15 +804,15 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (currentlyIgnoredColliders == null || currentlyIgnoredColliders.Count == 0) return;
 
-        Collider2D[] playerColliders = GetComponentsInChildren<Collider2D>();
+        Debug.Log("[Recovery] Ended and collisions restored");
+        Collider2D playerCollider = GetComponent<Collider2D>();
+        if (playerCollider == null) return;
+
         foreach (var otherCol in currentlyIgnoredColliders)
         {
             if (otherCol != null)
             {
-                foreach (var pCol in playerColliders)
-                {
-                    if (pCol != null) Physics2D.IgnoreCollision(pCol, otherCol, false);
-                }
+                Physics2D.IgnoreCollision(playerCollider, otherCol, false);
             }
         }
         currentlyIgnoredColliders.Clear();
@@ -902,6 +940,7 @@ public class PlayerObstacleRules : MonoBehaviour
             if (r != null) r.enabled = true;
         }
 
+        isRecovering = false;
         ResetCollisionIgnore();
     }
 }

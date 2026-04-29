@@ -54,7 +54,7 @@ namespace CatsEscape.Networking
             Debug.Log($"[GameDataApiClient] Started new session: {_currentSessionId}");
         }
 
-        public void SendActivity(string eventType, int? levelNumber = null, string result = null)
+        public Coroutine SendActivity(string eventType, int? levelNumber = null, string result = null)
         {
             // NEW: Ensure profile is initialized at least once during game start or session start
             if ((eventType == "game_start" || eventType == "session_start") && AuthManager.Instance != null && AuthManager.Instance.IsAuthenticated)
@@ -62,7 +62,7 @@ namespace CatsEscape.Networking
                 AuthManager.Instance.InitializeProfileOnBackend();
             }
 
-            StartCoroutine(PostActivityCoroutine(eventType, levelNumber, result));
+            return StartCoroutine(PostActivityCoroutine(eventType, levelNumber, result));
         }
 
         private IEnumerator PostActivityCoroutine(string eventType, int? levelNumber, string result)
@@ -107,15 +107,15 @@ namespace CatsEscape.Networking
             }
         }
 
-        public void SendLevelResult(string result)
+        public Coroutine SendLevelResult(string result)
         {
             if (GameplayStatsTracker.Instance == null)
             {
                 Debug.LogError("[GameDataApiClient] GameplayStatsTracker.Instance is NULL!");
-                return;
+                return null;
             }
 
-            SendLevelResult(
+            return SendLevelResult(
                 GameplayStatsTracker.Instance.currentLevelNumber,
                 result,
                 GameplayStatsTracker.Instance.GetFinalXPEarned(),
@@ -126,7 +126,7 @@ namespace CatsEscape.Networking
             );
         }
 
-        public void SendLevelResult(int levelNumber, string levelResult, int xpEarned, int fishSpawnCount, int potionSpawnCount, int heartsGained, int heartsLost)
+        public Coroutine SendLevelResult(int levelNumber, string levelResult, int xpEarned, int fishSpawnCount, int potionSpawnCount, int heartsGained, int heartsLost)
         {
             LevelResultDto dto = new LevelResultDto
             {
@@ -144,7 +144,7 @@ namespace CatsEscape.Networking
                 durationSeconds = (GameplayStatsTracker.Instance != null) ? GameplayStatsTracker.Instance.GetLevelDuration() : 0f
             };
 
-            StartCoroutine(PostLevelResultCoroutine(dto));
+            return StartCoroutine(PostLevelResultCoroutine(dto));
         }
 
         private IEnumerator PostLevelResultCoroutine(LevelResultDto dto)

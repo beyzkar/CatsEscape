@@ -55,25 +55,6 @@ public class LeaderboardManager : MonoBehaviour
             StartCoroutine(CoSyncCycle());
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            bool isScoreboardActive = (scoreboard != null && scoreboard.activeInHierarchy);
-            bool isLeaderboardActive = (leaderboardPanel != null && leaderboardPanel.activeInHierarchy);
-
-            if (isScoreboardActive || isLeaderboardActive)
-            {
-                // If keyboard is busy typing name, don't restart
-                if (nameSpace != null && nameSpace.isFocused) return;
-                
-                // If leaderboard popup is open, don't restart (Wait for X or manual retry)
-                if (isLeaderboardActive) return;
-
-                OnRetryButtonClick();
-            }
-        }
-    }
 
     public void CheckForHighScore(int currentScore)
     {
@@ -120,11 +101,6 @@ public class LeaderboardManager : MonoBehaviour
         SceneManager.LoadScene("MainMenu");
     }
 
-    public void OnRetryButtonClick()
-    {
-        ResetGameDynamics();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
 
     public void OnCloseLeaderboard()
     {

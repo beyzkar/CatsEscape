@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 // Handles mobile UI button interactions for character movement and jumping
-public class MobileButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+public class MobileButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerEnterHandler, IPointerExitHandler
 {
     public enum ButtonType { Left, Right, Up }
     
@@ -12,7 +12,6 @@ public class MobileButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
     private void Start()
     {
-        // Only search for player if not assigned in Inspector
         if (player == null)
         {
             GameObject pObj = GameObject.FindGameObjectWithTag("Player");
@@ -22,42 +21,50 @@ public class MobileButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (player == null) 
-        {
-            Debug.LogError($"[MOBILE_INPUT] {gameObject.name} (Type: {type}) has NO Player assigned!");
-            return;
-        }
-
-        Debug.Log($"[MOBILE_INPUT] {type} button down at {eventData.position}");
-
-        switch (type)
-        {
-            case ButtonType.Left:
-                player.SetMoveLeft(true);
-                break;
-            case ButtonType.Right:
-                player.SetMoveRight(true);
-                break;
-            case ButtonType.Up:
-                player.MobileJumpDown();
-                break;
-        }
+        HandleAction(true, true);
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
+        HandleAction(false, true);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        // Directional sliding: Only for Left and Right
+        if (type != ButtonType.Up && (eventData.pointerId != -1 || Input.touchCount > 0))
+        {
+            HandleAction(true, false);
+        }
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (type != ButtonType.Up)
+        {
+            HandleAction(false, false);
+        }
+    }
+
+    private void HandleAction(bool isActive, bool isExplicitTap)
+    {
         if (player == null) return;
 
-        Debug.Log($"[MOBILE_INPUT] {type} button up");
-
-        // Reset movement flags on button release (except for Up/Jump)
         switch (type)
         {
             case ButtonType.Left:
-                player.SetMoveLeft(false);
+                player.SetMoveLeft(isActive);
                 break;
             case ButtonType.Right:
-                player.SetMoveRight(false);
+                player.SetMoveRight(isActive);
+                break;
+            case ButtonType.Up:
+                // Jump MUST be an explicit tap (OnPointerDown) to prevent double-triggering
+                // and to prevent accidental jumps while sliding between left/right.
+                if (isActive && isExplicitTap) 
+                {
+                    player.MobileJumpDown();
+                }
                 break;
         }
     }

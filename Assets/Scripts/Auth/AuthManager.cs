@@ -200,6 +200,12 @@ namespace CatsEscape.Auth
 
         public async void ContinueAsGuest()
         {
+            // NEW: Handle abandonment of current run BEFORE switching to Guest
+            if (GameplayStatsTracker.Instance != null)
+            {
+                await WaitForCoroutine(GameplayStatsTracker.Instance.TrySendAbandonedIfActiveCoroutine("switch_to_guest"));
+            }
+
             try 
             {
                 bool success = await _authService.SignInAnonymouslyAsync();
@@ -224,8 +230,28 @@ namespace CatsEscape.Auth
             }
         }
 
+        private async Task WaitForCoroutine(System.Collections.IEnumerator routine)
+        {
+            if (routine == null) return;
+            var tcs = new TaskCompletionSource<bool>();
+            StartCoroutine(WaitRoutine(routine, tcs));
+            await tcs.Task;
+        }
+
+        private System.Collections.IEnumerator WaitRoutine(System.Collections.IEnumerator routine, TaskCompletionSource<bool> tcs)
+        {
+            yield return routine;
+            tcs.SetResult(true);
+        }
+
         public async Task SignInWithGoogleAsync()
         {
+            // NEW: Handle abandonment of current run BEFORE switching to Google
+            if (GameplayStatsTracker.Instance != null)
+            {
+                await WaitForCoroutine(GameplayStatsTracker.Instance.TrySendAbandonedIfActiveCoroutine("switch_to_google"));
+            }
+
             try
             {
                 bool success = await _authService.SignInWithGoogleAsync();
@@ -278,6 +304,7 @@ namespace CatsEscape.Auth
 
         public void SignOut()
         {
+            // Note: This is a synchronous call. For full safety, use SignOutAndReturnToMenu or wait for abandonment manually.
             _authService.SignOut();
             IsGuest = false;
             ResetLocalSessionOnly();
@@ -286,6 +313,22 @@ namespace CatsEscape.Auth
             
             Debug.Log("[AuthManager] Global SignOut complete. All local states cleared.");
             EnqueueOnMainThread(() => OnLogout?.Invoke());
+        }
+
+        public System.Collections.IEnumerator SignOutAndReturnToMenuCoroutine()
+        {
+            Debug.Log("[AuthManager] SignOutAndReturnToMenu starting...");
+            
+            if (GameplayStatsTracker.Instance != null)
+            {
+                Debug.Log("[AuthManager] Waiting for abandoned telemetry...");
+                yield return GameplayStatsTracker.Instance.TrySendAbandonedIfActiveCoroutine("logout");
+            }
+
+            SignOut();
+            Time.timeScale = 1f;
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+            Debug.Log("[AuthManager] SignOutAndReturnToMenu complete.");
         }
 
         public void EnqueueOnMainThread(Action action)
@@ -345,14 +388,7 @@ namespace CatsEscape.Auth
 
         public void SignOutAndReturnToMenu()
         {
-            if (GameplayStatsTracker.Instance != null)
-            {
-                GameplayStatsTracker.Instance.SendAbandonedResult();
-            }
-
-            SignOut();
-            Time.timeScale = 1f;
-            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+            StartCoroutine(SignOutAndReturnToMenuCoroutine());
         }
         public string GetLoginType()
         {

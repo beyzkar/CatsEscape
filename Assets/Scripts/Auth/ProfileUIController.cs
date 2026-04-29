@@ -104,5 +104,32 @@ namespace CatsEscape.UI
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
             }
         }
+
+        /// <summary>
+        /// Returns to the Main Menu without signing out. 
+        /// Used for simple navigation from GameScene back to the baseline.
+        /// </summary>
+        public void OnMainMenuClicked()
+        {
+            Debug.Log("[ProfileUI] Main Menu button clicked. Preparing for transition...");
+
+            // 1. Send Abandoned Result if there is an active run
+            if (CatsEscape.Networking.GameplayStatsTracker.Instance != null)
+            {
+                // This ensures game_end/abandoned events are sent to backend
+                CatsEscape.Networking.GameplayStatsTracker.Instance.SendAbandonedResult();
+            }
+
+            // 2. Safe State Resets
+            Time.timeScale = 1f;
+            GameSpeed.Multiplier = 1f;
+
+            // 3. UI Cleanup
+            CloseProfile();
+
+            // 4. Scene Transition
+            // Note: Using "MainMenu" as identified in the project's scene files.
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+        }
     }
 }
