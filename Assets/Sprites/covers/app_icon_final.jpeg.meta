@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 25c2d182795de4587a65451f835b0d30
+guid: e00635dc0a36847628de2face3bf395b
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1835533648303372327
-    second: GameArrow_0
+      213: -7643078120948743610
+    second: app_icon_final_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: GameArrow_0
+      name: app_icon_final_0
       rect:
         serializedVersion: 2
-        x: 557
-        y: 597
-        width: 946
-        height: 890
+        x: 0
+        y: 0
+        width: 1024
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 9d7c9973fdfd686e0800000000000000
-      internalID: -1835533648303372327
+      spriteID: 6424a4a91f45ee590800000000000000
+      internalID: -7643078120948743610
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      GameArrow_0: -1835533648303372327
+      app_icon_final_0: -7643078120948743610
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

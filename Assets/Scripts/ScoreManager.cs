@@ -129,15 +129,24 @@ public class ScoreManager : MonoBehaviour
     /// </summary>
     public static void InitializeForLevel(int level, int accountXP)
     {
-        if (level <= 1)
+        // OLD RULE: If Level 1, XP is ALWAYS 0. 
+        // NEW RULE: Always honor accountXP (Progress Preservation) unless explicitly logged out.
+        
+        if (accountXP > 0)
+        {
+            SetTotalXP(accountXP);
+            Debug.Log($"[PROGRESS] Preserved XP: {accountXP}, Level: {level}");
+        }
+        else if (level <= 1)
         {
             ResetAllXP();
-            Debug.Log($"[ScoreManager] Fresh Start (Level 1). XP forced to 0.");
+            Debug.Log($"[PROGRESS] Fresh Start (Level 1). XP initialized to 0.");
         }
         else
         {
-            SetTotalXP(accountXP);
-            Debug.Log($"[ScoreManager] Resume Start (Level {level}). Account XP loaded: {accountXP}");
+            // Level > 1 but 0 XP? (Unexpected but possible if account wiped)
+            SetTotalXP(0);
+            Debug.Log($"[PROGRESS] Resume Start (Level {level}). No XP found in account.");
         }
     }
 
@@ -183,10 +192,11 @@ public class ScoreManager : MonoBehaviour
             scoreText.text = totalXP.ToString() + " XP";
         }
 
-        // NEW: Sync with AuthManager for high score tracking
+        // NEW: Sync with AuthManager for high score tracking and run preservation
         if (CatsEscape.Auth.AuthManager.Instance != null)
         {
             CatsEscape.Auth.AuthManager.Instance.HighestXP = totalXP;
+            CatsEscape.Auth.AuthManager.Instance.LastSavedXP = totalXP;
         }
     }
 

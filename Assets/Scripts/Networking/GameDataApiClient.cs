@@ -97,7 +97,8 @@ namespace CatsEscape.Networking
             string idToken = tokenTask.Result;
             if (string.IsNullOrEmpty(idToken)) yield break;
 
-            string json = $"{{\"eventType\":\"{eventType}\",\"sessionId\":\"{SessionId}\"";
+            string userName = (AuthManager.Instance != null) ? AuthManager.Instance.UserName : "";
+            string json = $"{{\"eventType\":\"{eventType}\",\"sessionId\":\"{SessionId}\",\"userName\":\"{userName}\"";
             if (levelNumber.HasValue) json += $",\"levelNumber\":{levelNumber.Value}";
             if (!string.IsNullOrEmpty(result)) json += $",\"result\":\"{result}\"";
             json += "}";
@@ -159,7 +160,8 @@ namespace CatsEscape.Networking
                 startedAt = (GameplayStatsTracker.Instance != null) ? GameplayStatsTracker.Instance.levelStartedAtISO : "",
                 completedAt = (levelResult == "completed") ? System.DateTime.UtcNow.ToString("O") : "",
                 abandonedAt = (levelResult == "abandoned") ? System.DateTime.UtcNow.ToString("O") : "",
-                durationSeconds = (GameplayStatsTracker.Instance != null) ? GameplayStatsTracker.Instance.GetLevelDuration() : 0f
+                durationSeconds = (GameplayStatsTracker.Instance != null) ? GameplayStatsTracker.Instance.GetLevelDuration() : 0f,
+                userName = (AuthManager.Instance != null) ? AuthManager.Instance.UserName : ""
             };
 
             return StartCoroutine(PostLevelResultCoroutine(dto));
@@ -232,6 +234,101 @@ namespace CatsEscape.Networking
                 }
             }
         }
+
+        public void GetNextGuestUsername(System.Action<string> callback)
+        {
+            StartCoroutine(GetNextGuestUsernameCoroutine(callback));
+        }
+
+        private IEnumerator GetNextGuestUsernameCoroutine(System.Action<string> callback)
+        {
+            string url = $"{BaseUrl}/user/next-guest-username";
+            
+            if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
+            {
+                callback?.Invoke("GuestPlayer");
+                yield break;
+            }
+
+            var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
+            yield return new WaitUntil(() => tokenTask.IsCompleted);
+
+            using (UnityWebRequest request = UnityWebRequest.Get(url))
+            {
+                request.SetRequestHeader("Authorization", "Bearer " + tokenTask.Result);
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    var response = JsonUtility.FromJson<NextGuestResponse>(request.downloadHandler.text);
+                    callback?.Invoke(response.nextGuestName);
+                }
+                else
+                {
+                    callback?.Invoke("GuestPlayer");
+                }
+            }
+        }
+
+        [System.Serializable] class NextGuestResponse { public string nextGuestName; }
+
+        public void SetUsername(string userName, System.Action<bool, string> onComplete)
+        {
+            StartCoroutine(SetUsernameCoroutine(userName, onComplete));
+        }
+
+        private IEnumerator SetUsernameCoroutine(string userName, System.Action<bool, string> onComplete)
+        {
+            string url = $"{BaseUrl}/user/set-username";
+            
+            if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
+            {
+                onComplete?.Invoke(false, "AUTH_REQUIRED");
+                yield break;
+            }
+
+            var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
+            yield return new WaitUntil(() => tokenTask.IsCompleted);
+
+            string safeUserName = (userName ?? string.Empty).Trim();
+            string uid = AuthManager.Instance.UserId;
+            string json = JsonUtility.ToJson(new SetUsernameRequest { userName = safeUserName, uid = uid });
+
+            Debug.Log($"[USERNAME_API] Request URL={url}");
+            Debug.Log($"[USERNAME_API] Request Body={json}");
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+            {
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+                request.SetRequestHeader("Authorization", "Bearer " + tokenTask.Result);
+                request.timeout = 10;
+
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    var response = JsonUtility.FromJson<SetUsernameResponse>(request.downloadHandler.text);
+                    Debug.Log($"[USERNAME_API] SetUsername success. Code={request.responseCode}, Body={request.downloadHandler.text}");
+                    onComplete?.Invoke(true, response.userName);
+                }
+                else
+                {
+                    string errorMsg = "SERVER_ERROR";
+                    Debug.LogWarning($"[USERNAME_API] SetUsername failed. Code={request.responseCode}, Error={request.error}, Body={request.downloadHandler.text}");
+                    try {
+                        var errorRes = JsonUtility.FromJson<SetUsernameResponse>(request.downloadHandler.text);
+                        if (!string.IsNullOrEmpty(errorRes.message)) errorMsg = errorRes.message;
+                    } catch {}
+                    onComplete?.Invoke(false, errorMsg);
+                }
+            }
+        }
+
+        [System.Serializable] class SetUsernameRequest { public string userName; public string uid; }
+        [System.Serializable] class SetUsernameResponse { public bool success; public string userName; public string message; }
 
         public void InitializeProfile(string authType, string displayName, string email, string photoUrl, System.Action<bool> onComplete = null)
         {
@@ -315,17 +412,29 @@ namespace CatsEscape.Networking
 
     private IEnumerator GetProgressRoutine(System.Action<PlayerProgressDto> callback)
     {
-        string uid = (AuthManager.Instance != null) ? AuthManager.Instance.UserId : "NONE";
+        if (AuthManager.Instance == null || !AuthManager.Instance.IsAuthenticated)
+        {
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        // Get ID Token
+        var tokenTask = AuthManager.Instance.Service.GetIdTokenAsync();
+        yield return new WaitUntil(() => tokenTask.IsCompleted);
+        string idToken = tokenTask.Result;
+
+        string uid = AuthManager.Instance.UserId;
         string url = $"{BaseUrl}/progress?uid={uid}";
         
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
+            request.SetRequestHeader("Authorization", "Bearer " + idToken);
             request.timeout = 10;
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[GameDataApiClient] Fetch Progress Error: {request.error}");
+                Debug.LogWarning($"[GameDataApiClient] Fetch Progress Error: {request.error} (Code: {request.responseCode})");
                 callback?.Invoke(null);
             }
             else
@@ -355,5 +464,6 @@ namespace CatsEscape.Networking
         public int totalCompletions;
         public int totalFailures;
         public int totalAbandoned;
+        public string userName;
     }
 }

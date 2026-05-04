@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine.Serialization;
 using System.Collections;
 using CatsEscape.Networking;
+using CatsEscape.Auth;
 
 public class LevelManager : MonoBehaviour
 {
@@ -17,13 +18,13 @@ public class LevelManager : MonoBehaviour
     // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 5, 12, 17, 22, 28 };
+    private int[] levelGoals = { 0, 5, 5, 5, 5, 5 };
 
     public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };
     
     [Header("Speed Smoothing")]
-    public float speedSmoothRate = 1.5f;
+    public float speedSmoothRate = 1.5f; 
     private float targetGameMultiplier = 1f;
 
     [Header("UI Panels")]
@@ -164,24 +165,56 @@ public class LevelManager : MonoBehaviour
         }
 
         // --- RESUME MECHANIC (UID Aware) ---
-        if (savedLevel > 0)
+        bool isResetPending = (CatsEscape.Auth.AuthManager.Instance != null && CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset);
+        bool isForcedNewGame = AuthManager.IsNewGameStart;
+        
+        if (isForcedNewGame)
         {
+            Debug.Log("[GAME_SCENE] New Game mode detected, forcing Level 1 XP 0");
+            currentLevel = 1;
+            savedLevel = 1;
+        }
+        else if (isResetPending)
+        {
+            Debug.Log("[GAME_SCENE] Continue mode detected, but pending reset found. Starting Level 1.");
+            currentLevel = 1;
+            savedLevel = 1;
+        }
+        else if (savedLevel > 0)
+        {
+            Debug.Log("[GAME_SCENE] Continue mode detected, loading cached level.");
             currentLevel = savedLevel;
         }
         else if (CatsEscape.Auth.AuthManager.Instance != null)
         {
+            Debug.Log("[GAME_SCENE] Continue mode detected, loading saved progress");
             currentLevel = CatsEscape.Auth.AuthManager.Instance.LastLevelReached;
             savedLevel = currentLevel;
         }
         else
         {
-            savedLevel = currentLevel;
+            currentLevel = 1;
+            savedLevel = 1;
         }
 
         // --- NEW: Centralized XP Initialization ---
-        // Rule: Level 1 start = 0 XP, Level > 1 = Load Account XP
-        int accountXP = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.HighestXP : 0;
+        int accountXP = 0;
+        if (isForcedNewGame || isResetPending)
+        {
+            accountXP = 0;
+        }
+        else
+        {
+            accountXP = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.LastSavedXP : 0;
+        }
+
+        Debug.Log($"[PLAY] Initializing with Level={currentLevel}, XP={accountXP}");
         ScoreManager.InitializeForLevel(currentLevel, accountXP);
+        
+        if (isResetPending && CatsEscape.Auth.AuthManager.Instance != null)
+        {
+            CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset = false; // Flag consumed
+        }
 
         // Highlander Pattern: Ensure single player instance
         PlayerMovement[] allPlayers = Object.FindObjectsByType<PlayerMovement>(FindObjectsSortMode.None);
@@ -409,18 +442,37 @@ public class LevelManager : MonoBehaviour
         }
     }
 
-    public static void ResetPersistentLevel() => savedLevel = 1;
+    public static void ResetPersistentLevel() => savedLevel = -1;
 
     public void MainMenu()
     {
+        Debug.Log("[MAIN_MENU] Button clicked from Gameplay");
+
         // Try to send abandoned result if we are leaving an active level
         if (GameplayStatsTracker.Instance != null)
         {
             GameplayStatsTracker.Instance.SendAbandonedResult();
         }
 
-        ResetPersistentLevel();
-        
+        if (CatsEscape.Auth.AuthManager.Instance != null)
+        {
+            if (CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset)
+            {
+                Debug.Log("[MAIN_MENU] Final completed, resetting run progress.");
+                // The actual level/xp values were already set to 1/0 in ShowVictory
+                // But we ensure savedLevel is also reset so Awake loads from AuthManager
+                savedLevel = -1;
+            }
+            else
+            {
+                Debug.Log("[MAIN_MENU] Not final completed, preserving progress.");
+                // savedLevel = -1 ensures next Awake loads from AuthManager (which has preserved progress)
+                savedLevel = -1;
+            }
+            
+            Debug.Log($"[PROGRESS] Saved currentLevel={CatsEscape.Auth.AuthManager.Instance.LastLevelReached}, xp={CatsEscape.Auth.AuthManager.Instance.LastSavedXP}, pendingNewGameReset={CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset}");
+        }
+
         // XP reset is now handled centrally in Awake via InitializeForLevel
         Time.timeScale = 1f;
         targetGameMultiplier = 1f;
@@ -490,8 +542,13 @@ public class LevelManager : MonoBehaviour
             // Handle Stats & Progress
             if (CatsEscape.Auth.AuthManager.Instance != null)
             {
+                Debug.Log("[FINAL] Final portal reached. Marking game as completed.");
                 CatsEscape.Auth.AuthManager.Instance.TotalCompletions++;
-                CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 1; // Reset to 1 for loop
+                CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset = true;
+                
+                // We also set the base stats to 1 and 0 for the "Pending" state
+                CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 1;
+                CatsEscape.Auth.AuthManager.Instance.LastSavedXP = 0;
             }
 
             // Open Scoreboard/Leaderboard
@@ -518,18 +575,16 @@ public class LevelManager : MonoBehaviour
             }
         }
 
-        // Send results to backend
-        if (GameDataApiClient.Instance != null) 
+        // Send results to backend via centralized tracker
+        if (GameplayStatsTracker.Instance != null) 
         {
-            if (GameplayStatsTracker.Instance != null) 
-            {
-                Debug.Log("[RunState] Game ended result=completed");
-                GameplayStatsTracker.Instance.hasSentGameEnd = true;
-                GameplayStatsTracker.Instance.hasSentLevelResult = true;
-                GameplayStatsTracker.Instance.hasActiveLevelRun = false;
-            }
-            GameDataApiClient.Instance.SendLevelResult("completed");
-            GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "completed");
+            string uid = (AuthManager.Instance != null) ? AuthManager.Instance.UserId : "UNKNOWN";
+            float duration = GameplayStatsTracker.Instance.GetLevelDuration();
+            int xp = (ScoreManager.Instance != null ? ScoreManager.Instance.GetTotalXP() : 0);
+
+            Debug.Log($"[LEVEL] Details -> UID: {uid}, Level: {currentLevel}, Duration: {duration:F2}s, XP: {xp}");
+            
+            GameplayStatsTracker.Instance.TrackLevelResult("completed");
         }
     }
 
@@ -537,17 +592,13 @@ public class LevelManager : MonoBehaviour
     {
         if (currentLevel >= 5) return;
 
-        if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+        if (GameplayStatsTracker.Instance != null) 
         {
-            if (GameplayStatsTracker.Instance != null) 
+            if (!GameplayStatsTracker.Instance.resultAlreadySent)
             {
-                Debug.Log("[RunState] Game ended result=completed");
-                GameplayStatsTracker.Instance.hasSentGameEnd = true;
-                GameplayStatsTracker.Instance.hasSentLevelResult = true;
-                GameplayStatsTracker.Instance.hasActiveLevelRun = false;
+                Debug.Log("[LEVEL] Completed (NextLevel transition)");
+                GameplayStatsTracker.Instance.TrackLevelResult("completed");
             }
-            CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("completed");
-            CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "completed");
         }
 
         if (ScoreManager.Instance != null) ScoreManager.Instance.CommitSessionXP();

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 37c1afa9c29324a34be1e4e5a179eb1b
+guid: 1991525cb9f4e4943a2570f59ee1c5fe
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 4913123124036378789
-    second: ImageSuperCat_0
+      213: -1182705850341550471
+    second: simple_glossy_blank_buttons_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: ImageSuperCat_0
+      name: simple_glossy_blank_buttons_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1920
-        height: 2216
+        width: 1024
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5a022f1537bee2440800000000000000
-      internalID: 4913123124036378789
+      spriteID: 9769d9c9b4f269fe0800000000000000
+      internalID: -1182705850341550471
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      ImageSuperCat_0: 4913123124036378789
+      simple_glossy_blank_buttons_0: -1182705850341550471
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

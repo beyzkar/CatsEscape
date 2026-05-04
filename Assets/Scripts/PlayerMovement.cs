@@ -58,8 +58,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
-[Range(0f, 1f)] public float airControlMultiplier = 0.5f; // Scales horizontal speed while airborne
-[Range(0f, 1f)] public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly when jump starts
+public float airControlMultiplier = 0.5f; // Scales horizontal speed while airborne
+public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly when jump starts
     [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
     public float viewportPaddingX = 0.9f; // Balanced buffer to prevent hiding under the notch
@@ -299,9 +299,17 @@ public class PlayerMovement : MonoBehaviour
         totalDistance += distanceStep;
         if (totalDistance > peakDistance) peakDistance = totalDistance;
 
-        float finalVelocityX = targetVelocityX * groundedSpeedMultiplier;
+        float finalVelocityX = targetVelocityX;
         bool isAirborneForControl = !isGrounded || Mathf.Abs(rb.linearVelocity.y) > 0.05f;
-        if (isAirborneForControl) finalVelocityX *= airControlMultiplier;
+        
+        if (isAirborneForControl) 
+        {
+            finalVelocityX *= airControlMultiplier;
+        }
+        else 
+        {
+            finalVelocityX *= groundedSpeedMultiplier;
+        }
 
         float blendDuration = Mathf.Max(landingVelocityBlendTime, 0.01f);
         float currentPhysicsDecel = (Mathf.Abs(finalVelocityX) < 0.01f) ? stoppingDeceleration : deceleration;

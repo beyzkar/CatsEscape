@@ -11,6 +11,7 @@ namespace CatsEscape.Auth
     public class AuthManager : MonoBehaviour
     {
         public static AuthManager Instance { get; private set; }
+        public static bool IsNewGameStart = false; // Flag to force Level 1 XP 0
 
         [Header("Settings")]
         public string webClientId;
@@ -30,6 +31,11 @@ namespace CatsEscape.Auth
         public event Action OnGuestLogin;
         public event Action<string> OnLoginFailed;
         public event Action OnProgressSynced;
+        public event Action<string> OnUsernameRequired;
+        public event Action OnUsernameFlowResolved;
+
+        public string UserName { get; private set; }
+        public bool IsUsernameRequiredFlowPending { get; private set; }
 
         private PlayerProgressDto _cachedProgress;
 
@@ -49,6 +55,8 @@ namespace CatsEscape.Auth
         private const string HIGHEST_XP_KEY = "Stats_HighestXP";
         private const string TOTAL_COMPLETIONS_KEY = "Stats_TotalCompletions";
         private const string LAST_LEVEL_KEY = "Stats_LastLevelReached";
+        private const string LAST_SAVED_XP_KEY = "Stats_LastSavedXP";
+        private const string PENDING_RESET_KEY = "Stats_PendingReset";
 
         public bool IsGuest
         {
@@ -75,6 +83,7 @@ namespace CatsEscape.Auth
                     {
                         PlayerPrefs.SetInt(GetKey(HIGHEST_XP_KEY), value); 
                         PlayerPrefs.Save(); 
+                        Debug.Log($"[PROGRESS] Highest XP Updated: {value} (UID: {uid})");
                     }
                 } 
             }
@@ -99,17 +108,49 @@ namespace CatsEscape.Auth
         {
             get 
             {
-                if (IsGuest) return 1; 
+                // REMOVED: if (IsGuest) return 1; - Guests now preserve level progress
                 if (_cachedProgress != null) return _cachedProgress.lastLevelReached;
                 return PlayerPrefs.GetInt(GetKey(LAST_LEVEL_KEY), 1);
             }
             set 
             { 
-                if (IsGuest) return; 
+                // REMOVED: if (IsGuest) return; - Guests now preserve level progress
                 if (_cachedProgress != null) _cachedProgress.lastLevelReached = value;
                 PlayerPrefs.SetInt(GetKey(LAST_LEVEL_KEY), value); 
                 PlayerPrefs.Save(); 
+                Debug.Log($"[PROGRESS] Last Level Reached Updated: {value}");
             }
+        }
+
+        public int LastSavedXP
+        {
+            get => PlayerPrefs.GetInt(GetKey(LAST_SAVED_XP_KEY), 0);
+            set 
+            { 
+                PlayerPrefs.SetInt(GetKey(LAST_SAVED_XP_KEY), value); 
+                PlayerPrefs.Save(); 
+                Debug.Log($"[PROGRESS] Last Saved XP Updated: {value}");
+            }
+        }
+
+        public bool PendingNewGameReset
+        {
+            get => PlayerPrefs.GetInt(GetKey(PENDING_RESET_KEY), 0) == 1;
+            set 
+            { 
+                PlayerPrefs.SetInt(GetKey(PENDING_RESET_KEY), value ? 1 : 0); 
+                PlayerPrefs.Save(); 
+                Debug.Log($"[PROGRESS] Pending New Game Reset: {value}");
+            }
+        }
+
+        public void ResetRunProgressOnly()
+        {
+            Debug.Log("[NEW_GAME] Resetting run progress only");
+            LastLevelReached = 1;
+            LastSavedXP = 0;
+            PendingNewGameReset = false;
+            Debug.Log("[PROGRESS] Saved progress after reset: Level 1, XP 0");
         }
 
         public bool IsAuthenticated => IsUserLoggedIn() || IsGuest;
@@ -178,8 +219,8 @@ namespace CatsEscape.Auth
             }
             else 
             {
-                // Guests always start fresh
-                ScoreManager.ResetAllXP();
+                // Guests now preserve progress until logout per request
+                ScoreManager.SetTotalXP(HighestXP);
             }
             if (CatsEscape.Networking.GameDataApiClient.Instance != null)
             {
@@ -225,10 +266,10 @@ namespace CatsEscape.Auth
                 {
                     IsGuest = true;
                     LogLoginState(isOnline ? "Guest" : "Guest Offline");
+                    IsUsernameRequiredFlowPending = true;
                     
-                    if (LevelManager.Instance != null) LevelManager.Instance.currentLevel = 1;
-                    LevelManager.ResetSavedLevel();
-                    ScoreManager.ResetAllXP();
+                    // REMOVED: Forced resets. We want to preserve progress until logout.
+                    // Progress will be loaded via LogLoginState -> HighestXP
 
                     if (isOnline)
                     {
@@ -285,6 +326,7 @@ namespace CatsEscape.Auth
                 {
                     IsGuest = false;
                     LogLoginState("Google");
+                    IsUsernameRequiredFlowPending = true;
                     InitializeProfileOnBackend();
                     EnqueueOnMainThread(() => OnLoginSuccess?.Invoke());
                 }
@@ -305,6 +347,7 @@ namespace CatsEscape.Auth
             }
 
             string authType = IsGuest ? "guest" : "google";
+            IsUsernameRequiredFlowPending = true;
             string displayName = IsGuest ? "Guest" : _authService.UserDisplayName;
             string email = IsGuest ? "" : _authService.UserEmail;
             string photoUrl = IsGuest ? "" : _authService.UserPhotoUrl;
@@ -314,34 +357,44 @@ namespace CatsEscape.Auth
                 if (success)
                 {
                     Debug.Log($"[AuthManager] Profile initialized successfully for {authType}.");
-                    // For Google users, now fetch their actual progress
-                    if (!IsGuest)
-                    {
-                        SyncProgressWithBackend();
-                    }
+                    // Fetch actual progress (including userName) for both Google and Guest
+                    SyncProgressWithBackend();
                 }
                 else
                 {
                     Debug.LogWarning($"[AuthManager] Profile initialization FAILED for {authType}. Continuing anyway...");
-                    // Still try to sync progress if Google, it might just be the init endpoint that failed
-                    if (!IsGuest)
-                    {
-                        SyncProgressWithBackend();
-                    }
+                    SyncProgressWithBackend();
                 }
             });
         }
 
         public void SignOut()
         {
+            Debug.Log("[LOGOUT] User explicitly logged out, clearing session/progress cache if needed");
+            
             // Note: This is a synchronous call. For full safety, use SignOutAndReturnToMenu or wait for abandonment manually.
+            
+            // Before signing out, if we are a Guest, we might want to clear their specific PlayerPrefs 
+            // since Logout is the ONLY place to clear data.
+            if (IsGuest)
+            {
+                Debug.Log("[LOGOUT] Clearing Guest-specific PlayerPrefs");
+                PlayerPrefs.DeleteKey(GetKey(HIGHEST_XP_KEY));
+                PlayerPrefs.DeleteKey(GetKey(LAST_LEVEL_KEY));
+                PlayerPrefs.Save();
+            }
+
             _authService.SignOut();
             IsGuest = false;
             ResetLocalSessionOnly();
+            
+            // For a full reset on Logout, we clear the static XP and the session level
             ScoreManager.ResetAllXP();
             LevelManager.ResetSavedLevel(); // Explicitly reset to -1
+            LastSavedXP = 0;
+            PendingNewGameReset = false;
             
-            Debug.Log("[AuthManager] Global SignOut complete. All local states cleared.");
+            Debug.Log("[LOGOUT] Global SignOut complete. All local states cleared.");
             EnqueueOnMainThread(() => OnLogout?.Invoke());
         }
 
@@ -369,7 +422,7 @@ namespace CatsEscape.Auth
 
         public void SyncProgressWithBackend()
         {
-            if (CatsEscape.Networking.GameDataApiClient.Instance != null && IsUserLoggedIn())
+            if (CatsEscape.Networking.GameDataApiClient.Instance != null && IsAuthenticated)
             {
                 if (!CatsEscape.Networking.GameDataApiClient.Instance.IsNetworkAvailable)
                 {
@@ -378,10 +431,27 @@ namespace CatsEscape.Auth
                 }
 
                 Debug.Log("[AuthManager] Syncing progress with backend...");
-                CatsEscape.Networking.GameDataApiClient.Instance.FetchPlayerProgress((progress) => {
+                CatsEscape.Networking.GameDataApiClient.Instance.FetchPlayerProgress((progress) => 
+                {
                     if (progress != null)
                     {
                         _cachedProgress = progress;
+                        UserName = progress.userName;
+
+                        if (string.IsNullOrEmpty(UserName))
+                        {
+                            Debug.Log("[AUTH] Backend needsUserName=true");
+                            string defaultName = IsGuest ? "Guest" : GetFormattedUserName();
+                            IsUsernameRequiredFlowPending = true;
+                            Debug.Log($"[AUTH] Triggering OnUsernameRequired with defaultName={defaultName}");
+                            EnqueueOnMainThread(() => OnUsernameRequired?.Invoke(defaultName));
+                        }
+                        else
+                        {
+                            Debug.Log("[AUTH] Backend needsUserName=false");
+                            IsUsernameRequiredFlowPending = false;
+                            EnqueueOnMainThread(() => OnUsernameFlowResolved?.Invoke());
+                        }
                         
                         // Only apply XP to ScoreManager if we are in the MainMenu (baseline)
                         // OR if we are resuming a level > 1. 
@@ -389,7 +459,7 @@ namespace CatsEscape.Auth
                         bool isMainMenu = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu";
                         bool isResumingHigherLevel = LevelManager.Instance != null && LevelManager.Instance.currentLevel > 1;
 
-                        if (isMainMenu || isResumingHigherLevel)
+                        if (!IsNewGameStart && (isMainMenu || isResumingHigherLevel))
                         {
                             ScoreManager.SetTotalXP(progress.highestXP);
                         }
@@ -400,6 +470,8 @@ namespace CatsEscape.Auth
                     else
                     {
                         Debug.LogWarning("[AuthManager] Sync failed or no profile found. Keeping local baseline.");
+                        IsUsernameRequiredFlowPending = false;
+                        EnqueueOnMainThread(() => OnUsernameFlowResolved?.Invoke());
                     }
                 });
             }
@@ -435,14 +507,33 @@ namespace CatsEscape.Auth
 
         public string GetFormattedUserName()
         {
+            if (!string.IsNullOrEmpty(UserName)) return UserName;
             if (IsGuest) return "Guest Explorer";
+            
+            // Priority 1: Google Display Name
+            if (_authService != null && !string.IsNullOrEmpty(_authService.UserDisplayName))
+            {
+                return _authService.UserDisplayName;
+            }
+
+            // Priority 2: Email Prefix
             if (_authService != null && !string.IsNullOrEmpty(_authService.UserEmail))
             {
                 string email = _authService.UserEmail;
                 if (email.Contains("@")) return email.Split('@')[0];
                 return email;
             }
-            return "Unknown User";
+
+            // Priority 3: Fallback
+            return "Player";
+        }
+
+        public void FinalizeUsername(string confirmedName)
+        {
+            UserName = confirmedName;
+            IsUsernameRequiredFlowPending = false;
+            Debug.Log($"[AuthManager] UserName finalized: {confirmedName}");
+            EnqueueOnMainThread(() => OnUsernameFlowResolved?.Invoke());
         }
     }
 }

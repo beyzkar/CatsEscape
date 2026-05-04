@@ -62,7 +62,7 @@ namespace CatsEscape.Auth
             }
         }
 
-        private void OnLoginSuccess() { UpdateUI(); }
+        private void OnLoginSuccess() { HandleGuestLogin(); }
         private void OnLogout() { UpdateUI(); }
 
         private void HandleGuestLogin()

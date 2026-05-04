@@ -10,6 +10,7 @@ public class ScoreSubmitRequest
 {
     public string uid;
     public string displayName;
+    public string userName;
     public string authType;
     public int levelNumber;
     public int score;
@@ -22,6 +23,7 @@ public class LeaderboardApiEntry
 {
     public string uid;
     public string displayName;
+    public string userName;
     public int levelNumber;
     public int score;
     public int xpEarned;

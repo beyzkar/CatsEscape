@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1d1aa7e2ee760469690be581d58582cd
+guid: 8b0adddd80935438c8675560e6aff147
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1382866574923414194
-    second: GuestButton_0
+      213: -4061008381218752391
+    second: vibrant_glossy_ui_kit_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: GuestButton_0
+      name: vibrant_glossy_ui_kit_0
       rect:
         serializedVersion: 2
-        x: 102
-        y: 215
-        width: 1735
-        height: 419
+        x: 0
+        y: 0
+        width: 1024
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2ba321ab2dde03310800000000000000
-      internalID: 1382866574923414194
+      spriteID: 9787297b46664a7c0800000000000000
+      internalID: -4061008381218752391
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      GuestButton_0: 1382866574923414194
+      vibrant_glossy_ui_kit_0: -4061008381218752391
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

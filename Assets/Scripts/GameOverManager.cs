@@ -40,19 +40,17 @@ public class GameOverManager : MonoBehaviour
             gameOverPanel.SetActive(true);
         }
 
-        // Send results to backend
-        if (CatsEscape.Networking.GameDataApiClient.Instance != null)
+        // Send results to backend via centralized tracker
+        if (GameplayStatsTracker.Instance != null)
         {
-            if (GameplayStatsTracker.Instance != null)
-            {
-                Debug.Log("[RunState] Game ended result=failed");
-                GameplayStatsTracker.Instance.hasSentGameEnd = true;
-                GameplayStatsTracker.Instance.hasSentLevelResult = true;
-                GameplayStatsTracker.Instance.hasActiveLevelRun = false;
-            }
-            CatsEscape.Networking.GameDataApiClient.Instance.SendLevelResult("failed");
+            string uid = (AuthManager.Instance != null) ? AuthManager.Instance.UserId : "UNKNOWN";
+            float duration = GameplayStatsTracker.Instance.GetLevelDuration();
             int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.currentLevel : 1;
-            CatsEscape.Networking.GameDataApiClient.Instance.SendActivity("game_end", currentLevel, "failed");
+            int xp = (ScoreManager.Instance != null ? ScoreManager.Instance.GetTotalXP() : 0);
+
+            Debug.Log($"[LEVEL] Details -> UID: {uid}, Level: {currentLevel}, Duration: {duration:F2}s, XP: {xp}");
+            
+            GameplayStatsTracker.Instance.TrackLevelResult("failed");
         }
     }
 
@@ -68,6 +66,8 @@ public class GameOverManager : MonoBehaviour
 
     public void LoadMainMenu()
     {
+        Debug.Log("[MAIN_MENU] Button clicked from GameOver");
+        
         // Try to send abandoned if not already sent (e.g. if player leaves Game Over screen)
         // But in ShowGameOver we already set hasSentResult = true, so this won't trigger unless logic changes.
         if (GameplayStatsTracker.Instance != null)
@@ -75,11 +75,22 @@ public class GameOverManager : MonoBehaviour
             GameplayStatsTracker.Instance.SendAbandonedResult();
         }
 
-        // Global hard reset for XP when returning to start
-        // XP reset is now handled centrally in Awake via InitializeForLevel
+        if (CatsEscape.Auth.AuthManager.Instance != null)
+        {
+            if (CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset)
+            {
+                Debug.Log("[MAIN_MENU] Final completed, resetting run progress.");
+            }
+            else
+            {
+                Debug.Log("[MAIN_MENU] Not final completed, preserving progress.");
+            }
+            
+            Debug.Log($"[PROGRESS] Saved currentLevel={CatsEscape.Auth.AuthManager.Instance.LastLevelReached}, xp={CatsEscape.Auth.AuthManager.Instance.LastSavedXP}, pendingNewGameReset={CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset}");
+        }
 
-        // Seviye sürekliliğini sıfırla
-        LevelManager.ResetPersistentLevel();
+        // REMOVED: LevelManager.ResetPersistentLevel() - We want to preserve progress when returning to menu.
+        Debug.Log("[MAIN_MENU] Returning to Main Menu scene. Progress handling complete.");
 
         // Reset time and speed scales before returning to menu
         Time.timeScale = 1f;

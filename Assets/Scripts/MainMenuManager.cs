@@ -1,28 +1,32 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using CatsEscape.Auth; // Namespace eklendi
+using CatsEscape.Auth;
 
 public class MainMenuManager : MonoBehaviour
 {
+    [Header("Settings")]
     public string gameSceneName = "GameScene";
+
+    [Header("UI Panels")]
     public GameObject characterSelectPanel; 
     public GameObject mainMenuView;         
     public GameObject authPanel;            
+    public UnityEngine.UI.Button continueButton;
 
     private void Start()
     {
-        // Başlangıçta panelleri hazırlayalım
         if (characterSelectPanel != null) characterSelectPanel.SetActive(false);
         
-        // Eğer zaten giriş yapılmışsa (Google veya Guest) direkt menüyü göster
-        CheckAuthState();
+        UpdateAuthUI();
 
-        // Auth olaylarını dinle (Geç kalmış silent login'ler veya yeni girişler için)
         if (AuthManager.Instance != null)
         {
-            AuthManager.Instance.OnLoginSuccess += HandleAuthSuccess;
-            AuthManager.Instance.OnGuestLogin += HandleAuthSuccess;
-            AuthManager.Instance.OnLogout += HandleLogout;
+            AuthManager.Instance.OnLoginSuccess += UpdateAuthUI;
+            AuthManager.Instance.OnGuestLogin += UpdateAuthUI;
+            AuthManager.Instance.OnLogout += UpdateAuthUI;
+            AuthManager.Instance.OnProgressSynced += UpdateContinueButtonState;
+            AuthManager.Instance.OnUsernameRequired += HandleUsernameRequired;
+            AuthManager.Instance.OnUsernameFlowResolved += UpdateAuthUI;
         }
     }
 
@@ -30,41 +34,89 @@ public class MainMenuManager : MonoBehaviour
     {
         if (AuthManager.Instance != null)
         {
-            AuthManager.Instance.OnLoginSuccess -= HandleAuthSuccess;
-            AuthManager.Instance.OnGuestLogin -= HandleAuthSuccess;
-            AuthManager.Instance.OnLogout -= HandleLogout;
+            AuthManager.Instance.OnLoginSuccess -= UpdateAuthUI;
+            AuthManager.Instance.OnGuestLogin -= UpdateAuthUI;
+            AuthManager.Instance.OnLogout -= UpdateAuthUI;
+            AuthManager.Instance.OnProgressSynced -= UpdateContinueButtonState;
+            AuthManager.Instance.OnUsernameRequired -= HandleUsernameRequired;
+            AuthManager.Instance.OnUsernameFlowResolved -= UpdateAuthUI;
         }
     }
 
-    private void CheckAuthState()
+    private void UpdateAuthUI()
     {
         if (AuthManager.Instance == null) return;
 
         bool isAuthenticated = AuthManager.Instance.IsAuthenticated;
-        Debug.Log($"[MainMenu] Initial Auth State: {isAuthenticated}");
-
-        if (mainMenuView != null) mainMenuView.SetActive(isAuthenticated);
-        if (authPanel != null) authPanel.SetActive(!isAuthenticated);
+        bool blockForUsername = AuthManager.Instance.IsUsernameRequiredFlowPending;
+        bool showMainMenu = isAuthenticated && !blockForUsername;
+        
+        if (mainMenuView != null) mainMenuView.SetActive(showMainMenu);
+        if (authPanel != null) authPanel.SetActive(!isAuthenticated && !blockForUsername);
+        
+        if (showMainMenu) 
+        {
+            UpdateContinueButtonState();
+        }
+        else 
+        {
+            if (characterSelectPanel != null) characterSelectPanel.SetActive(false);
+        }
     }
 
-    private void HandleAuthSuccess()
+    private void HandleUsernameRequired(string _)
     {
-        Debug.Log("[MainMenu] Auth Success received. Showing Menu.");
-        if (mainMenuView != null) mainMenuView.SetActive(true);
-        if (authPanel != null) authPanel.SetActive(false);
+        UpdateAuthUI();
     }
 
-    private void HandleLogout()
+    private void UpdateContinueButtonState()
     {
-        Debug.Log("[MainMenu] Logout received. Showing Auth Panel.");
-        if (mainMenuView != null) mainMenuView.SetActive(false);
-        if (authPanel != null) authPanel.SetActive(true);
-        if (characterSelectPanel != null) characterSelectPanel.SetActive(false);
+        if (continueButton != null && AuthManager.Instance != null)
+        {
+            bool hasProgress = AuthManager.Instance.LastLevelReached > 1 || AuthManager.Instance.LastSavedXP > 0;
+            continueButton.interactable = hasProgress;
+        }
     }
 
-    public void StartGame()
+    public void ContinueGame()
     {
-        // Direkt başlamak yerine seçim panelini aç
+        Debug.Log("[MAIN_MENU] Continue clicked.");
+        
+        AuthManager.IsNewGameStart = false;
+        Debug.Log("[CONTINUE] IsNewGameStart=false");
+
+        var progress = ProgressManager.LoadProgress();
+        Debug.Log($"[CONTINUE] Loading saved progress: level={progress.currentLevel}, xp={progress.xp}");
+
+        if (characterSelectPanel != null)
+        {
+            characterSelectPanel.SetActive(true);
+            if (mainMenuView != null) mainMenuView.SetActive(false);
+        }
+        else
+        {
+            PerformStartGame();
+        }
+    }
+
+    public void NewStartGame()
+    {
+        Debug.Log("[NEW_GAME] Starting fresh run");
+
+        AuthManager.IsNewGameStart = true;
+        Debug.Log("[NEW_GAME] IsNewGameStart=true");
+
+        // Reset ONLY run progress
+        ProgressManager.CurrentLevel = 1;
+        ProgressManager.XP = 0;
+        
+        // Ensure backend sync flags are also reset if needed
+        ProgressManager.ResetRunProgressOnly(); 
+        ProgressManager.Save();
+
+        Debug.Log("[NEW_GAME] Progress reset: level=1, xp=0");
+
+        // Start the game flow (which might show character selection)
         if (characterSelectPanel != null)
         {
             characterSelectPanel.SetActive(true);
@@ -80,19 +132,11 @@ public class MainMenuManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         if (GameSpeed.Multiplier <= 0f) GameSpeed.Multiplier = 1f;
-
-        // Reset level progression if we are a guest starting fresh
-        if (AuthManager.Instance != null && AuthManager.Instance.IsGuest)
-        {
-            LevelManager.ResetSavedLevel();
-        }
-        
         SceneManager.LoadScene(gameSceneName);
     }
 
     public void QuitGame()
     {
-        Debug.Log("Game Quitting...");
         Application.Quit();
     }
 }

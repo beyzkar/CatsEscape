@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: e27dd783d87c04337803b15b8c491541
+guid: d75fcf9a1970142b4ba774dd86807516
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1227254096713744525
-    second: GoogleButton_0
+      213: 7328115547334787871
+    second: Gemini_Generated_Image_3vyfpq3vyfpq3vyf_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: GoogleButton_0
+      name: Gemini_Generated_Image_3vyfpq3vyfpq3vyf_0
       rect:
         serializedVersion: 2
-        x: 57
-        y: 48
-        width: 640
-        height: 149
+        x: 306
+        y: 172
+        width: 1593
+        height: 1639
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d8004c34915180110800000000000000
-      internalID: 1227254096713744525
+      spriteID: f1348e7a342b2b560800000000000000
+      internalID: 7328115547334787871
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      GoogleButton_0: 1227254096713744525
+      Gemini_Generated_Image_3vyfpq3vyfpq3vyf_0: 7328115547334787871
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

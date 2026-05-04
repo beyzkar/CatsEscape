@@ -204,7 +204,8 @@ public class LeaderboardManager : MonoBehaviour
         foreach (var e in entries)
         {
             if (e == null) continue;
-            merged.Add(new ScoreData(e.displayName ?? "Player", e.score));
+            string nameToUse = !string.IsNullOrEmpty(e.userName) ? e.userName : (e.displayName ?? "Player");
+            merged.Add(new ScoreData(nameToUse, e.score));
         }
         scores = merged.OrderByDescending(s => s.xp).Take(10).ToList();
     }

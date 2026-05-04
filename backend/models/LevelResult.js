@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const levelResultSchema = new mongoose.Schema({
   uid: { type: String, required: true, index: true },
+  userName: { type: String },
   levelNumber: { type: Number, required: true },
   levelResult: { type: String, enum: ['completed', 'failed', 'abandoned'], required: true },
   xpEarned: { type: Number, default: 0 },

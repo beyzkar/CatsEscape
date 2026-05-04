@@ -82,6 +82,7 @@ public class LeaderboardApiService : MonoBehaviour
         {
             uid = AuthManager.Instance.UserId,
             displayName = string.IsNullOrEmpty(displayName) ? "Player" : displayName,
+            userName = AuthManager.Instance.UserName,
             authType = authType,
             levelNumber = levelNumber,
             score = score,

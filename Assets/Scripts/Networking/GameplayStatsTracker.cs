@@ -19,8 +19,12 @@ namespace CatsEscape.Networking
 
         [Header("State Tracking")]
         public bool hasActiveLevelRun = false;
-        public bool hasSentGameEnd = false;
-        public bool hasSentLevelResult = false;
+        public bool hasLevelEnded = false;
+        public bool resultAlreadySent = false;
+        
+        // Aliases for compatibility
+        public bool hasSentGameEnd => resultAlreadySent;
+        public bool hasSentLevelResult => resultAlreadySent;
         
         public string levelStartedAtISO;
         private float levelStartedAtRealTime;
@@ -72,11 +76,17 @@ namespace CatsEscape.Networking
 
             // Reset state
             hasActiveLevelRun = true;
-            hasSentGameEnd = false;
-            hasSentLevelResult = false;
+            hasLevelEnded = false;
+            resultAlreadySent = false;
             
             levelStartedAtISO = DateTime.UtcNow.ToString("O");
             levelStartedAtRealTime = Time.realtimeSinceStartup;
+
+            Debug.Log("[ACTIVITY] game_start sent, result=null");
+            if (GameDataApiClient.Instance != null)
+            {
+                GameDataApiClient.Instance.SendActivity("game_start", currentLevelNumber, null);
+            }
         }
 
         public float GetLevelDuration()
@@ -92,45 +102,49 @@ namespace CatsEscape.Networking
             return xpEarnedInLevel;
         }
 
+        public void TrackLevelResult(string result)
+        {
+            if (resultAlreadySent)
+            {
+                Debug.Log("[ACTIVITY] skipped duplicate result");
+                return;
+            }
+
+            resultAlreadySent = true;
+            hasLevelEnded = true;
+            hasActiveLevelRun = false;
+
+            Debug.Log($"[ACTIVITY] level_result sent, result={result}");
+
+            if (GameDataApiClient.Instance != null)
+            {
+                // Send to both activity and level-result collections
+                GameDataApiClient.Instance.SendActivity("level_result", currentLevelNumber, result);
+                GameDataApiClient.Instance.SendLevelResult(result);
+            }
+        }
+
         public void SendAbandonedResult()
         {
-            StartCoroutine(TrySendAbandonedIfActiveCoroutine("automatic"));
+            if (hasActiveLevelRun && !hasLevelEnded && !resultAlreadySent)
+            {
+                TrackLevelResult("abandoned");
+            }
         }
 
         public System.Collections.IEnumerator TrySendAbandonedIfActiveCoroutine(string reason)
         {
-            if (hasActiveLevelRun && !hasSentGameEnd)
+            if (hasActiveLevelRun && !hasLevelEnded && !resultAlreadySent)
             {
                 string uid = (AuthManager.Instance != null) ? AuthManager.Instance.UserId : "UNKNOWN";
                 string sid = (GameDataApiClient.Instance != null) ? GameDataApiClient.Instance.SessionId : "UNKNOWN";
+                float duration = GetLevelDuration();
                 
-                Debug.Log($"[Abandoned] Active run detected. Reason: {reason}");
-                Debug.Log($"[Abandoned] Sending game_end abandoned uid={uid} level={currentLevelNumber} session={sid}");
+                Debug.Log($"[LEVEL] Abandoned (player exited early). Reason: {reason}");
+                Debug.Log($"[LEVEL] Details -> UID: {uid}, Level: {currentLevelNumber}, Duration: {duration:F2}s, Session: {sid}");
                 
-                hasSentGameEnd = true;
-                hasSentLevelResult = true;
-                hasActiveLevelRun = false;
-                
-                if (GameDataApiClient.Instance != null)
-                {
-                    Debug.Log($"[Abandoned] Sending activity and levelResult for uid={uid}");
-                    var activityTask = GameDataApiClient.Instance.SendActivity("game_end", currentLevelNumber, "abandoned");
-                    var resultTask = GameDataApiClient.Instance.SendLevelResult("abandoned");
-
-                    // Wait for both requests to finish if we are in a Coroutine
-                    if (activityTask != null) yield return activityTask;
-                    if (resultTask != null) yield return resultTask;
-                    
-                    Debug.Log("[Abandoned] All telemetry sent successfully before state change.");
-                }
-            }
-            else if (hasActiveLevelRun)
-            {
-                Debug.Log($"[Abandoned] Skipped: result already sent (reason: {reason})");
-            }
-            else
-            {
-                Debug.Log($"[Abandoned] Skipped: no active run (reason: {reason})");
+                TrackLevelResult("abandoned");
+                yield return null; // Small wait for coroutine consistency
             }
             yield break;
         }
@@ -138,6 +152,15 @@ namespace CatsEscape.Networking
         private void OnApplicationQuit()
         {
             SendAbandonedResult();
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            // On mobile, backgrounding the app often means abandonment if not resumed
+            if (pauseStatus)
+            {
+                SendAbandonedResult();
+            }
         }
 
         public void OnFishSpawned() => fishSpawnCount++;

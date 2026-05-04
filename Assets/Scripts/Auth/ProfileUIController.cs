@@ -14,7 +14,6 @@ namespace CatsEscape.UI
         public TMP_Text playerNameText;
         public TMP_Text lastLevelText;
         public TMP_Text highestXPText;
-        public TMP_Text totalCompletionsText;
         public TMP_Text emailText;
 
         /// <summary>
@@ -24,13 +23,11 @@ namespace CatsEscape.UI
         {
             if (profilePopup == null) 
             {
-                Debug.LogError("[ProfileUI] ProfilePopup reference is missing in the Inspector!");
                 return;
             }
 
             if (AuthManager.Instance == null)
             {
-                Debug.LogError("[ProfileUI] AuthManager instance not found!");
                 return;
             }
 
@@ -67,10 +64,6 @@ namespace CatsEscape.UI
             if (highestXPText != null)
                 highestXPText.text = "Highest XP: " + auth.HighestXP;
 
-            if (totalCompletionsText != null)
-                totalCompletionsText.text = "Total Completed: " + auth.TotalCompletions;
-
-            Debug.Log($"[ProfileUI] Data populated. Type: {auth.GetLoginType()}, User: {auth.GetFormattedUserName()}");
         }
 
         /// <summary>
@@ -99,7 +92,6 @@ namespace CatsEscape.UI
             }
             else
             {
-                Debug.LogError("[ProfileUI] Cannot sign out: AuthManager missing.");
                 // Fallback to reload if everything fails
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
             }
@@ -111,8 +103,6 @@ namespace CatsEscape.UI
         /// </summary>
         public void OnMainMenuClicked()
         {
-            Debug.Log("[ProfileUI] Main Menu button clicked. Preparing for transition...");
-
             // 1. Send Abandoned Result if there is an active run
             if (CatsEscape.Networking.GameplayStatsTracker.Instance != null)
             {

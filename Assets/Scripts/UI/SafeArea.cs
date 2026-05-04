@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CatsEscape.UI
 {
-    /// <summary>
-    /// Robust Safe Area implementation for mobile notches and home bars.
-    /// Apply this to a UI Panel that contains all your gameplay elements.
-    /// </summary>
+
     [RequireComponent(typeof(RectTransform))]
     public class SafeArea : MonoBehaviour
     {
