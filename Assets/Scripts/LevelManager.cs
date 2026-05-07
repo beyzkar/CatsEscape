@@ -17,7 +17,7 @@ public class LevelManager : MonoBehaviour
     
     private static int savedLevel = -1;
     
-    private int[] levelGoals = { 0, 5, 5, 5, 5, 5 };
+    private int[] levelGoals = { 0, 5, 12, 18, 26, 30 };
 
     public float[] levelSpeeds = { 0.8f, 1.0f, 1.25f, 1.5f, 1.8f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };

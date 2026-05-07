@@ -463,7 +463,7 @@ public class PlayerMovement : MonoBehaviour
         int levelNum = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 0;
         Debug.Log($"[SPAWN_START] Level: {levelNum}, Position Before: {transform.position}");
 
-        float targetX = -6f; // Forced to -6f per user request for all levels
+        float targetX = -4f; 
         float probeBaseY = (levelStartPoint != null) ? levelStartPoint.position.y : transform.position.y;
         float targetY = probeBaseY;
 
