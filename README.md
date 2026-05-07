@@ -1,27 +1,28 @@
-# Cats Escape 🐈💨
-
-
+# 🐱 Cats Escape 🐈💨
 
 **Cats Escape** is a high-octane, professional 2D side-scrolling runner built with Unity. Embark on a thrilling journey as a nimble cat escaping through diverse environments, collecting rewards, and outsmarting obstacles. With a robust backend and global leaderboard, every jump counts!
 
 ---
 
-## 🎮 Game Mechanics
+## 🚀 Key Features
 
-### Core Gameplay
-*   **Progressive Difficulty:** Navigate through 5 unique, thematic levels where speed and obstacle density increase as you advance.
-*   **Thematic Environments:** Experience changing backgrounds and assets—from serene forests to challenging urban landscapes.
-*   **Level Transitions:** Seamless transitions between levels featuring cinematic animations and video support.
-*   **Portal System:** Reach the final portal in Level 5 to secure your victory and submit your high score.
+- **Advanced Level System:** 5 unique levels with increasing difficulty and dynamic object spawning.
+- **Dual Authentication:** Secure persistent progress via **Google Login** or instant play with **Guest Mode**.
+- **Global Leaderboard:** Real-time leaderboard synchronization powered by a custom Node.js backend.
+- **Player Progression:** Track total XP, highest level reached, and detailed player stats on the profile page.
+- **Mobile Optimized:** Full Android support including Responsive SafeArea, custom mobile controls, and **Haptic Feedback**.
+- **Offline-First Architecture:** Resilient gameplay with API timeouts and guest fallbacks for network fluctuations.
+- **Detailed Telemetry:** Integrated activity tracking (Start, Success, Failure, Abandoned) for gameplay analytics.
 
-### Collectibles & Power-ups
-*   **🐟 Fish:** Your primary source of **XP** and health. Collect them to climb the leaderboard!
-*   **🧪 Potions:** Transform into the **"Big Cat"**! Gain temporary invincibility, increased jump height, and a speed boost.
-*   **🏠 Home Exit:** Complete Levels 1-4 by reaching the "Home" gate to safely transition to the next stage.
+---
 
-### Movement System
-*   **Better Jump:** Custom physics implementation for responsive, snappy jumping and double-jumping.
-*   **Speed Smoothing:** Intelligent speed management that ensures difficulty curves feel natural and fair.
+## 🎮 Gameplay Mechanics
+
+- **Hearts:** Protect your lives! Hitting obstacles results in losing hearts.
+- **🐟 Fish:** Your primary source of **XP** and health. Collect them to climb the leaderboard!
+- **🧪 Potions:** Transform into the **"Big Cat"**! Gain temporary invincibility, increased jump height, and a speed boost.
+- **🏠 Home Exit:** Complete Levels 1-4 by reaching the "Home" gate to safely transition to the next stage.
+- **Portal System:** Reach the final portal in Level 5 to secure your victory and submit your high score.
 
 ---
 
@@ -40,41 +41,20 @@
 ## 🛠️ Technical Stack
 
 ### Frontend (Unity Engine)
-*   **Engine:** Unity 2022.x+
-*   **Rendering:** **Universal Render Pipeline (URP)** for modern, optimized 2D lighting and post-processing.
-*   **Language:** C# (Object-Oriented Architecture).
-*   **Input:** New Unity Input System for cross-platform compatibility.
-*   **UI:** TextMeshPro for crisp typography and responsive layouts.
-*   **Networking:** `UnityWebRequest` for secure REST API communication.
+- **Engine:** Unity 6000.3.8f1+ (URP)
+- **Language:** C# (Object-Oriented Architecture)
+- **Networking:** `UnityWebRequest` for secure REST API communication.
+- **Input:** New Unity Input System for cross-platform compatibility.
 
 ### Backend (Node.js API)
-*   **Runtime:** Node.js
-*   **Framework:** Express.js
-*   **Database:** **MongoDB** (via Mongoose) for persistent player profiles and leaderboard data.
-*   **Security:** **Firebase Admin SDK** for verifying Google ID tokens and securing user sessions.
-*   **Architecture:** RESTful API with dedicated routes for game data, activity logging, and leaderboard management.
+- **Runtime:** Node.js / Express.js
+- **Database:** **MongoDB** (via Mongoose) for persistent player profiles.
+- **Security:** **Firebase Admin SDK** for verifying Google ID tokens.
+- **Logging:** Custom middleware for real-time request monitoring.
 
 ---
 
-## 🌐 Advanced Features
-
-### 🔐 Authentication System
-*   **Google Sign-In:** Secure authentication using Google Identity.
-*   **Guest Mode:** Jump straight into the action without an account.
-*   **Account Linking:** Seamlessly transition from Guest to Google Play/Cloud accounts (planned).
-
-### 📶 Offline-First Architecture
-*   **Resilient Play:** The game features a **Pending Score Queue**. Earn XP while offline, and the game will automatically sync with the server once a connection is re-established.
-*   **API Timeouts:** Robust error handling prevents the game from hanging during network fluctuations.
-*   **Guest Fallback:** Full gameplay support even in completely offline environments.
-
-### 📊 Global Leaderboard
-*   **Real-time Sync:** Compete with players worldwide for the top XP spot.
-*   **Activity Tracking:** Detailed logging of game starts, level completions, and abandoned runs for performance analytics.
-
----
-
-## 🚀 Setup & Installation
+## 📦 Setup & Installation
 
 ### 1. Backend Setup
 1.  Navigate to the `backend` directory.
@@ -89,14 +69,14 @@
     ```
 
 ### 2. Unity Project
-1.  Open the project in **Unity Hub** (Version 2022.3+ recommended).
-2.  Open the `Assets/Scenes/Main Menu` scene.
-3.  Ensure the `AuthManager` and `LeaderboardManager` in the hierarchy are pointing to your server's URL (Default: `http://localhost:5001`).
+1.  Open the project in **Unity Hub** (Version 6000.3.8f1+).
+2.  Ensure the `EditorBaseUrl` in the `LeaderboardApiService` is set to your server URL (Default: `http://localhost:5001`).
+3.  For Android builds, update the `AndroidBaseUrl` with your machine's local IP address.
 4.  Press **Play** and enjoy!
 
 ---
 
-## 📄 License
-This project is for educational and personal use. All assets are property of their respective owners.
+## 📜 License
+This project was developed for personal growth and educational purposes. All rights reserved.
 
 ![Cats Escape Cover](./cats_escape_cover_1777473681622.png)
