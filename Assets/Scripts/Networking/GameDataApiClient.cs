@@ -15,7 +15,7 @@ namespace CatsEscape.Networking
         public string editorBaseUrl = "http://localhost:5001/api/game";
         
         [Tooltip("Base URL for the API on Android (PHYSICAL DEVICE: Using your Computer's Local IP)")]
-        public string androidBaseUrl = "http://192.168.1.180:5001/api/game"; 
+        public string androidBaseUrl = "http://192.168.1.181:5001/api/game"; 
 
         private string BaseUrl => Application.platform == RuntimePlatform.Android ? androidBaseUrl : editorBaseUrl;
         
@@ -27,7 +27,6 @@ namespace CatsEscape.Networking
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
-                Debug.Log("[GameDataApiClient] Initialized and marked as DontDestroyOnLoad.");
             }
             else
             {
@@ -53,7 +52,6 @@ namespace CatsEscape.Networking
         {
             _currentSessionId = System.Guid.NewGuid().ToString();
             SendActivity("session_start");
-            Debug.Log($"[GameDataApiClient] Started new session: {_currentSessionId}");
         }
 
         public Coroutine SendActivity(string eventType, int? levelNumber = null, string result = null)
@@ -71,7 +69,6 @@ namespace CatsEscape.Networking
         {
             if (!IsNetworkAvailable)
             {
-                Debug.Log("[Network] Offline detected. Skipping activity log.");
                 yield break;
             }
 
@@ -90,7 +87,6 @@ namespace CatsEscape.Networking
             
             if (!tokenTask.IsCompleted)
             {
-                Debug.LogWarning("[API] Token retrieval timed out.");
                 yield break;
             }
 
@@ -117,7 +113,6 @@ namespace CatsEscape.Networking
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[GameDataApiClient] Activity '{eventType}' logged successfully.");
                 }
                 else
                 {
@@ -138,6 +133,7 @@ namespace CatsEscape.Networking
                 GameplayStatsTracker.Instance.currentLevelNumber,
                 result,
                 GameplayStatsTracker.Instance.GetFinalXPEarned(),
+                ScoreManager.Instance.GetTotalXP(),
                 GameplayStatsTracker.Instance.fishSpawnCount,
                 GameplayStatsTracker.Instance.potionSpawnCount,
                 GameplayStatsTracker.Instance.heartsGained,
@@ -145,13 +141,14 @@ namespace CatsEscape.Networking
             );
         }
 
-        public Coroutine SendLevelResult(int levelNumber, string levelResult, int xpEarned, int fishSpawnCount, int potionSpawnCount, int heartsGained, int heartsLost)
+        public Coroutine SendLevelResult(int levelNumber, string levelResult, int xpEarned, int totalXP, int fishSpawnCount, int potionSpawnCount, int heartsGained, int heartsLost)
         {
             LevelResultDto dto = new LevelResultDto
             {
                 levelNumber = levelNumber,
                 levelResult = levelResult,
                 xpEarned = xpEarned,
+                totalXP = totalXP,
                 fishSpawnCount = fishSpawnCount,
                 potionSpawnCount = potionSpawnCount,
                 heartsGained = heartsGained,
@@ -179,13 +176,11 @@ namespace CatsEscape.Networking
 
             if (!IsNetworkAvailable)
             {
-                Debug.Log("[Network] Offline detected. Skipping level result sync.");
                 yield break;
             }
 
             if (!AuthManager.Instance.IsAuthenticated)
             {
-                Debug.LogWarning("[GameDataApiClient] User NOT authenticated. Skipping telemetry sync.");
                 yield break;
             }
 
@@ -225,7 +220,6 @@ namespace CatsEscape.Networking
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[GameDataApiClient] Level result synced successfully for Level {dto.levelNumber}.");
                 }
                 else
                 {
@@ -294,9 +288,6 @@ namespace CatsEscape.Networking
             string uid = AuthManager.Instance.UserId;
             string json = JsonUtility.ToJson(new SetUsernameRequest { userName = safeUserName, uid = uid });
 
-            Debug.Log($"[USERNAME_API] Request URL={url}");
-            Debug.Log($"[USERNAME_API] Request Body={json}");
-
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
@@ -311,16 +302,27 @@ namespace CatsEscape.Networking
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     var response = JsonUtility.FromJson<SetUsernameResponse>(request.downloadHandler.text);
-                    Debug.Log($"[USERNAME_API] SetUsername success. Code={request.responseCode}, Body={request.downloadHandler.text}");
                     onComplete?.Invoke(true, response.userName);
                 }
                 else
                 {
                     string errorMsg = "SERVER_ERROR";
-                    Debug.LogWarning($"[USERNAME_API] SetUsername failed. Code={request.responseCode}, Error={request.error}, Body={request.downloadHandler.text}");
+                    bool isNetworkError = request.responseCode == 0 || 
+                                         request.result == UnityWebRequest.Result.ConnectionError ||
+                                         request.error.ToLower().Contains("timeout") ||
+                                         request.error.ToLower().Contains("connect");
+
+                    if (isNetworkError)
+                    {
+                        errorMsg = "NETWORK_ERROR";
+                        Debug.LogError($"[USERNAME_API] Network Error Detected! Error: {request.error}, Code: {request.responseCode}, URL: {url}");
+                    }
                     try {
-                        var errorRes = JsonUtility.FromJson<SetUsernameResponse>(request.downloadHandler.text);
-                        if (!string.IsNullOrEmpty(errorRes.message)) errorMsg = errorRes.message;
+                        if (!string.IsNullOrEmpty(request.downloadHandler.text))
+                        {
+                            var errorRes = JsonUtility.FromJson<SetUsernameResponse>(request.downloadHandler.text);
+                            if (errorRes != null && !string.IsNullOrEmpty(errorRes.message)) errorMsg = errorRes.message;
+                        }
                     } catch {}
                     onComplete?.Invoke(false, errorMsg);
                 }
@@ -341,7 +343,6 @@ namespace CatsEscape.Networking
 
             if (!IsNetworkAvailable)
             {
-                Debug.Log("[Network] Offline detected. Skipping profile initialization.");
                 onComplete?.Invoke(false);
                 yield break;
             }
@@ -362,7 +363,6 @@ namespace CatsEscape.Networking
 
             if (!tokenTask.IsCompleted)
             {
-                Debug.LogWarning("[API] Token retrieval timed out for profile init.");
                 onComplete?.Invoke(false);
                 yield break;
             }
@@ -394,7 +394,6 @@ namespace CatsEscape.Networking
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
-                    Debug.Log($"[GameDataApiClient] Profile initialized successfully for user {AuthManager.Instance.UserId}. Response: {request.downloadHandler.text}");
                     onComplete?.Invoke(true);
                 }
                 else

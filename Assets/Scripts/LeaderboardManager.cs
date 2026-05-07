@@ -20,9 +20,9 @@ public class LeaderboardManager : MonoBehaviour
     public static LeaderboardManager Instance { get; private set; }
 
     [Header("UI Layout")]
-    public TMP_InputField nameSpace; 
     public GameObject scoreboard; 
     public GameObject leaderboardPanel; 
+    public UnityEngine.UI.Button saveButton;
     public TextMeshProUGUI[] entryTexts; 
 
     [Header("Flow Control")]
@@ -60,15 +60,13 @@ public class LeaderboardManager : MonoBehaviour
     {
         if (scoreboard != null) scoreboard.SetActive(true);
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
-
-        // Pre-fill name if logged in via Google (Phase 1)
-        if (nameSpace != null && nameSpace.text == "")
+        
+        // Reset button state for new attempt
+        if (saveButton != null)
         {
-            var auth = GameObject.FindAnyObjectByType<CatsEscape.Auth.AuthManager>();
-            if (auth != null && auth.IsUserLoggedIn())
-            {
-                nameSpace.text = auth.GetFormattedUserName();
-            }
+            saveButton.interactable = true;
+            var cg = saveButton.GetComponent<CanvasGroup>();
+            if (cg != null) cg.alpha = 1f;
         }
     }
 
@@ -84,13 +82,35 @@ public class LeaderboardManager : MonoBehaviour
             UpdateLeaderboardUI();
     }
 
+    private bool _isSubmitting = false;
+
     public void OnSaveButtonClick()
     {
-        if (nameSpace == null) return;
+        Debug.Log("[LeaderboardManager] Save Button Clicked.");
+        
+        // Strictly use the username from AuthManager as it's mandatory
+        string name = (CatsEscape.Auth.AuthManager.Instance != null) 
+            ? CatsEscape.Auth.AuthManager.Instance.GetFormattedUserName() 
+            : "Player";
 
-        string name = !string.IsNullOrEmpty(nameSpace.text) ? nameSpace.text : "Player";
+        if (_isSubmitting)
+        {
+            Debug.LogWarning("[LeaderboardManager] Submission already in progress.");
+            return;
+        }
+
         int currentXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
         
+        Debug.Log($"[LeaderboardManager] Proceeding to save with mandatory username: {name} | XP: {currentXP}");
+
+        // Disable and fade button to prevent multiple saves
+        if (saveButton != null)
+        {
+            saveButton.interactable = false;
+            var cg = saveButton.GetComponent<CanvasGroup>();
+            if (cg != null) cg.alpha = 0.5f;
+        }
+
         SaveAndShowLeaderboard(name, currentXP);
     }
 
@@ -100,7 +120,6 @@ public class LeaderboardManager : MonoBehaviour
         ResetGameDynamics();
         SceneManager.LoadScene("MainMenu");
     }
-
 
     public void OnCloseLeaderboard()
     {
@@ -116,11 +135,6 @@ public class LeaderboardManager : MonoBehaviour
 
     public void SaveAndShowLeaderboard(string playerName, int currentXP)
     {
-        // Immediate UI feedback (add to memory, but don't save to cache yet - cache is for server sync only)
-        scores.Add(new ScoreData(playerName, currentXP));
-        scores = scores.OrderByDescending(s => s.xp).Take(10).ToList();
-        UpdateLeaderboardUI();
-
         if (scoreboard != null) scoreboard.SetActive(false);
         if (leaderboardPanel != null) leaderboardPanel.SetActive(true);
 
@@ -129,26 +143,39 @@ public class LeaderboardManager : MonoBehaviour
             int currentLevel = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 1;
             string authType = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.GetLoginType().ToLower() : "guest";
             int xpEarned = (GameplayStatsTracker.Instance != null) ? GameplayStatsTracker.Instance.GetFinalXPEarned() : 0;
-            float timeSeconds = 0f; // GameplayStatsTracker doesn't track time yet, setting to 0
+            float timeSeconds = 0f; 
 
+            Debug.Log($"[LeaderboardManager] Starting API Submit Coroutine for {playerName}");
             StartCoroutine(CoSubmitAndSync(playerName, currentXP, currentLevel, authType, xpEarned, timeSeconds));
+        }
+        else
+        {
+            // Fallback for offline/no API
+            scores.Add(new ScoreData(playerName, currentXP));
+            scores = scores.OrderByDescending(s => s.xp).Take(5).ToList();
+            UpdateLeaderboardUI();
         }
     }
 
     private IEnumerator CoSubmitAndSync(string playerName, int currentXP, int levelNumber, string authType, int xpEarned, float timeSeconds)
     {
+        if (_isSubmitting) yield break;
+        _isSubmitting = true;
+
         SubmitScoreResult result = null;
         yield return apiService.SubmitScore(playerName, currentXP, levelNumber, authType, xpEarned, timeSeconds, r => result = r);
 
         if (result == null || !result.success)
         {
-            Debug.LogWarning("[Leaderboard] Offline: Adding score to pending queue.");
+            Debug.LogWarning("[Leaderboard] Failed to save online. Adding to pending queue.");
             pendingScores.Add(new ScoreData(playerName, currentXP));
             SavePending();
         }
         
-        // Always try to fetch latest (this will overwrite cache with SSOT data)
+        // Always try to fetch latest 
         yield return CoSyncCycle();
+
+        _isSubmitting = false;
     }
 
     private IEnumerator CoSyncCycle()
@@ -158,7 +185,6 @@ public class LeaderboardManager : MonoBehaviour
         // 1. Flush Pending Queue
         if (pendingScores.Count > 0)
         {
-            Debug.Log($"[Leaderboard] Syncing {pendingScores.Count} pending scores...");
             List<ScoreData> toRemove = new List<ScoreData>();
             
             foreach (var ps in pendingScores)
@@ -182,10 +208,12 @@ public class LeaderboardManager : MonoBehaviour
         bool ok = false;
         LeaderboardApiEntry[] entries = null;
         int? currentLevel = (LevelManager.Instance != null) ? (int?)LevelManager.Instance.currentLevel : null;
+        string fetchError = "";
 
         yield return apiService.FetchLeaderboard(currentLevel, (success, error, list) =>
         {
             ok = success;
+            fetchError = error;
             entries = list;
         });
 
@@ -193,6 +221,10 @@ public class LeaderboardManager : MonoBehaviour
         {
             ApplyServerEntries(entries);
             SaveCache(); // Update our read-only cache
+        }
+        else if (!ok)
+        {
+            Debug.LogError($"[LEADERBOARD] Sync failed: {fetchError}");
         }
         
         UpdateLeaderboardUI();
@@ -207,19 +239,30 @@ public class LeaderboardManager : MonoBehaviour
             string nameToUse = !string.IsNullOrEmpty(e.userName) ? e.userName : (e.displayName ?? "Player");
             merged.Add(new ScoreData(nameToUse, e.score));
         }
-        scores = merged.OrderByDescending(s => s.xp).Take(10).ToList();
+        // Take TOP 5 only
+        scores = merged.OrderByDescending(s => s.xp).Take(5).ToList();
     }
 
     private void UpdateLeaderboardUI()
     {
         if (entryTexts == null) return;
-        for (int i = 0; i < entryTexts.Length; i++)
+        
+        // Ensure we always fill 5 rows (as per UI layout)
+        int rowCount = Mathf.Min(entryTexts.Length, 5);
+        
+        for (int i = 0; i < rowCount; i++)
         {
             if (entryTexts[i] == null) continue;
+            
             if (i < scores.Count)
+            {
                 entryTexts[i].text = $"{i + 1}. {scores[i].playerName} - {scores[i].xp} XP";
+            }
             else
+            {
                 entryTexts[i].text = $"{i + 1}. ---";
+                // Only log empty rows once or if needed, but keeping it simple
+            }
         }
     }
 

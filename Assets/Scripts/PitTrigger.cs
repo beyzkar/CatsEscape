@@ -23,7 +23,6 @@ public class PitTrigger : MonoBehaviour
     private void HandlePlayerFall(GameObject player)
     {
         isRestarting = true;
-        Debug.Log("[PitTrigger] Player fell into the pit!");
 
         // 1. Freeze player controls and physics
         FreezePlayer(player);

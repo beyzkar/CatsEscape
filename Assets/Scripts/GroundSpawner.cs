@@ -6,11 +6,11 @@ using System.Collections.Generic;
 /// </summary>
 public class GroundSpawner : MonoBehaviour
 {
-    [Header("Prefab Ayarları")]
-    public GameObject groundNormalPrefab; // Standart düz zemin parçası
-    public float normalYOffset = 0f;      // Düz zemin için ek yükseklik ayarı
-    public GameObject groundPitPrefab;    // İçinde boşluk ve PitTrigger olan zemin parçası
-    public float pitYOffset = 0f;         // Çukurlu zemin için ek yükseklik ayarı
+    [Header("Prefab Settings")]
+    public GameObject groundNormalPrefab;
+    public float normalYOffset = 0f;
+    public GameObject groundPitPrefab;
+    public float pitYOffset = 0f;
     
     public static GroundSpawner Instance { get; private set; }
 
@@ -19,16 +19,14 @@ public class GroundSpawner : MonoBehaviour
         if (Instance == null) Instance = this;
     }
     
-    [Header("Düzenleme Ayarları")]
-    public float groundWidth = 12f;       // Her bir zemin prefabının genişliği (Unity birimi cinsinden)
-    public float groundY = -2.5f;         // Zeminlerin oluşacağı dikey konum
-    public int initialAmount = 6;         // Oyun başında kaç parça hazır dursun
+    [Header("Layout Settings")]
+    public float groundWidth = 12f;
+    public float groundY = -2.5f;
+    public int initialAmount = 6;
 
-    [Header("Level Geçiş Ayarları")]
-    public GameObject staticEnvironment;  // Level 1-2'deki sabit zeminleri tutan obje (Environment)
-    
-    [Header("Oyun Mantığı")]
-    public int minSafeDistance = 3;       // Başlangıçta kaç parça güvenli (çukursuz) gelsin
+    public GameObject staticEnvironment;
+    [Header("Logic Settings")]
+    public int minSafeDistance = 3;
 
     private List<GameObject> activeGrounds = new List<GameObject>();
     private float nextSpawnX = 0f;        // Bir sonraki parçanın ekleneceği X koordinatı
@@ -114,7 +112,6 @@ public class GroundSpawner : MonoBehaviour
         groundY = -2.5f;
         normalYOffset = 0f;
         pitYOffset = 0f;
-        Debug.Log("GroundSpawner: Y ofsetleri sıfırlandı.");
     }
 
     void CheckLevelAndInitialize()

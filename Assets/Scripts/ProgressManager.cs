@@ -26,7 +26,6 @@ public static class ProgressManager
     public static void Save()
     {
         PlayerPrefs.Save();
-        Debug.Log("[PROGRESS] Saved progress after reset");
     }
 
     // Keep SaveProgress for backward compatibility if needed, but the user asked for Save()

@@ -11,7 +11,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Jump Settings")]
     public float jumpForce = 12f;
     public float fallMultiplier = 2.5f; 
-    public float lowJumpMultiplier = 2f; // Bunu geri ekliyorum, FixedUpdate içinde kullanılıyor
+    public float lowJumpMultiplier = 2f;
     private float currentJumpMultiplier = 1f;
     public int maxJumps = 2; 
     private int jumpsLeft;
@@ -23,21 +23,8 @@ public class PlayerMovement : MonoBehaviour
     public Transform groundCheck; // Point used to detect if the player is on the ground
     public float groundCheckRadius = 0.15f;
     public LayerMask groundLayer; // Specifies which layer is ground
-    /*
-     Layer:
-       - Groups objects
-       - Provides physics and detection control
-       - Prevents errors
-       - Improves performance
-     */
 
     private Rigidbody2D rb; // Rigidbody2D: Adds physics to the object
-    /*
-     - Applies gravity
-     - Enables falling
-     - Allows applying forces
-     - Reacts to collisions
-     */
     private bool isGrounded;
     public bool IsGrounded => isGrounded;
 
@@ -49,8 +36,8 @@ public class PlayerMovement : MonoBehaviour
     public float acceleration = 5f;
     public float deceleration = 10f;
     public float stoppingDeceleration = 60f; // High rate for instant stops when input is released
-    [Range(0.1f, 1f)] public float groundedSpeedMultiplier = 0.75f; // Global horizontal speed reduction on ground
-    [Range(0.1f, 1f)] public float airAccelerationMultiplier = 0.55f; // Prevents building excessive X speed in air
+    [Range(0.1f, 1f)] public float groundedSpeedMultiplier = 0.5f; // Set to 0.5 so Cat(0.5) + World(0.5) = 1.0 (Max Speed)
+    [Range(0.1f, 1f)] public float airAccelerationMultiplier = 1.0f; // REMOVED acceleration delay in air for consistency
     [Range(0.01f, 0.5f)] public float landingVelocityBlendTime = 0.12f; // Smooths airborne -> grounded transition
     private float currentHorizontalVelocity = 0f;
     private float targetVelocityX = 0f;
@@ -58,9 +45,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Viewport Clamping")]
     public bool useViewportClamping = true;
-public float airControlMultiplier = 0.5f; // Scales horizontal speed while airborne
-public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly when jump starts
-    [Range(0.1f, 10f)] public float xScrollLimit = 0.35f; // Boundary multiplier
+    public float airControlMultiplier = 0.5f; // Set to 0.5 so Cat(0.5) + World(0.5) = 1.0 (Max Speed)
+    public float jumpTakeoffHorizontalMultiplier = 1.0f; // REMOVED jump speed dampening
     public float ScreenMaxX { get; private set; } // Right edge of screen for other scripts
     public float viewportPaddingX = 0.9f; // Balanced buffer to prevent hiding under the notch
     private Vector3 bottomLeft;
@@ -136,6 +122,9 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
         totalDistance = 0f;
         peakDistance = 0f;
         transform.localRotation = Quaternion.identity; 
+        
+        // Ensure player starts at X = -6 and Idle on every scene load (Retry, Level 1, etc.)
+        PrepareForLevelStart();
     }
 
     public void ResetRetreatLimit()
@@ -159,22 +148,8 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
 
     void Update()
     {
+        UpdateViewportBounds();
         if (dead) return;
-
-        if (!introFinished)
-        {
-            DoIntroWalk();
-            transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
-            transform.localRotation = Quaternion.identity;
-            if (anim != null) anim.transform.localRotation = Quaternion.Euler(0, rotationRight, 0);
-
-            if (anim != null) 
-            {
-                anim.SetBool("walking", true);
-                anim.SetBool("Idle", false);
-            }
-            return;
-        } 
 
         if (portalExitSequenceActive) return;
 
@@ -190,43 +165,54 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
             return;
         }
 
+        // --- INTRO & MOVEMENT LOGIC ---
+        float hInput = 0f;
+        bool jumpInput = Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space);
+
+        if (!introFinished)
+        {
+            // Auto-move right during intro
+            hInput = 1f;
+            
+            // Check if we reached stop position
+            if (transform.position.x >= stopX)
+            {
+                introFinished = true;
+            }
+        }
+        else
+        {
+            // Normal Input
+            hInput = Input.GetAxisRaw("Horizontal");
+            if (isLevelEnding) hInput = 1f;
+            else
+            {
+                if (mobileLeft) hInput = -1f;
+                if (mobileRight) hInput = 1f;
+            }
+        }
+
         bool physicsGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         bool clampGrounded = (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4 && transform.position.y <= -3.69f);
         isGrounded = physicsGrounded || clampGrounded;
 
         if (isGrounded && rb.linearVelocity.y <= 0.1f) ResetJumps();
 
-        float hInput = Input.GetAxisRaw("Horizontal");
-        if (isLevelEnding) hInput = 1f;
-        else
-        {
-            if (mobileLeft) hInput = -1f;
-            if (mobileRight) hInput = 1f;
-        }
+        // Speed during intro is forced to introSpeed, otherwise use moveRight/LeftSpeed
+        float speedMultiplier = !introFinished ? (introSpeed / moveRightSpeed) : 1f;
+        float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed) * speedMultiplier;
 
-        float desiredVelocity = hInput * (hInput > 0 ? moveRightSpeed : moveLeftSpeed);
-        bool isStopping = (hInput == 0);
-        bool isTurning = (desiredVelocity > 0 && currentHorizontalVelocity < 0) || (desiredVelocity < 0 && currentHorizontalVelocity > 0);
-        
-        float currentDecelRate = isStopping ? stoppingDeceleration : deceleration;
-        float accelRate = isTurning ? (deceleration * 2f) : (Mathf.Abs(desiredVelocity) > 0.01f ? acceleration : currentDecelRate);
-        
-        if (!isGrounded) accelRate *= airAccelerationMultiplier;
-        currentHorizontalVelocity = Mathf.MoveTowards(currentHorizontalVelocity, desiredVelocity, accelRate * Time.deltaTime);
-        
-        if (isStopping && Mathf.Abs(currentHorizontalVelocity) < 0.01f) currentHorizontalVelocity = 0f;
-        targetVelocityX = currentHorizontalVelocity;
+        targetVelocityX = desiredVelocity;
+        currentHorizontalVelocity = targetVelocityX; 
 
         // Dynamic animator fetch for multiple character skins
         if (anim == null || !anim.gameObject.activeInHierarchy)
             anim = GetComponentInChildren<Animator>();
 
-        // Retro (Geriye Gidiş) sınırı: fixed world limit (minX) kullanılmalı.
         bool isAtRetreatLimit = (transform.position.x <= CurrentLeftBoundaryX && hInput < 0);
         
         if (isAtRetreatLimit)
         {
-            // On first contact with the left retreat boundary, immediately refresh jump charges.
             if (!wasAtRetreatLimit) ResetJumps();
 
             GameSpeed.Multiplier = 0f; // Dünyayı dondur
@@ -236,12 +222,17 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
         }
         else
         {
-            GameSpeed.Multiplier = 1f; // Dünyayı çöz
+            // Reset to base speed only if we were frozen at the retreat limit and are now moving away
+            // Start gameplay movement ONLY when player provides input (Keyboard or Mobile)
+            bool hasMovementInput = (hInput != 0) || jumpInput || IsMovingLeft || IsMovingRight || (rb.linearVelocity.y > 0.1f);
+            if (GameSpeed.Multiplier < 0.01f && !stuckByRules() && introFinished && hasMovementInput) 
+            {
+                float baseSpeed = (LevelManager.Instance != null) ? LevelManager.Instance.GetCurrentBaseSpeed() : 1f;
+                GameSpeed.Multiplier = baseSpeed;
+                if (LevelManager.Instance != null) LevelManager.Instance.SetTargetSpeed(baseSpeed);
+            }
         }
 
-        // If we were at the left retreat limit and the player starts moving right,
-        // or is pushing right near the wall, immediately and continuously restore jump availability.
-        // This ensures the player can always jump out of the corner reliably.
         if (transform.position.x <= (CurrentLeftBoundaryX + 0.1f) && hInput > 0.1f)
         {
             ResetJumps();
@@ -267,15 +258,13 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
             anim.transform.localRotation = Quaternion.RotateTowards(anim.transform.localRotation, Quaternion.Euler(0, targetRY, 0), rotationSpeed * Time.deltaTime);
         }
 
-        // Explicitly separate Jump input from Horizontal input
-        bool jumpInput = Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space);
-        if (jumpInput) MobileJumpDown();
+        if (jumpInput && introFinished) MobileJumpDown(); // No jumping during intro
     }
+
+    private bool stuckByRules() => rules != null && rules.IsStuck;
 
     void FixedUpdate()
     {
-        UpdateViewportBounds();
-
         if (rules != null && rules.IsHorizontalBlocked && targetVelocityX > 0)
         {
             targetVelocityX = 0f;
@@ -290,10 +279,10 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
             appliedHorizontalVelocity = 0f;
         }
 
-        if (!introFinished || (rules != null && rules.IsDead)) return;
+        if (rules != null && rules.IsDead) return;
         if (portalExitSequenceActive) return;
 
-        float distanceStep = targetVelocityX * GameSpeed.Multiplier * Time.fixedDeltaTime;
+        float distanceStep = (CurrentVelocityX + Mathf.Max(0, appliedHorizontalVelocity)) * GameSpeed.Multiplier * Time.fixedDeltaTime;
         if (transform.position.x <= CurrentLeftBoundaryX && distanceStep < 0) distanceStep = 0; 
 
         totalDistance += distanceStep;
@@ -311,13 +300,26 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
             finalVelocityX *= groundedSpeedMultiplier;
         }
 
-        float blendDuration = Mathf.Max(landingVelocityBlendTime, 0.01f);
-        float currentPhysicsDecel = (Mathf.Abs(finalVelocityX) < 0.01f) ? stoppingDeceleration : deceleration;
-        float blendRate = (Mathf.Abs(finalVelocityX) > 0.01f) ? Mathf.Abs(finalVelocityX - appliedHorizontalVelocity) / blendDuration : currentPhysicsDecel;
-        appliedHorizontalVelocity = Mathf.MoveTowards(appliedHorizontalVelocity, finalVelocityX, blendRate * Time.fixedDeltaTime);
+        // --- SMOOTH MOVEMENT CALCULATION ---
+        bool isStopping = (targetVelocityX == 0);
+        bool isTurning = (targetVelocityX > 0 && appliedHorizontalVelocity < 0) || (targetVelocityX < 0 && appliedHorizontalVelocity > 0);
+        float currentDecelRate = isStopping ? stoppingDeceleration : deceleration;
+        float accelRate = isTurning ? (deceleration * 2f) : (Mathf.Abs(targetVelocityX) > 0.01f ? acceleration : currentDecelRate);
+        
+        appliedHorizontalVelocity = Mathf.MoveTowards(appliedHorizontalVelocity, finalVelocityX, accelRate * Time.fixedDeltaTime);
 
-        if (transform.position.x >= maxX && appliedHorizontalVelocity > 0) appliedHorizontalVelocity = 0f;
-        rb.linearVelocity = new Vector2(appliedHorizontalVelocity, rb.linearVelocity.y);
+        // Strict capping to prevent any buildup
+        appliedHorizontalVelocity = Mathf.Clamp(appliedHorizontalVelocity, -moveLeftSpeed * 0.5f, moveRightSpeed * 0.5f);
+
+        float physicsVelocityX = appliedHorizontalVelocity;
+        
+        // --- RIGHT BOUNDARY (maxX) VELOCITY CLAMPING ---
+        if (transform.position.x >= maxX && physicsVelocityX > 0)
+        {
+            physicsVelocityX = 0f;
+        }
+
+        rb.linearVelocity = new Vector2(physicsVelocityX, rb.linearVelocity.y);
 
         if (rb.linearVelocity.y < 0)
         {
@@ -328,25 +330,21 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
         }
 
-        if (transform.position.x > maxX)
+        if (transform.position.x > maxX + 0.05f)
         {
             rb.position = new Vector2(maxX, rb.position.y);
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            appliedHorizontalVelocity = 0f;
         }
     }
 
     void LateUpdate()
     {
-        UpdateViewportBounds();
         if (portalExitSequenceActive) return;
         if (!useViewportClamping) return;
         
-        float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
-        if (clampedX != transform.position.x)
+        if (transform.position.x > maxX + 0.05f || transform.position.x < minX - 0.05f)
         {
+            float clampedX = Mathf.Clamp(transform.position.x, minX, maxX);
             transform.position = new Vector3(clampedX, transform.position.y, transform.position.z);
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
         }
 
         if (LevelManager.Instance != null && LevelManager.Instance.currentLevel <= 4)
@@ -370,17 +368,11 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
         }
     }
 
-    void DoIntroWalk()
-    {
-        transform.position = Vector3.MoveTowards(transform.position, new Vector3(stopX, transform.position.y, transform.position.z), introSpeed * Time.deltaTime);
-        if (Mathf.Abs(transform.position.x - stopX) < 0.1f || transform.position.x >= maxX - 0.1f) introFinished = true;
-    }
-
     public void ResetJumps() => jumpsLeft = maxJumps;
     public void TryJump()
     {
         if (jumpsLeft <= 0) return;  
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x * jumpTakeoffHorizontalMultiplier, 0f);
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset Y only, preserve X for constant speed
         rb.AddForce(Vector2.up * (jumpForce * currentJumpMultiplier), ForceMode2D.Impulse);
         if (AudioManager.Instance != null) AudioManager.Instance.PlayJump();
         jumpsLeft--;
@@ -395,7 +387,37 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
     public bool IsMovingLeft => Input.GetKey(KeyCode.LeftArrow) || mobileLeft;
     public bool IsMovingRight => Input.GetKey(KeyCode.RightArrow) || mobileRight;
     
-    public float CurrentVelocityX => (rules != null && (rules.IsHorizontalBlocked || GameSpeed.Multiplier <= 0.01f) && currentHorizontalVelocity > 0) ? 0f : currentHorizontalVelocity;
+    public float CurrentVelocityX
+    {
+        get
+        {
+            if (rules != null && (rules.IsHorizontalBlocked || GameSpeed.Multiplier <= 0.01f)) return 0f;
+            
+            float baseV = appliedHorizontalVelocity;
+
+            // --- RELATIVE VELOCITY COMPENSATION (Surgical Fix) ---
+            // Formula: TotalRelativeSpeed = CatVelocityOnScreen + WorldScrollSpeed
+            // WorldScrollSpeed = CurrentVelocityX * GameSpeed.Multiplier
+            // Goal: Relative speed before limit (V + V*M) must equal relative speed at limit (0 + V_Compensated * M).
+            // Solving (V + VM) = V_Comp * M  =>  V_Comp = V * (1 + 1/M)
+            if (transform.position.x >= maxX && baseV > 0)
+            {
+                float compensatedV = baseV * (1f + (1f / GameSpeed.Multiplier));
+                
+                // Debug log only at the limit (guarded)
+                if (transform.position.x >= maxX + 0.01f && Time.frameCount % 100 == 0)
+                {
+                    Debug.Log($"[SPEED_CLAMP] Level: {LevelManager.Instance?.currentLevel}, " +
+                              $"CatV: {baseV:F2}, M: {GameSpeed.Multiplier:F2}, " +
+                              $"CompV: {compensatedV:F2}, FinalWorldV: {compensatedV * GameSpeed.Multiplier:F2}");
+                }
+                
+                return compensatedV;
+            }
+
+            return baseV;
+        }
+    }
     
     public void MobileJumpDown()
     {
@@ -438,7 +460,10 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
 
     public void PrepareForLevelStart()
     {
-        float targetX = (levelStartPoint != null) ? levelStartPoint.position.x : stopX;
+        int levelNum = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 0;
+        Debug.Log($"[SPAWN_START] Level: {levelNum}, Position Before: {transform.position}");
+
+        float targetX = -6f; // Forced to -6f per user request for all levels
         float probeBaseY = (levelStartPoint != null) ? levelStartPoint.position.y : transform.position.y;
         float targetY = probeBaseY;
 
@@ -453,7 +478,7 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
         {
             rb.bodyType = RigidbodyType2D.Dynamic;
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-            rb.linearVelocity = Vector2.zero;
+            rb.linearVelocity = Vector2.zero; // RB Velocity Reset
             rb.position = new Vector2(targetX, targetY);
         }
         else transform.position = new Vector3(targetX, targetY, transform.position.z);
@@ -462,21 +487,29 @@ public float jumpTakeoffHorizontalMultiplier = 0.7f; // Damp X speed exactly whe
         targetVelocityX = 0f;
         appliedHorizontalVelocity = 0f;
         mobileLeft = mobileRight = wasAtRetreatLimit = dead = false;
-        isGrounded = introFinished = true;
+        
+        // --- Intro Reset ---
+        // Spawn exactly at -6f with no offset or intro walk
+        introFinished = true; 
+        isGrounded = true;
+        
         WorldDirection = 1;
         jumpDisabled = isLevelEnding = false;
         ResetJumps();
 
         if (anim != null)
         {
-            anim.SetBool("walking", false);
+            anim.SetBool("walking", false); 
             anim.SetBool("Idle", true);
+            anim.Play("Idle", 0, 0f); // Force immediate transition to Idle state
             anim.transform.localRotation = Quaternion.Euler(0, rotationRight, 0);
         }
 
         transform.localRotation = Quaternion.identity;
         transform.localScale = new Vector3(originalAbsScaleX, transform.localScale.y, transform.localScale.z);
         ResetRetreatLimit();
+
+        Debug.Log($"[SPAWN_FINISH] Level: {levelNum}, Position After: {transform.position}, Intro Disabled: {introFinished}");
     }
 
     public void FreezeForTransition(bool freeze)

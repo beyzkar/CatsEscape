@@ -56,14 +56,12 @@ namespace CatsEscape.Networking
             // If the unloaded scene was the GameScene and we haven't sent a result, it's an abandonment
             if (scene.name == "GameScene")
             {
-                Debug.Log("[RunState] GameScene unloaded. Checking for abandonment...");
                 SendAbandonedResult();
             }
         }
 
         public void ResetStats(int levelNumber)
         {
-            Debug.Log($"[RunState] Game started level={levelNumber} sessionId={GameDataApiClient.Instance?.SessionId}");
             currentLevelNumber = levelNumber;
             fishSpawnCount = 0;
             potionSpawnCount = 0;
@@ -81,8 +79,6 @@ namespace CatsEscape.Networking
             
             levelStartedAtISO = DateTime.UtcNow.ToString("O");
             levelStartedAtRealTime = Time.realtimeSinceStartup;
-
-            Debug.Log("[ACTIVITY] game_start sent, result=null");
             if (GameDataApiClient.Instance != null)
             {
                 GameDataApiClient.Instance.SendActivity("game_start", currentLevelNumber, null);
@@ -106,15 +102,12 @@ namespace CatsEscape.Networking
         {
             if (resultAlreadySent)
             {
-                Debug.Log("[ACTIVITY] skipped duplicate result");
                 return;
             }
 
             resultAlreadySent = true;
             hasLevelEnded = true;
             hasActiveLevelRun = false;
-
-            Debug.Log($"[ACTIVITY] level_result sent, result={result}");
 
             if (GameDataApiClient.Instance != null)
             {
@@ -139,9 +132,6 @@ namespace CatsEscape.Networking
                 string uid = (AuthManager.Instance != null) ? AuthManager.Instance.UserId : "UNKNOWN";
                 string sid = (GameDataApiClient.Instance != null) ? GameDataApiClient.Instance.SessionId : "UNKNOWN";
                 float duration = GetLevelDuration();
-                
-                Debug.Log($"[LEVEL] Abandoned (player exited early). Reason: {reason}");
-                Debug.Log($"[LEVEL] Details -> UID: {uid}, Level: {currentLevelNumber}, Duration: {duration:F2}s, Session: {sid}");
                 
                 TrackLevelResult("abandoned");
                 yield return null; // Small wait for coroutine consistency

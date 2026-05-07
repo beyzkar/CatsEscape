@@ -9,6 +9,7 @@ namespace CatsEscape.Networking
         public string levelResult; // "completed" | "failed" | "abandoned"
         public string userName;
         public int xpEarned;
+        public int totalXP;
         public int fishSpawnCount;
         public int potionSpawnCount;
         public int heartsGained;

@@ -15,12 +15,11 @@ public class LevelManager : MonoBehaviour
     public int currentLevel = 1;
     public int obstaclesPassed = 0;  
     
-    // Level persistence (static variable, -1: Not yet assigned)
     private static int savedLevel = -1;
     
     private int[] levelGoals = { 0, 5, 5, 5, 5, 5 };
 
-    public float[] levelSpeeds = { 0.8f, 1.1f, 1.5f, 2.0f, 2.6f };
+    public float[] levelSpeeds = { 0.8f, 1.0f, 1.25f, 1.5f, 1.8f };
     public float[] enemySpeeds = { 0f, 0f, 0.8f, 1.5f, 2.2f, 3.2f };
     
     [Header("Speed Smoothing")]
@@ -124,6 +123,7 @@ public class LevelManager : MonoBehaviour
     private bool worldStoppedForHome = false;
     private bool goalReachedPendingHome = false;
     private float distanceAtGoal = 0f;
+    private bool isProcessingVictory = false;
 
     private void Start()
     {
@@ -152,7 +152,6 @@ public class LevelManager : MonoBehaviour
         }
 
         transitionController.ForceReset();
-        Debug.Log("LEVEL_MANAGER: TransitionController başlatıldı ve gizlendi.");
     }
 
     private void Awake()
@@ -170,24 +169,21 @@ public class LevelManager : MonoBehaviour
         
         if (isForcedNewGame)
         {
-            Debug.Log("[GAME_SCENE] New Game mode detected, forcing Level 1 XP 0");
             currentLevel = 1;
             savedLevel = 1;
+            AuthManager.IsNewGameStart = false; // Consume the flag so retries don't reset to Level 1
         }
         else if (isResetPending)
         {
-            Debug.Log("[GAME_SCENE] Continue mode detected, but pending reset found. Starting Level 1.");
             currentLevel = 1;
             savedLevel = 1;
         }
         else if (savedLevel > 0)
         {
-            Debug.Log("[GAME_SCENE] Continue mode detected, loading cached level.");
             currentLevel = savedLevel;
         }
         else if (CatsEscape.Auth.AuthManager.Instance != null)
         {
-            Debug.Log("[GAME_SCENE] Continue mode detected, loading saved progress");
             currentLevel = CatsEscape.Auth.AuthManager.Instance.LastLevelReached;
             savedLevel = currentLevel;
         }
@@ -199,17 +195,27 @@ public class LevelManager : MonoBehaviour
 
         // --- NEW: Centralized XP Initialization ---
         int accountXP = 0;
-        if (isForcedNewGame || isResetPending)
+        string source = "NextLevel";
+
+        if (isForcedNewGame)
         {
+            source = "NewGame";
+            accountXP = 0;
+        }
+        else if (isResetPending)
+        {
+            source = "Continue"; 
             accountXP = 0;
         }
         else
         {
+            // If savedLevel > 0 and matches currentLevel, it's a Retry or NextLevel
+            bool isFreshSession = (savedLevel <= 0);
+            source = isFreshSession ? "Continue" : "NextLevel";
             accountXP = (CatsEscape.Auth.AuthManager.Instance != null) ? CatsEscape.Auth.AuthManager.Instance.LastSavedXP : 0;
         }
 
-        Debug.Log($"[PLAY] Initializing with Level={currentLevel}, XP={accountXP}");
-        ScoreManager.InitializeForLevel(currentLevel, accountXP);
+        ScoreManager.InitializeForLevel(currentLevel, accountXP, source);
         
         if (isResetPending && CatsEscape.Auth.AuthManager.Instance != null)
         {
@@ -251,6 +257,10 @@ public class LevelManager : MonoBehaviour
         UpdateInGameLevelText();
         ApplyPlayerOffset();
         PrepareHomeExitForCurrentLevel();
+
+        // --- Start Level in Static Idle State ---
+        GameSpeed.Multiplier = 0f;
+        targetGameMultiplier = 0f;
     }
 
     public static void ResetSavedLevel()
@@ -446,7 +456,6 @@ public class LevelManager : MonoBehaviour
 
     public void MainMenu()
     {
-        Debug.Log("[MAIN_MENU] Button clicked from Gameplay");
 
         // Try to send abandoned result if we are leaving an active level
         if (GameplayStatsTracker.Instance != null)
@@ -458,19 +467,13 @@ public class LevelManager : MonoBehaviour
         {
             if (CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset)
             {
-                Debug.Log("[MAIN_MENU] Final completed, resetting run progress.");
-                // The actual level/xp values were already set to 1/0 in ShowVictory
-                // But we ensure savedLevel is also reset so Awake loads from AuthManager
                 savedLevel = -1;
             }
             else
             {
-                Debug.Log("[MAIN_MENU] Not final completed, preserving progress.");
-                // savedLevel = -1 ensures next Awake loads from AuthManager (which has preserved progress)
                 savedLevel = -1;
             }
             
-            Debug.Log($"[PROGRESS] Saved currentLevel={CatsEscape.Auth.AuthManager.Instance.LastLevelReached}, xp={CatsEscape.Auth.AuthManager.Instance.LastSavedXP}, pendingNewGameReset={CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset}");
         }
 
         // XP reset is now handled centrally in Awake via InitializeForLevel
@@ -525,7 +528,9 @@ public class LevelManager : MonoBehaviour
 
     private void ShowVictory()
     {
-        Debug.Log("[FinalPortal] Player entered final portal - Processing completion");
+        if (isProcessingVictory) return;
+        isProcessingVictory = true;
+
         
         Time.timeScale = 0f;
         targetGameMultiplier = 0f;
@@ -536,19 +541,14 @@ public class LevelManager : MonoBehaviour
 
         if (isFinalLevel)
         {
-            Debug.Log("[FinalPortal] Final completed, opening scoreboard");
             if (AudioManager.Instance != null) AudioManager.Instance.PlayFinalWinSound();
             
             // Handle Stats & Progress
             if (CatsEscape.Auth.AuthManager.Instance != null)
             {
-                Debug.Log("[FINAL] Final portal reached. Marking game as completed.");
                 CatsEscape.Auth.AuthManager.Instance.TotalCompletions++;
-                CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset = true;
-                
-                // We also set the base stats to 1 and 0 for the "Pending" state
-                CatsEscape.Auth.AuthManager.Instance.LastLevelReached = 1;
                 CatsEscape.Auth.AuthManager.Instance.LastSavedXP = 0;
+                CatsEscape.Auth.AuthManager.Instance.PendingNewGameReset = true;
             }
 
             // Open Scoreboard/Leaderboard
@@ -582,7 +582,6 @@ public class LevelManager : MonoBehaviour
             float duration = GameplayStatsTracker.Instance.GetLevelDuration();
             int xp = (ScoreManager.Instance != null ? ScoreManager.Instance.GetTotalXP() : 0);
 
-            Debug.Log($"[LEVEL] Details -> UID: {uid}, Level: {currentLevel}, Duration: {duration:F2}s, XP: {xp}");
             
             GameplayStatsTracker.Instance.TrackLevelResult("completed");
         }
@@ -590,13 +589,19 @@ public class LevelManager : MonoBehaviour
 
     public void NextLevel()
     {
-        if (currentLevel >= 5) return;
+        if (isProcessingVictory) return;
+        isProcessingVictory = true;
+
+        if (currentLevel >= 5) 
+        {
+            isProcessingVictory = false;
+            return;
+        }
 
         if (GameplayStatsTracker.Instance != null) 
         {
             if (!GameplayStatsTracker.Instance.resultAlreadySent)
             {
-                Debug.Log("[LEVEL] Completed (NextLevel transition)");
                 GameplayStatsTracker.Instance.TrackLevelResult("completed");
             }
         }
@@ -618,6 +623,7 @@ public class LevelManager : MonoBehaviour
         if (CatsEscape.Auth.AuthManager.Instance != null)
         {
             CatsEscape.Auth.AuthManager.Instance.LastLevelReached = currentLevel;
+            CatsEscape.Auth.AuthManager.Instance.LastSavedXP = (ScoreManager.Instance != null) ? ScoreManager.Instance.GetTotalXP() : 0;
         }
 
         obstaclesPassed = 0;
@@ -632,9 +638,19 @@ public class LevelManager : MonoBehaviour
             PlayerObstacleRules rules = playerMovement.GetComponent<PlayerObstacleRules>();
             if (rules != null) rules.ResetForLevelStart();
             playerMovement.PrepareForLevelStart();
+            
+            // --- Start Next Level in Static Idle State ---
+            GameSpeed.Multiplier = 0f;
+            targetGameMultiplier = 0f;
+            
             if (rules != null) rules.UpdateGameSpeed();
         }
-        else GameSpeed.Multiplier = GetCurrentBaseSpeed();
+        else
+        {
+            float baseSpeed = GetCurrentBaseSpeed();
+            GameSpeed.Multiplier = baseSpeed;
+            targetGameMultiplier = baseSpeed;
+        }
 
         if (AudioManager.Instance != null) AudioManager.Instance.PlayBackgroundMusic();
         if (transitionController != null) transitionController.ForceReset();
@@ -645,7 +661,20 @@ public class LevelManager : MonoBehaviour
         ApplyPlayerOffset();
         PrepareHomeExitForCurrentLevel();
 
+        isProcessingVictory = false;
         if (GameplayStatsTracker.Instance != null) GameplayStatsTracker.Instance.ResetStats(currentLevel);
+    }
+
+    public void RestartCurrentLevel()
+    {
+        // For Retry, we do NOT update LastSavedXP in AuthManager.
+        // This ensures the next Awake loads the levelStartXP.
+        savedLevel = currentLevel; 
+        Time.timeScale = 1f;
+        GameSpeed.Multiplier = 1f;
+        
+        ScoreManager.ResetToLevelStartXP(); 
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     private void ClearCurrentObstacles()

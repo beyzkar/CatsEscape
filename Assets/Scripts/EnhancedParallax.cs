@@ -48,7 +48,6 @@ public class EnhancedParallax : MonoBehaviour
         }
         
         AlignAllLayers();
-        Debug.Log("Background fitted to camera height.");
     }
 
     [ContextMenu("Align All Layers")]

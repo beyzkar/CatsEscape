@@ -201,9 +201,6 @@ public class PlayerObstacleRules : MonoBehaviour
         stuck = true;
         lastHitWall = hitSource; // Track if it's a solid obstacle or just the screen edge
 
-        // POSITION SNAPPING REMOVED (User Request):
-        // No longer forcing the player to snap to a specific X coordinate upon impact.
-        // The character will now stop exactly where the physics engine caught the collision.
 
         if (animator != null) 
         {
@@ -262,7 +259,6 @@ public class PlayerObstacleRules : MonoBehaviour
             // Preservation Rule: Keep the manually set size from the prefab/LevelManager.
             boxCol.offset = center;
             
-            Debug.Log("Player: Auto-Centered Offset Applied (Size Preserved).");
         }
     }
 
@@ -521,7 +517,6 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (isMovingAway) return;
 
-            // Yan vuruş (duvara çarpma): Hassasiyeti artırdık (0.3 -> 0.1)
             bool shouldFreeze = isTrigger ? (transform.position.y < other.GetComponent<Collider2D>().bounds.center.y + 0.5f) : (Mathf.Abs(normal.x) > 0.1f);
             if (shouldFreeze) 
             {
@@ -668,16 +663,8 @@ public class PlayerObstacleRules : MonoBehaviour
             baseSpeed = LevelManager.Instance.GetCurrentBaseSpeed();
         }
 
-        float multiplier = 1f;
-        if (isInvincible)
-        {
-            multiplier = 1.4f; // Increased from 1.2f for more noticeable boost
-        }
-        else if (isPotionActive)
-        {
-            multiplier = 1.2f;
-        }
-
+        float multiplier = 1f; // User request: Constant speed, no hidden multipliers from power-ups
+        
         if (LevelManager.Instance != null)
         {
             LevelManager.Instance.SetTargetSpeed(baseSpeed * multiplier);
@@ -703,6 +690,7 @@ public class PlayerObstacleRules : MonoBehaviour
             animator.speed = 1f;
             animator.SetBool("walking", false);
             animator.SetBool("Idle", true);
+            animator.Play("Idle", 0, 0f); // Force immediate transition to Idle state
         }
 
         if (rb != null)
@@ -750,7 +738,6 @@ public class PlayerObstacleRules : MonoBehaviour
 
     private void StartCollisionIgnore()
     {
-        Debug.Log("[Recovery] Started - Collecting colliders to ignore");
         ResetCollisionIgnore(); // Ensure clean state
         
         Collider2D playerCollider = GetComponent<Collider2D>();
@@ -792,7 +779,6 @@ public class PlayerObstacleRules : MonoBehaviour
 
             if (shouldIgnore)
             {
-                Debug.Log($"[Recovery] Ignoring collider: {name} / Tag: {tag}");
                 Physics2D.IgnoreCollision(playerCollider, otherCol, true);
                 if (!currentlyIgnoredColliders.Contains(otherCol))
                     currentlyIgnoredColliders.Add(otherCol);
@@ -804,7 +790,6 @@ public class PlayerObstacleRules : MonoBehaviour
     {
         if (currentlyIgnoredColliders == null || currentlyIgnoredColliders.Count == 0) return;
 
-        Debug.Log("[Recovery] Ended and collisions restored");
         Collider2D playerCollider = GetComponent<Collider2D>();
         if (playerCollider == null) return;
 

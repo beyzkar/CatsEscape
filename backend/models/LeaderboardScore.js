@@ -13,7 +13,7 @@ const leaderboardScoreSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index to quickly find a player's best score for a specific level
-leaderboardScoreSchema.index({ uid: 1, levelNumber: 1 }, { unique: true });
+// Non-unique index for fast lookups
+leaderboardScoreSchema.index({ levelNumber: 1, score: -1 });
 
 module.exports = mongoose.model('LeaderboardScore', leaderboardScoreSchema);

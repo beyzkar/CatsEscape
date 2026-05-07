@@ -78,6 +78,7 @@ public class LeaderboardApiService : MonoBehaviour
         string idToken = tokenTask.Result;
 
         string url = CombineUrl(BaseUrl, submitScorePath, null);
+        Debug.Log($"[LeaderboardApi] POSTing to: {url} | UID: {AuthManager.Instance.UserId}");
         var payload = new ScoreSubmitRequest
         {
             uid = AuthManager.Instance.UserId,
@@ -92,6 +93,11 @@ public class LeaderboardApiService : MonoBehaviour
         string json = JsonUtility.ToJson(payload);
         byte[] body = Encoding.UTF8.GetBytes(json);
 
+        if (logRequests)
+        {
+            Debug.Log($"[LEADERBOARD_SAVE] Submit Start UID={payload.uid} UserName={payload.userName} Score={score} Level={levelNumber}");
+        }
+
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             req.uploadHandler = new UploadHandlerRaw(body);
@@ -101,18 +107,19 @@ public class LeaderboardApiService : MonoBehaviour
             if (requestTimeoutSeconds > 0)
                 req.timeout = requestTimeoutSeconds;
 
-            if (logRequests)
-                Debug.Log($"[LeaderboardApi] POST {url}\n{json}");
-
             yield return req.SendWebRequest();
 
             result.responseCode = req.responseCode;
+            // result.responseCode = req.responseCode;
+            
             if (req.result != UnityWebRequest.Result.Success)
             {
                 result.success = false;
                 result.errorMessage = $"POST failed: {req.error} (HTTP {req.responseCode})";
                 if (!string.IsNullOrEmpty(req.downloadHandler?.text))
+                {
                     result.errorMessage += " Body: " + req.downloadHandler.text;
+                }
             }
             else if (req.responseCode >= 400)
             {
@@ -182,6 +189,9 @@ public class LeaderboardApiService : MonoBehaviour
             }
 
             string text = req.downloadHandler?.text;
+            if (logRequests)
+                Debug.Log($"[LeaderboardApi] Response JSON: {text}");
+
             if (string.IsNullOrEmpty(text))
             {
                 onComplete?.Invoke(false, "GET returned empty body.", null);

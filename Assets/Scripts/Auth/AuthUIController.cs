@@ -24,7 +24,6 @@ namespace CatsEscape.Auth
 
         private void Start()
         {
-            Debug.Log("[AUTH_FLOW] UI Controller initializing...");
             
             // Handle Isolation Mode Toggles
             if (googleLoginButton != null)
@@ -48,7 +47,6 @@ namespace CatsEscape.Auth
             }
 
             UpdateUI();
-            Debug.Log("[AUTH_FLOW] UI Controller ready.");
         }
 
         private void OnDestroy()
@@ -67,7 +65,6 @@ namespace CatsEscape.Auth
 
         private void HandleGuestLogin()
         {
-            Debug.Log("[AUTH_FLOW] Guest login event received. Processing UI transition...");
             if (AuthManager.Instance != null)
             {
                 AuthManager.Instance.StartCoroutine(DeferredDeactivationRoutine());
@@ -88,7 +85,6 @@ namespace CatsEscape.Auth
         {
             try
             {
-                Debug.Log("[AUTH_FLOW] Deactivating AuthOverlay...");
                 this.gameObject.SetActive(false);
                 
                 // Note: We removed CompleteGuestFlowAndStartGame from here because
@@ -108,15 +104,12 @@ namespace CatsEscape.Auth
                 return;
             }
 
-            Debug.Log("[AUTH_ANDROID] Google button clicked");
-            Debug.Log("[AUTH_FLOW] STEP 1: Google Button Clicked in UI.");
             SetButtonsInteractable(false);
             
             try
             {
                 if (AuthManager.Instance != null)
                 {
-                    Debug.Log("[AUTH_FLOW] STEP 1.1: Handing over to AuthManager.SignInWithGoogleAsync()...");
                     await AuthManager.Instance.SignInWithGoogleAsync();
                 }
                 else
@@ -131,7 +124,6 @@ namespace CatsEscape.Auth
             finally
             {
                 SetButtonsInteractable(true);
-                Debug.Log("[AUTH_FLOW] STEP 1.2: UI Buttons re-enabled.");
             }
         }
 
@@ -139,8 +131,6 @@ namespace CatsEscape.Auth
         {
             if (!allowGuestLogin) return;
 
-            Debug.Log("[AUTH_ANDROID] Guest button clicked");
-            Debug.Log("[AUTH_FLOW] Guest button clicked.");
             if (AuthManager.Instance != null)
             {
                 AuthManager.Instance.ContinueAsGuest();

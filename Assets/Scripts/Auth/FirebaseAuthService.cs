@@ -66,7 +66,6 @@ namespace CatsEscape.Auth
         public async Task InitAsync(string webClientId)
         {
             _webClientId = webClientId;
-            Debug.Log($"[AUTH_FLOW] InitAsync started. WebClientId: {webClientId}");
 
 #if USE_FIREBASE_AUTH
             try
@@ -87,7 +86,6 @@ namespace CatsEscape.Auth
                     _auth = FirebaseAuth.GetAuth(_app);
                     _auth.StateChanged += AuthStateChanged;
                     _isInitialized = true;
-                    Debug.Log("[AUTH_FLOW] Firebase Initialized Success.");
 
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
                     // Configure Google Sign-In ONCE here during initialization
@@ -99,7 +97,6 @@ namespace CatsEscape.Auth
                             RequestIdToken = true,
                             UseGameSignIn = false
                         };
-                        Debug.Log("[AUTH_FLOW] GoogleSignIn Configuration applied successfully during Init.");
                     }
                     else
                     {
@@ -121,7 +118,6 @@ namespace CatsEscape.Auth
                 _isInitialized = false; // Fix: Stay false if exception occurs
             }
 #else
-            Debug.Log("[AUTH_FLOW] InitAsync: Firebase Auth is disabled (USE_FIREBASE_AUTH not defined).");
             _errorMessage = "Scripting Define Symbol (USE_FIREBASE_AUTH) is missing.";
             _isInitialized = true;
             await Task.Yield();
@@ -137,7 +133,6 @@ namespace CatsEscape.Auth
                 _user = _auth.CurrentUser;
                 if (signedIn)
                 {
-                    Debug.Log($"[AUTH_FLOW] User Logged In: {_user.DisplayName}");
                 }
             }
         }
@@ -145,7 +140,6 @@ namespace CatsEscape.Auth
 
         public async Task<bool> SignInWithGoogleAsync()
         {
-            Debug.Log("[AUTH_FLOW] SignInWithGoogleAsync entry.");
             if (!_isInitialized || _auth == null)
             {
                 Debug.LogError("[AUTH_FLOW] Service not initialized or _auth is null.");
@@ -162,7 +156,6 @@ namespace CatsEscape.Auth
                 }
 
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-                Debug.Log("[AUTH_ANDROID] Google sign-in started");
                 var googleUser = await GoogleSignIn.DefaultInstance.SignIn();
 
                 if (googleUser == null)
@@ -171,13 +164,11 @@ namespace CatsEscape.Auth
                     return false;
                 }
 
-                Debug.Log("[AUTH_ANDROID] Firebase credential sign-in started");
                 Credential credential = GoogleAuthProvider.GetCredential(googleUser.IdToken, null);
                 _user = await _auth.SignInWithCredentialAsync(credential);
                 
                 if (_user != null)
                 {
-                    Debug.Log($"[AUTH_ANDROID] Firebase credential sign-in success UID: {_user.UserId}");
                     return true;
                 }
                 else
@@ -205,7 +196,6 @@ namespace CatsEscape.Auth
         
         public async Task<bool> SignInAnonymouslyAsync()
         {
-            Debug.Log("[AUTH_FLOW] SignInAnonymouslyAsync entry.");
             if (!_isInitialized || _auth == null)
             {
                 Debug.LogError("[AUTH_FLOW] Service not initialized or _auth is null.");
@@ -215,13 +205,11 @@ namespace CatsEscape.Auth
 #if USE_FIREBASE_AUTH
             try
             {
-                Debug.Log("[AUTH_ANDROID] Calling Firebase anonymous sign-in");
                 var authResult = await _auth.SignInAnonymouslyAsync();
                 _user = authResult?.User;
                 
                 if (_user != null)
                 {
-                    Debug.Log($"[AUTH_ANDROID] Firebase anonymous sign-in success UID: {_user.UserId}");
                     return true;
                 }
                 else
@@ -243,23 +231,18 @@ namespace CatsEscape.Auth
 
         public async Task<bool> TrySilentLoginAsync()
         {
-            Debug.Log("[AUTH_FLOW] Silent login check starting...");
 #if USE_FIREBASE_AUTH
             if (!_isInitialized || _auth == null) return false;
             try
             {
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-                Debug.Log("[AUTH_FLOW] Calling Googe SignInSilently...");
                 var googleUser = await GoogleSignIn.DefaultInstance.SignInSilently();
                 if (googleUser != null)
                 {
-                    Debug.Log("[AUTH_FLOW] Silent SUCCESS. Binding to Firebase...");
                     Credential credential = GoogleAuthProvider.GetCredential(googleUser.IdToken, null);
                     _user = await _auth.SignInWithCredentialAsync(credential);
-                    Debug.Log("[AUTH_FLOW] Silent Bind SUCCESS.");
                     return _user != null;
                 }
-                Debug.Log("[AUTH_FLOW] No silent user detected.");
 #else
                 // Satisfy async requirement in Editor
                 await Task.Yield();
@@ -275,7 +258,6 @@ namespace CatsEscape.Auth
 
         public void SignOut()
         {
-            Debug.Log("[Auth] Sign-out requested.");
 #if USE_FIREBASE_AUTH
             try 
             {
@@ -284,7 +266,6 @@ namespace CatsEscape.Auth
                 GoogleSignIn.DefaultInstance?.SignOut();
 #endif
                 _user = null;
-                Debug.Log("[Auth] Sign-out complete.");
             }
             catch (Exception ex)
             {
@@ -302,7 +283,6 @@ namespace CatsEscape.Auth
                     string token = await _user.TokenAsync(forceRefresh);
                     if (!string.IsNullOrEmpty(token))
                     {
-                        Debug.Log("[AUTH_ANDROID] Firebase ID token retrieved successfully");
                     }
                     return token;
                 }

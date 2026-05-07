@@ -23,6 +23,5 @@ public class CharacterSelector : MonoBehaviour
             }
         }
 
-        Debug.Log("In-Game: Character " + selectedIndex + " activated.");
     }
 }

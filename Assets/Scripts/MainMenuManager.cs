@@ -12,6 +12,7 @@ public class MainMenuManager : MonoBehaviour
     public GameObject mainMenuView;         
     public GameObject authPanel;            
     public UnityEngine.UI.Button continueButton;
+    public UnityEngine.UI.Button newGameButton;
 
     private void Start()
     {
@@ -49,18 +50,44 @@ public class MainMenuManager : MonoBehaviour
 
         bool isAuthenticated = AuthManager.Instance.IsAuthenticated;
         bool blockForUsername = AuthManager.Instance.IsUsernameRequiredFlowPending;
-        bool showMainMenu = isAuthenticated && !blockForUsername;
         
-        if (mainMenuView != null) mainMenuView.SetActive(showMainMenu);
-        if (authPanel != null) authPanel.SetActive(!isAuthenticated && !blockForUsername);
-        
-        if (showMainMenu) 
+
+        // Logic for which root panel to show
+        bool showPlayMenu = isAuthenticated && !blockForUsername;
+        bool showAuthOverlay = !isAuthenticated && !blockForUsername;
+
+        if (showPlayMenu)
         {
-            UpdateContinueButtonState();
+            ShowPlayMenuImmediate();
         }
-        else 
+        else
         {
+            if (mainMenuView != null) mainMenuView.SetActive(false);
+            if (authPanel != null) authPanel.SetActive(showAuthOverlay);
             if (characterSelectPanel != null) characterSelectPanel.SetActive(false);
+        }
+    }
+
+    private void ShowPlayMenuImmediate()
+    {
+        
+        if (mainMenuView != null) mainMenuView.SetActive(true);
+        if (authPanel != null) authPanel.SetActive(false);
+        if (characterSelectPanel != null) characterSelectPanel.SetActive(false);
+
+        // Ensure New Game and Continue are VISIBLE
+        if (newGameButton != null) 
+        {
+            newGameButton.gameObject.SetActive(true);
+            newGameButton.interactable = true;
+        }
+
+        if (continueButton != null)
+        {
+            continueButton.gameObject.SetActive(true);
+            // Default to non-interactable until we ARE SURE there is progress
+            // (either from local PlayerPrefs baseline or background sync)
+            UpdateContinueButtonState();
         }
     }
 
@@ -73,20 +100,21 @@ public class MainMenuManager : MonoBehaviour
     {
         if (continueButton != null && AuthManager.Instance != null)
         {
+            // Note: LastLevelReached and LastSavedXP look at local PlayerPrefs if _cachedProgress is null
             bool hasProgress = AuthManager.Instance.LastLevelReached > 1 || AuthManager.Instance.LastSavedXP > 0;
-            continueButton.interactable = hasProgress;
+            
+            if (continueButton.interactable != hasProgress)
+            {
+                continueButton.interactable = hasProgress;
+            }
         }
     }
 
     public void ContinueGame()
     {
-        Debug.Log("[MAIN_MENU] Continue clicked.");
-        
         AuthManager.IsNewGameStart = false;
-        Debug.Log("[CONTINUE] IsNewGameStart=false");
 
         var progress = ProgressManager.LoadProgress();
-        Debug.Log($"[CONTINUE] Loading saved progress: level={progress.currentLevel}, xp={progress.xp}");
 
         if (characterSelectPanel != null)
         {
@@ -101,10 +129,7 @@ public class MainMenuManager : MonoBehaviour
 
     public void NewStartGame()
     {
-        Debug.Log("[NEW_GAME] Starting fresh run");
-
         AuthManager.IsNewGameStart = true;
-        Debug.Log("[NEW_GAME] IsNewGameStart=true");
 
         // Reset ONLY run progress
         ProgressManager.CurrentLevel = 1;
@@ -113,8 +138,6 @@ public class MainMenuManager : MonoBehaviour
         // Ensure backend sync flags are also reset if needed
         ProgressManager.ResetRunProgressOnly(); 
         ProgressManager.Save();
-
-        Debug.Log("[NEW_GAME] Progress reset: level=1, xp=0");
 
         // Start the game flow (which might show character selection)
         if (characterSelectPanel != null)

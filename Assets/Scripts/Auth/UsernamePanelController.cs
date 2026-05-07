@@ -10,6 +10,7 @@ public class UsernamePanelController : MonoBehaviour
     public GameObject panel;
     public TMP_InputField usernameInput;
     public Button confirmButton;
+    public Button exitButton;
     public TMP_Text warningText;
     [Header("Optional: Menu Visibility")]
     public GameObject mainMenuView;
@@ -19,19 +20,22 @@ public class UsernamePanelController : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log("[USERNAME_UI] Controller Awake");
         if (panel != null) panel.SetActive(false);
         if (warningText != null) warningText.text = "";
 
         if (AuthManager.Instance != null)
         {
             AuthManager.Instance.OnUsernameRequired += ShowPanel;
-            Debug.Log("[USERNAME_UI] Subscribed to OnUsernameRequired");
         }
 
         if (confirmButton != null)
         {
             confirmButton.onClick.AddListener(OnConfirmButtonClicked);
+        }
+
+        if (exitButton != null)
+        {
+            exitButton.onClick.AddListener(OnExitButtonClicked);
         }
     }
 
@@ -45,16 +49,13 @@ public class UsernamePanelController : MonoBehaviour
 
     public void ShowPanel(string defaultName)
     {
-        Debug.Log($"[USERNAME_UI] Show panel called with defaultName={defaultName}");
         _defaultName = defaultName;
         
         if (panel != null) panel.SetActive(true);
-        Debug.Log($"[USERNAME_UI] UsernamePanel active={(panel != null && panel.activeSelf)}");
         if (warningText != null) warningText.text = "";
         if (mainMenuView != null) mainMenuView.SetActive(false);
         if (authPanel != null) authPanel.SetActive(false);
 
-        Debug.Log("[USERNAME] Opening username panel.");
 
         if (AuthManager.Instance.IsGuest)
         {
@@ -64,9 +65,6 @@ public class UsernamePanelController : MonoBehaviour
                 if (usernameInput != null) 
                 {
                     usernameInput.text = nextGuestName;
-                    Debug.Log($"[USERNAME_UI] Input text set to={nextGuestName}");
-                    Debug.Log($"[USERNAME] Guest default username: {nextGuestName}");
-                    Debug.Log($"[USERNAME] Input field pre-filled with: {nextGuestName}");
                 }
             });
         }
@@ -75,11 +73,20 @@ public class UsernamePanelController : MonoBehaviour
             if (usernameInput != null) 
             {
                 usernameInput.text = defaultName;
-                Debug.Log($"[USERNAME_UI] Input text set to={defaultName}");
-                Debug.Log($"[USERNAME] Google default username: {defaultName}");
-                Debug.Log($"[USERNAME] Input field pre-filled with: {defaultName}");
             }
         }
+    }
+
+    public void OnExitButtonClicked()
+    {
+        // Cancel the current session/login if user exits before picking a name
+        if (AuthManager.Instance != null)
+        {
+            AuthManager.Instance.SignOut();
+        }
+
+        if (panel != null) panel.SetActive(false);
+        if (authPanel != null) authPanel.SetActive(true);
     }
 
     public void OnConfirmButtonClicked()
@@ -100,14 +107,12 @@ public class UsernamePanelController : MonoBehaviour
 
         confirmButton.interactable = false;
         ShowWarning("Checking availability...");
-        Debug.Log($"[USERNAME] Checking availability: {chosenName}");
 
         GameDataApiClient.Instance.SetUsername(chosenName, (success, result) => {
             confirmButton.interactable = true;
 
             if (success)
             {
-                Debug.Log($"[USERNAME] Username saved: {result}");
                 AuthManager.Instance.FinalizeUsername(result);
                 if (panel != null) panel.SetActive(false);
                 if (mainMenuView != null) mainMenuView.SetActive(true);
@@ -117,11 +122,21 @@ public class UsernamePanelController : MonoBehaviour
                 if (result == "USERNAME_TAKEN")
                 {
                     ShowWarning("Username is already taken.");
-                    Debug.Log("[USERNAME] Username taken.");
                 }
                 else if (result == "USERNAME_EMPTY")
                 {
                     ShowWarning("Username cannot be empty.");
+                }
+                else if (result == "NETWORK_ERROR")
+                {
+                    Debug.LogWarning("[USERNAME] Server unreachable. Finalizing locally.");
+                    ShowWarning("Sunucuya bağlanılamadı. Yerel olarak devam ediliyor...");
+                    
+                    // Allow proceeding anyway - Requirement 9
+                    AuthManager.Instance.FinalizeUsername(chosenName);
+                    
+                    // Small delay to let user see the message before closing
+                    Invoke(nameof(HidePanelAndShowMenu), 1.5f);
                 }
                 else
                 {
@@ -129,6 +144,12 @@ public class UsernamePanelController : MonoBehaviour
                 }
             }
         });
+    }
+
+    private void HidePanelAndShowMenu()
+    {
+        if (panel != null) panel.SetActive(false);
+        if (mainMenuView != null) mainMenuView.SetActive(true);
     }
 
     private void ShowWarning(string message)

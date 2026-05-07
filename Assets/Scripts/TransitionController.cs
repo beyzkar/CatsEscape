@@ -16,7 +16,7 @@ public class TransitionController : MonoBehaviour
     [SerializeField] private float transitionDuration = 1.6f;
 
     [Header("Debug")]
-    [SerializeField] private bool showDebugLogs = true;
+    [SerializeField] private bool showDebugLogs = false;
 
     private bool isTransitioning = false;
     private RenderTexture runtimeRT; // Runtime'da oluşturulan RT
@@ -68,7 +68,6 @@ public class TransitionController : MonoBehaviour
     private IEnumerator TransitionSequence(System.Action onComplete)
     {
         isTransitioning = true;
-        Log("=== TRANSITION START ===");
 
         // STEP 1: OYUNU DONDUR (Claude bunu silmiş)
         GameSpeed.Multiplier = 0f;
@@ -105,10 +104,8 @@ public class TransitionController : MonoBehaviour
         HideImmediate();
         onComplete?.Invoke();
         
-        // Oyunu devam ettir
         GameSpeed.Multiplier = 1f;
         isTransitioning = false;
-        Log("=== TRANSITION COMPLETE ===");
     }
 
     private void CreateRuntimeRenderTexture()

@@ -11,8 +11,12 @@ public class ScoreManager : MonoBehaviour
     private float distance = 0f;
     private int totalXP = 0;
     private int bonusXP = 0;
+    private bool isTransitioning = false;
 
-    // Banked XP from previously completed levels. Static so it survives scene reloads (Retries).
+    // The XP value at the absolute start of the current level (survives scene reload)
+    private static int levelStartXP = 0;
+    
+    // The base XP from previous levels, excluding current session
     private static int persistentXP = 0;
 
     [Header("XP Prefabs")]
@@ -20,7 +24,6 @@ public class ScoreManager : MonoBehaviour
     public GameObject xp50Prefab;
     public GameObject xp75Prefab;
     public Transform playerTransform;
-
 
     private void Awake()
     {
@@ -30,24 +33,20 @@ public class ScoreManager : MonoBehaviour
 
     private void Start()
     {
-        // Cache player for XP icon spawning
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null) playerTransform = player.transform;
 
-        // NEW: Initialize XP and UI immediately on load so persistent XP is displayed at level start
         CalculateXP();
         UpdateUI();
     }
 
     private void Update()
     {
-        // Update distance based on actual player velocity (RIGHTWARD progress only)
+        if (isTransitioning) return;
+
         if (PlayerMovement.Instance != null && GameSpeed.Multiplier > 0)
         {
             float currentSpeed = PlayerMovement.Instance.CurrentVelocityX * GameSpeed.Multiplier;
-            
-            // Only add to distance if moving right (positive velocity)
-            // This ensures XP increase is tied to distance covered, not just time spent moving.
             if (currentSpeed > 0)
             {
                 distance += currentSpeed * Time.deltaTime;
@@ -59,40 +58,44 @@ public class ScoreManager : MonoBehaviour
 
     private void CalculateXP()
     {
-        // Tiered XP calculation based on distance milestones
+        if (isTransitioning) return;
+
         float tempXP = 0;
-
         if (distance <= 50f) tempXP = distance * 0.2f;
-        else if (distance <= 100f) tempXP = 10f + (distance - 50f) * 0.4f; // 10 = 50 * 0.2
-        else if (distance <= 150f) tempXP = 30f + (distance - 100f) * 0.6f; // 30 = 10 + 20
-        else tempXP = 60f + (distance - 150f) * 1.0f; // 60 = 30 + 30
+        else if (distance <= 100f) tempXP = 10f + (distance - 50f) * 0.4f;
+        else if (distance <= 150f) tempXP = 30f + (distance - 100f) * 0.6f;
+        else tempXP = 60f + (distance - 150f) * 1.0f;
 
-        // Final XP is the BANKed previous levels XP + current level session XP
-        totalXP = persistentXP + Mathf.FloorToInt(tempXP) + bonusXP;
+        int sessionXP = Mathf.FloorToInt(tempXP);
+        int newTotal = persistentXP + sessionXP + bonusXP;
+
+        if (newTotal != totalXP)
+        {
+            totalXP = newTotal;
+        }
     }
 
-    /// <summary>
-    /// Officially "Banks" the current total XP into persistent storage.
-    /// Called when a level is successfully completed.
-    /// </summary>
     public void CommitSessionXP()
     {
-        persistentXP = totalXP;
+        isTransitioning = true;
         
-        // Reset session progress so it doesn't carry over as 'earned twice'
+        // Final total becomes the new base for the next level
+        persistentXP = totalXP;
+        levelStartXP = totalXP; // For retry logic in the NEXT level
+        
+
         distance = 0f;
         bonusXP = 0;
         
-        Debug.Log($"[ScoreManager] XP Committed! New Banked XP: {persistentXP}");
+        CalculateXP();
+        UpdateUI();
         
-        Debug.Log($"[ScoreManager] XP Committed! New Banked XP: {persistentXP}");
+        isTransitioning = false;
     }
 
-    /// <summary>
-    /// Resets all XP to absolute zero. Called for Main Menu or New Game.
-    /// </summary>
     public static void ResetAllXP()
     {
+        levelStartXP = 0;
         persistentXP = 0;
         if (Instance != null)
         {
@@ -101,18 +104,21 @@ public class ScoreManager : MonoBehaviour
             Instance.distance = 0f;
             Instance.UpdateUI();
         }
-        Debug.Log("[ScoreManager] All XP data wiped (Static Persistent and Instance Session).");
     }
 
-    /// <summary>
-    /// Forcefully sets the total XP from an authoritative source (like Backend).
-    /// Resets all session progress (distance, bonus) to ensure a clean state.
-    /// </summary>
-    public static void SetTotalXP(int amount)
+    public static void SetTotalXP(int amount, string reason = "Forced")
     {
-        if (amount < 0) amount = 0; // Guard against negative values
+        if (amount < 0) amount = 0;
         
+        bool isMainMenu = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu";
+        if (!isMainMenu && amount > (persistentXP + 20000))
+        {
+            return;
+        }
+
         persistentXP = amount;
+        levelStartXP = amount; 
+
         if (Instance != null)
         {
             Instance.totalXP = amount;
@@ -120,33 +126,40 @@ public class ScoreManager : MonoBehaviour
             Instance.distance = 0f;
             Instance.UpdateUI();
         }
-        Debug.Log($"[ScoreManager] Total XP RESTORED: {amount}");
     }
 
-    /// <summary>
-    /// Centralized point to decide XP state based on starting level.
-    /// RULE: If Level 1, XP is ALWAYS 0. If Level > 1, XP is restored from account.
-    /// </summary>
-    public static void InitializeForLevel(int level, int accountXP)
+    public static void InitializeForLevel(int level, int startXP, string source)
     {
-        // OLD RULE: If Level 1, XP is ALWAYS 0. 
-        // NEW RULE: Always honor accountXP (Progress Preservation) unless explicitly logged out.
-        
-        if (accountXP > 0)
-        {
-            SetTotalXP(accountXP);
-            Debug.Log($"[PROGRESS] Preserved XP: {accountXP}, Level: {level}");
-        }
-        else if (level <= 1)
+        if (level <= 1)
         {
             ResetAllXP();
-            Debug.Log($"[PROGRESS] Fresh Start (Level 1). XP initialized to 0.");
+            return;
         }
-        else
+
+        levelStartXP = startXP;
+        persistentXP = startXP;
+
+        if (Instance != null)
         {
-            // Level > 1 but 0 XP? (Unexpected but possible if account wiped)
-            SetTotalXP(0);
-            Debug.Log($"[PROGRESS] Resume Start (Level {level}). No XP found in account.");
+            Instance.totalXP = startXP;
+            Instance.bonusXP = 0;
+            Instance.distance = 0f;
+            Instance.UpdateUI();
+        }
+
+    }
+
+    public static void ResetToLevelStartXP()
+    {
+        int level = (LevelManager.Instance != null) ? LevelManager.Instance.currentLevel : 1;
+        persistentXP = levelStartXP;
+
+        if (Instance != null)
+        {
+            Instance.totalXP = levelStartXP;
+            Instance.bonusXP = 0;
+            Instance.distance = 0f;
+            Instance.UpdateUI();
         }
     }
 
@@ -156,11 +169,8 @@ public class ScoreManager : MonoBehaviour
         UpdateUI();
         SpawnXPIcon(amount);
 
-        // Play sound effect
         if (playSound && AudioManager.Instance != null)
-        {
             AudioManager.Instance.PlayExtraXP();
-        }
     }
 
     private void SpawnXPIcon(int amount)
@@ -174,35 +184,21 @@ public class ScoreManager : MonoBehaviour
 
         if (prefab != null)
         {
-            // Spawn slightly above the player
             Vector3 spawnPos = playerTransform.position + new Vector3(0, 1.5f, 0);
-            GameObject instantiated = Instantiate(prefab, spawnPos, Quaternion.identity);
-            Debug.Log($"[ScoreManager] Spawned XP icon: {instantiated.name} for amount: {amount}");
-        }
-        else
-        {
-            Debug.LogWarning($"[ScoreManager] No prefab assigned for XP amount: {amount}. Check ScoreManager Inspector!");
+            Instantiate(prefab, spawnPos, Quaternion.identity);
         }
     }
 
     private void UpdateUI()
     {
-        if (scoreText != null)
-        {
-            scoreText.text = totalXP.ToString() + " XP";
-        }
+        if (scoreText != null) scoreText.text = totalXP.ToString() + " XP";
 
-        // NEW: Sync with AuthManager for high score tracking and run preservation
         if (CatsEscape.Auth.AuthManager.Instance != null)
         {
+            // Only update highestXP (stat), NEVER LastSavedXP here!
             CatsEscape.Auth.AuthManager.Instance.HighestXP = totalXP;
-            CatsEscape.Auth.AuthManager.Instance.LastSavedXP = totalXP;
         }
     }
 
-    public int GetTotalXP()
-    {
-        return totalXP;
-    }
+    public int GetTotalXP() => totalXP;
 }
-

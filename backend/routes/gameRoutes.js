@@ -14,6 +14,7 @@ router.post('/level-result', verifyToken, async (req, res) => {
       levelNumber,
       levelResult,
       xpEarned,
+      totalXP,
       fishSpawnCount,
       potionSpawnCount,
       heartsGained,
@@ -52,10 +53,12 @@ router.post('/level-result', verifyToken, async (req, res) => {
 
     const updateData = {
       $inc: {
-        highestXP: xpEarned,
         totalCompletions: isCompleted ? 1 : 0,
         totalFailures: isFailed ? 1 : 0,
         totalAbandoned: isAbandoned ? 1 : 0
+      },
+      $max: {
+        highestXP: totalXP || 0
       },
       lastActiveAt: new Date()
     };
@@ -64,7 +67,7 @@ router.post('/level-result', verifyToken, async (req, res) => {
 
     if (isCompleted) {
       updateData.lastLevelReached = levelNumber + 1;
-      updateData.$max = { highestLevelReached: levelNumber + 1 };
+      updateData.$max.highestLevelReached = levelNumber + 1;
     }
 
     await PlayerProfile.findOneAndUpdate(
@@ -114,69 +117,82 @@ router.post('/scores', verifyToken, async (req, res) => {
     const { displayName, authType, levelNumber, score, xpEarned, timeSeconds, userName } = req.body;
     const uid = req.user.uid;
 
+    console.log(`[LEADERBOARD_SAVE] Submit Start UID=${uid} UserName=${userName} Score=${score} Level=${levelNumber}`);
+
     if (levelNumber === undefined || score === undefined) {
-      return res.status(400).json({ message: 'levelNumber and score are required' });
+      return res.status(400).json({ success: false, message: 'levelNumber and score are required' });
     }
 
-    const existingEntry = await LeaderboardScore.findOne({ uid, levelNumber });
+    // 1. Create a NEW leaderboard entry (Attempt-based, NO UNIQUE UID CONSTRAINT)
+    // We use LeaderboardScore.create() or new ().save() to ensure an INSERT operation.
+    const newScoreEntry = new LeaderboardScore({
+      uid,
+      userName,
+      displayName: displayName || 'Player',
+      authType: authType || 'guest',
+      levelNumber: Number(levelNumber),
+      score: Number(score),
+      xpEarned: xpEarned || 0,
+      timeSeconds: timeSeconds || 0
+    });
 
-    if (existingEntry) {
-      if (score > existingEntry.score) {
-        existingEntry.score = score;
-        existingEntry.displayName = displayName || existingEntry.displayName;
-        existingEntry.authType = authType || existingEntry.authType;
-        existingEntry.userName = userName || existingEntry.userName;
-        existingEntry.xpEarned = xpEarned !== undefined ? xpEarned : existingEntry.xpEarned;
-        existingEntry.timeSeconds = timeSeconds !== undefined ? timeSeconds : existingEntry.timeSeconds;
-        await existingEntry.save();
-        console.log(`[Backend] Updated best score for user ${uid}, level ${levelNumber}: ${score}`);
-      }
-      return res.status(200).json({ message: 'Score processed', data: existingEntry });
-    } else {
-      const newScore = new LeaderboardScore({
-        uid,
-        userName,
-        displayName: displayName || 'Player',
-        authType: authType || 'guest',
-        levelNumber,
-        score,
-        xpEarned: xpEarned || 0,
-        timeSeconds: timeSeconds || 0
-      });
-      await newScore.save();
-      console.log(`[Backend] Saved new best score for user ${uid}, level ${levelNumber}: ${score}`);
-      return res.status(201).json({ message: 'Score saved successfully', data: newScore });
-    }
+    await newScoreEntry.save();
+    console.log(`[LEADERBOARD_SAVE] Success. New Doc ID: ${newScoreEntry._id}`);
+
+    // 2. Separately update PlayerProfile.highestXP (This stays unique per user)
+    await PlayerProfile.findOneAndUpdate(
+      { uid },
+      {
+        $max: { highestXP: Number(score) },
+        $set: { lastActiveAt: new Date() }
+      },
+      { upsert: true }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Score saved successfully',
+      data: newScoreEntry
+    });
+
   } catch (error) {
-    console.error('[Backend] Error saving score:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('[LEADERBOARD_SAVE] Critical Error:', error);
+    // If we get a Duplicate Key error (11000), it's because of a MongoDB index restriction
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'DATABASE_INDEX_ERROR: Duplicate entry detected. Please drop unique index on uid in MongoDB.',
+        error: error.message
+      });
+    }
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
 
 // GET /api/game/leaderboard
 router.get('/leaderboard', verifyToken, async (req, res) => {
   try {
-    const { levelNumber, limit = 10, sortBy = 'score' } = req.query;
+    const { levelNumber } = req.query;
 
     let query = {};
     if (levelNumber) {
       query.levelNumber = parseInt(levelNumber);
     }
 
-    let sortOption = {};
-    if (sortBy === 'timeSeconds') {
-      sortOption[sortBy] = 1;
-    } else {
-      sortOption[sortBy] = -1;
-    }
-
+    // Return TOP 5 scores of all time (Multiple entries per user allowed)
     const entries = await LeaderboardScore.find(query)
-      .sort(sortOption)
-      .limit(parseInt(limit));
+      .sort({ score: -1, createdAt: 1 })
+      .limit(5);
 
-    res.status(200).json({ success: true, entries });
+    console.log(`[LEADERBOARD] Fetching top 5 scores. Found: ${entries.length} entries.`);
+
+    res.status(200).json({
+      success: true,
+      count: entries.length,
+      entries
+    });
   } catch (error) {
-    console.error('[Backend] Error fetching leaderboard:', error);
+    console.error('[LEADERBOARD] Error fetching leaderboard:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
@@ -239,10 +255,11 @@ router.post('/user/set-username', verifyToken, async (req, res) => {
     }
 
     const trimmedName = userName.trim();
+    const normalizedName = trimmedName.toLowerCase();
 
-    // Check if username is already taken
+    // Check if username is already taken (Case-insensitive via normalized field)
     const existing = await PlayerProfile.findOne({
-      userName: { $regex: new RegExp(`^${trimmedName}$`, 'i') }
+      userNameNormalized: normalizedName
     });
 
     if (existing && existing.uid !== uid) {
@@ -255,6 +272,7 @@ router.post('/user/set-username', verifyToken, async (req, res) => {
       {
         $set: {
           userName: trimmedName,
+          userNameNormalized: normalizedName,
           authType: authType,
           displayName: displayName,
           lastActiveAt: new Date(),
@@ -282,6 +300,9 @@ router.post('/user/set-username', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('[AUTH] Critical Error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'USERNAME_TAKEN' });
+    }
     res.status(500).json({ success: false, message: 'SERVER_ERROR', error: error.message });
   }
 });

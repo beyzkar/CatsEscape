@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const playerProfileSchema = new mongoose.Schema({
   uid: { type: String, required: true, unique: true },
   userName: { type: String, unique: true, sparse: true },
+  userNameNormalized: { type: String, unique: true, sparse: true },
   email: { type: String },
   displayName: { type: String },
   photoUrl: { type: String },

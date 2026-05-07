@@ -39,11 +39,37 @@ if (fs.existsSync(absolutePath)) {
 }
 
 // MongoDB Connection
-const mongodbUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/catsescape';
+const mongodbUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/catsescape';
 console.log(`[Backend] Attempting to connect to MongoDB...`);
 
 mongoose.connect(mongodbUri)
-  .then(() => console.log('[Backend] Successfully connected to MongoDB.'))
+  .then(async () => {
+    console.log('[Backend] Successfully connected to MongoDB.');
+    
+    // AUTO-FIX: Drop ALL potential unique indexes on the leaderboard collection
+    try {
+      const LeaderboardScore = require('./models/LeaderboardScore');
+      const indexes = await LeaderboardScore.collection.indexes();
+      
+      const indexesToDrop = ["uid_1", "uid_1_levelNumber_1", "userName_1"];
+      
+      for (const indexName of indexesToDrop) {
+        if (indexes.some(idx => idx.name === indexName)) {
+          console.log(`[Backend] Found legacy unique index '${indexName}'. Dropping it...`);
+          await LeaderboardScore.collection.dropIndex(indexName);
+          console.log(`[Backend] Index '${indexName}' dropped successfully.`);
+        }
+      }
+
+      // Ensure PlayerProfile unique indexes
+      const PlayerProfile = require('./models/PlayerProfile');
+      await PlayerProfile.collection.createIndex({ userNameNormalized: 1 }, { unique: true, sparse: true });
+      console.log('[Backend] PlayerProfile indexes verified.');
+
+    } catch (indexErr) {
+      console.warn('[Backend] Index check/drop skipped (already clean):', indexErr.message);
+    }
+  })
   .catch(err => {
     console.error('[Backend] MongoDB connection error:');
     console.error(err);
@@ -57,6 +83,6 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date() });
 });
 
-app.listen(PORT, () => {
-  console.log(`[Backend] Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Backend] Server running on port ${PORT} (Listening on all interfaces)`);
 });
