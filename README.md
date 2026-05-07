@@ -1,4 +1,4 @@
-# 🐱 Cats Escape 🐈💨
+# Cats Escape 🐈
 
 **Cats Escape** is a high-octane, professional 2D side-scrolling runner built with Unity. Embark on a thrilling journey as a nimble cat escaping through diverse environments, collecting rewards, and outsmarting obstacles. With a robust backend and global leaderboard, every jump counts!
 
